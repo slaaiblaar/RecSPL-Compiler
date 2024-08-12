@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CFG>
+    <PROG>
+        <production>
+            <KEYWORD terminal="true">
+                <value>main</value>
+            </KEYWORD> 
+            <GLOBVARS terminal="false" /> 
+            <ALGO terminal="false" /> 
+            <FUNCTIONS terminal="false" />
+        </production>
+    </PROG>
+
+    <GLOBVARS>
+        <production>
+            <EPSILON terminal="true">
+            </EPSILON>
+        </production>
+
+        <production>
+            <VTYP terminal="false" /> 
+            <VNAME terminal="false" /> 
+            <KEYWORD terminal="true">
+                <value>,</value>
+            </KEYWORD>
+            <GLOBVARS terminal="false" />
+        </production>
+    </GLOBVARS>
+
+    <VTYP>
+        <production>
+            <KEYWORD terminal="true">
+                <value>num</value>
+            </KEYWORD>
+        </production>
+
+        <production>
+            <KEYWORD terminal="true">
+                <value>text</value>
+            </KEYWORD>
+        </production>
+    </VTYP>
+
+    <VNAME>
+        <production>
+            <ID terminal="true">
+                <pattern>V_[a-z][a-z0-9]*</pattern>
+            </ID>
+        </production>
+    </VNAME>
+
+    <ALGO>
+        <production>
+            <KEYWORD terminal="true">
+                <value>begin</value>
+            </KEYWORD>
+            <INSTRUC terminal="false" />
+            <KEYWORD terminal="true">
+                <value>end</value>
+            </KEYWORD>
+        </production>
+    </ALGO>
+
+    <INSTRUC>
+        <production>
+            <EPSILON terminal="true"></EPSILON>
+        </production>
+
+        <production>
+            <COMMAND terminal="false" />
+            <KEYWORD terminal="true">
+                <value>;</value>
+            </KEYWORD>
+            <INSTRUC terminal="false" />
+        </production>
+    </INSTRUC>
+
+    <COMMAND>
+        <production>
+            <KEYWORD terminal="true">
+                <value>skip</value>
+            </KEYWORD>
+        </production>
+
+        <production>
+            <KEYWORD terminal="true">
+                <value>halt</value>
+            </KEYWORD>
+        </production>
+
+        <production>
+            <KEYWORD terminal="true">
+                <value>print</value>
+            </KEYWORD>
+            <ATOMIC terminal="false" />
+        </production>
+
+        <production>
+            <ASSIGN terminal="false" />
+        </production>
+
+        <production>
+            <CALL terminal="false" />
+        </production>
+
+        <production>
+            <BRANCH terminal="false" />
+        </production>
+    </COMMAND>
+
+    <ATOMIC>
+        <production>
+            <VNAME terminal="false" />
+        </production>
+
+        <production>
+            <CONST terminal="false" />
+        </production>
+    </ATOMIC>
+
+    <CONST>
+        <!-- TODO: check of expressions correct, test to see if works -->
+        <production>
+            <LITERAL terminal="true">
+                <pattern>0|0.([0-9])*[1-9]|-0.([0-9])*[1-9]|[1-9]([0-9])*|-[1-9]([0-9])*|[1-9]([0-9])*.([0-9])*[1-9]|-[1-9]([0-9])*.([0-9])*[1-9]</pattern>
+            </LITERAL>
+        </production>
+
+        <production>
+            <LITERAL terminal="true">
+                <pattern>"[A-Z][a-z][a-z][a-z][a-z][a-z][a-z][a-z]"|"[A-Z][a-z][a-z][a-z][a-z][a-z][a-z]"|"[A-Z][a-z][a-z][a-z][a-z][a-z]"|"[A-Z][a-z][a-z][a-z][a-z]"|"[A-Z][a-z][a-z][a-z]"|"[A-Z][a-z][a-z]"|"[A-Z][a-z]"|"[A-Z]"</pattern>
+            </LITERAL>
+        </production>
+    </CONST>
+
+    <ASSIGN>
+        <production>
+            <VNAME terminal="false" />
+            <KEYWORD terminal="true">
+                <value>&lt;input</value>
+            </KEYWORD>
+        </production>
+
+        <production>
+            <VNAME terminal="false" />
+            <KEYWORD terminal="true">
+                <value>=</value>
+            </KEYWORD>
+            <TERM terminal="false" />
+        </production>
+    </ASSIGN>
+
+    <CALL>
+        <production>
+            <FNAME terminal="false" />
+            <KEYWORD terminal="true">
+                <value>(</value>
+            </KEYWORD>
+            <ATOMIC terminal="false" />
+            <KEYWORD terminal="true">
+                <value>,</value>
+            </KEYWORD>
+            <ATOMIC terminal="false" />
+            <KEYWORD terminal="true">
+                <value>,</value>
+            </KEYWORD>
+            <ATOMIC terminal="false" />
+            <KEYWORD terminal="true">
+                <value>)</value>
+            </KEYWORD>
+        </production>
+    </CALL>
+
+    <BRANCH>
+        <production>
+            <KEYWORD terminal="true">
+                <value>if</value>
+            </KEYWORD>
+            <COND terminal="false" />
+            <KEYWORD terminal="true">
+                <value>then</value>
+            </KEYWORD>
+            <ALGO terminal="false" />
+            <KEYWORD terminal="true">
+                <value>else</value>
+            </KEYWORD>
+            <ALGO terminal="false" />
+        </production>
+    </BRANCH>
+
+    <TERM>
+        <production>
+            <ATOMIC terminal="false" />
+        </production>
+
+        <production>
+            <CALL terminal="false" />
+        </production>
+
+        <production>
+            <OP terminal="false" />
+        </production>
+    </TERM>
+
+    <OP>
+        <production>
+            <UNOP terminal="false" />
+            <KEYWORD terminal="true">
+                <value>(</value>
+            </KEYWORD>
+            <ARG terminal="false" />
+            <KEYWORD terminal="true">
+                <value>)</value>
+            </KEYWORD>
+        </production>
+        
+        <production>
+            <BINOP terminal="false" />
+            <KEYWORD terminal="true">
+                <value>(</value>
+            </KEYWORD>
+            <ARG terminal="false" />
+            <KEYWORD terminal="true">
+                <value>,</value>
+            </KEYWORD>
+            <ARG terminal="false" />
+            <KEYWORD terminal="true">
+                <value>)</value>
+            </KEYWORD>
+        </production>
+    </OP>
+
+    <ARG>
+        <production>
+            <ATOMIC terminal="false" />
+        </production>
+
+        <production>
+            <OP terminal="false" />
+        </production>
+    </ARG>
+
+    <COND>
+        <production>
+            <SIMPLE terminal="false" />
+        </production>
+
+        <production>
+            <COMPOSIT terminal="false" />
+        </production>
+    </COND>
+
+    <SIMPLE>
+        <production>
+            <BINOP terminal="false" />
+            <KEYWORD terminal="true">
+                <value>(</value>
+            </KEYWORD>
+            <ATOMIC terminal="false" />
+            <KEYWORD terminal="true">
+                <value>,</value>
+            </KEYWORD>
+            <ATOMIC terminal="false" />
+            <KEYWORD terminal="true">
+                <value>)</value>
+            </KEYWORD>
+        </production>
+    </SIMPLE>
+
+    <COMPOSIT>
+        <production>
+            <BINOP terminal="false" />
+            <KEYWORD terminal="true">
+                <value>(</value>
+            </KEYWORD>
+            <SIMPLE terminal="false" />
+            <KEYWORD terminal="true">
+                <value>,</value>
+            </KEYWORD>
+            <SIMPLE terminal="false" />
+            <KEYWORD terminal="true">
+                <value>)</value>
+            </KEYWORD>
+        </production>
+
+        <production>
+            <UNOP terminal="false" />
+            <KEYWORD terminal="true">
+                <value>(</value>
+            </KEYWORD>
+            <SIMPLE terminal="false" />
+            <KEYWORD terminal="true">
+                <value>)</value>
+            </KEYWORD>
+        </production>
+    </COMPOSIT>
+
+    <UNOP>
+        <production>
+            <KEYWORD terminal="true">
+                <value>not</value>
+            </KEYWORD>
+        </production>
+
+        <production>
+            <KEYWORD terminal="true">
+                <value>sqrt</value>
+            </KEYWORD>
+        </production>
+    </UNOP>
+
+    <BINOP>
+        <production>
+            <KEYWORD terminal="true">
+                <value>add</value>
+            </KEYWORD>
+        </production>
+
+        <production>
+            <KEYWORD terminal="true">
+                <value>sub</value>
+            </KEYWORD>
+        </production>
+
+        <production>
+            <KEYWORD terminal="true">
+                <value>mul</value>
+            </KEYWORD>
+        </production>
+
+        <production>
+            <KEYWORD terminal="true">
+                <value>div</value>
+            </KEYWORD>
+        </production>
+
+        <production>
+            <KEYWORD terminal="true">
+                <value>and</value>
+            </KEYWORD>
+        </production>
+
+        <production>
+            <KEYWORD terminal="true">
+                <value>or</value>
+            </KEYWORD>
+        </production>
+
+        <production>
+            <KEYWORD terminal="true">
+                <value>eq</value>
+            </KEYWORD>
+        </production>
+
+        <production>
+            <KEYWORD terminal="true">
+                <value>grt</value>
+            </KEYWORD>
+        </production>
+    </BINOP>
+    <FNAME>
+        <production>
+            <ID terminal="true">
+                <pattern>F_[a-z][a-z0-9]*</pattern>
+            </ID>
+        </production>
+    </FNAME>
+
+    <FUNCTIONS>
+        <production>
+            <EPSILON terminal="true">
+            </EPSILON>
+        </production>
+
+        <production>
+            <DECL terminal="false" />
+            <FUNCTIONS terminal="false" />
+        </production>
+    </FUNCTIONS>
+
+    <DECL>
+        <production>
+            <HEADER terminal="false" />
+            <BODY terminal="false" />
+        </production>
+    </DECL>
+
+    <HEADER>
+        <production>
+            <FTYP terminal="false" />
+            <FNAME terminal="false" />
+            <KEYWORD terminal="true">
+                <value>(</value>
+            </KEYWORD>
+            <VNAME terminal="false" />
+            <KEYWORD terminal="true">
+                <value>,</value>
+            </KEYWORD>
+            <VNAME terminal="false" />
+            <KEYWORD terminal="true">
+                <value>,</value>
+            </KEYWORD>
+            <VNAME terminal="false" />
+            <KEYWORD terminal="true">
+                <value>)</value>
+            </KEYWORD>
+        </production>
+    </HEADER>
+
+    <FTYP>
+        <production>
+            <KEYWORD terminal="true">
+                <value>num</value>
+            </KEYWORD>
+        </production>
+
+        <production>
+            <KEYWORD terminal="true">
+                <value>void</value>
+            </KEYWORD>
+        </production>
+    </FTYP>
+
+    <BODY>
+        <production>
+            <PROLOG terminal="false" />
+            <LOCVARS terminal="false" />
+            <ALGO terminal="false" />
+            <EPILOG terminal="false" />
+            <SUBFUNCS terminal="false" />
+            <KEYWORD terminal="true">
+                <value>end</value>
+            </KEYWORD>
+        </production>
+    </BODY>
+
+    <PROLOG>
+        <production>
+            <KEYWORD terminal="true">
+                <value>{</value>
+            </KEYWORD>
+        </production>
+    </PROLOG>
+
+    <EPILOG>
+        <production>
+            <KEYWORD terminal="true">
+                <value>}</value>
+            </KEYWORD>
+        </production>
+    </EPILOG>
+
+    <LOCVARS>
+        <production>
+            <VTYP terminal="false" />
+            <VNAME terminal="false" />
+            <KEYWORD terminal="true">
+                <value>,</value>
+            </KEYWORD>
+            <VTYP terminal="false" />
+            <VNAME terminal="false" />
+            <KEYWORD terminal="true">
+                <value>,</value>
+            </KEYWORD>
+            <VTYP terminal="false" />
+            <VNAME terminal="false" />
+            <KEYWORD terminal="true">
+                <value>,</value>
+            </KEYWORD>
+        </production>
+    </LOCVARS>
+
+    <SUBFUNCS>
+        <production>
+            <FUNCTIONS terminal="false" />
+        </production>
+    </SUBFUNCS>
+</CFG>
