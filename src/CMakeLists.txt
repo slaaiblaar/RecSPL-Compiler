@@ -1,7 +1,9 @@
+add_subdirectory(automata)
 add_subdirectory(pugixml)
 add_subdirectory(app)
 
 install(TARGETS
+    automata
     pugixml
     app
     RUNTIME DESTINATION bin
@@ -12,8 +14,15 @@ install(TARGETS
 
 install(
     FILES
-        ${CMAKE_SOURCE_DIR}/pugixml.hpp
+        ${CMAKE_BINRAY_DIR}/automata_export.hpp
+        ${CMAKE_SOURCE_DIR}/automata.hpp
+    DESTINATION 
+        include/automata
+)
+install(
+    FILES
         ${CMAKE_BINRAY_DIR}/pugixml_export.hpp
+        ${CMAKE_SOURCE_DIR}/pugixml.hpp
     DESTINATION 
         include/pugixml
 )
