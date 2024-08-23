@@ -5,5 +5,4 @@ bin
 exports
 Makefile
 compile_commands.json
-settings.json
 *.a

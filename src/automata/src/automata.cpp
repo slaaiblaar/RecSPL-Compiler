@@ -1,63 +1,6 @@
 #include "automata.hpp"
 #include <iostream>
 #include <stack>
-int State::id_counter = 0;
-
-State::State()
-{
-    id = id_counter++;
-}
-
-void State::add_transition(std::shared_ptr<State> to, char soombol)
-{
-    transitions[soombol].push_back(to);
-}
-
-bool State::can_transition(char soombol)
-{
-    return transitions.find(soombol) != transitions.end();
-}
-
-Automaton::Automaton(AutomatonClass automaton_class) : automaton_class(automaton_class)
-{
-    start_state = nullptr;
-    current_state = nullptr;
-    // if NFA create a start state for epsilon transitions
-    if (automaton_class == AutomatonClass::NFA)
-    {
-        start_state = std::make_shared<State>();
-        states.push_back(start_state);
-    }
-}
-
-// simply strings a bunch of states together
-std::shared_ptr<State> Automaton::string_to_automaton(std::string input, std::string token_class)
-{
-    // if NFA then add epsilon transition from start state to first state
-    if (automaton_class != AutomatonClass::NFA)
-    {
-        return nullptr;
-    }
-
-    int index = 0;
-    std::shared_ptr<State> nfa_start = std::make_shared<State>();
-    std::shared_ptr<State> prev_state = nullptr;
-    std::shared_ptr<State> current_state = nfa_start;
-    states.push_back(nfa_start);
-    while (index < input.length())
-    {
-        prev_state = current_state;
-        current_state = std::make_shared<State>();
-        states.push_back(current_state);
-        add_transition(prev_state, current_state, input[index]);
-        index++;
-    }
-    current_state->is_final = true;
-    current_state->token_class = token_class;
-    start_state->add_transition(nfa_start, '\0');
-
-    return nfa_start;
-}
 /**
  * pattern helpers in order of relevant operator precedence
  */
@@ -122,6 +65,7 @@ std::string remove_parentheses_pairs(std::string input)
 }
 
 // Kinda gross but it works
+// TODO: Improve to handle more cases like [1-3], [A-G], etc.
 std::string remove_bracket_shorthand(std::string input, int start, int end)
 {
     std::cout << "Removing bracket shorthands for input: " << input << std::endl;
@@ -168,32 +112,26 @@ std::string remove_bracket_shorthand(std::string input, int start, int end)
         pos = input.find("[a-z0-9]", start);
     }
     std::cout << input << std::endl;
-    // remove unnecessary parentheses pairs like"((" and "))"
+
     return input;
 }
 
 bool Automaton::pattern_to_automaton(std::string input, std::string token_class)
 {
     std::cout << "hey" << std::endl;
-    if (automaton_class != AutomatonClass::NFA)
+    if (automaton_class != AutomatonClass::NFA || input.length() == 0)
     {
         return false;
     }
 
-    int index = 0;
-    std::shared_ptr<State> prev_state = start_state;
-    std::shared_ptr<State> current_state = std::make_shared<State>();
-    states.push_back(current_state);
-    // transition on null character
-    add_transition(prev_state, current_state, '\0');
-    while (index < input.length())
-    {
-        // if current char not alphanumeric, then it is a rule
-        input = remove_bracket_shorthand(input, index, input.length());
-        input = remove_parentheses_pairs(input);
-        std::cout << input << std::endl;
-        return true;
-    }
+    // Reduce number of possible regexp rules/operators
+    input = remove_bracket_shorthand(input, 0, input.length());
+    // Simplify pattern
+    input = remove_parentheses_pairs(input);
+    // Convert to tree structure
+    RegexpTree tree(input, 0);
+    tree.printTree();
+
     return false;
 }
 

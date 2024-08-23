@@ -40,12 +40,12 @@ int main()
     } while ((lhs = lhs.next_sibling()) != pugi::xml_node());
     std::cout << "\nBefore nfa tests\n";
     Automaton automata(AutomatonClass::NFA);
-    std::cout << "\n"
-              << automata.string_to_automaton("a", "TEST") << std::endl;
-    std::cout << automata.pattern_to_automaton("\"[A-Z][a-z][a-z0-9]\"", "TEST") << std::endl;
+    // std::cout << "\n"
+    //           << automata.string_to_automaton("a", "TEST") << std::endl;
+    // std::cout << automata.pattern_to_automaton("\"[A-Z][a-z][a-z0-9]\"", "TEST") << std::endl;
     //-[1-9]([0-9])*.([0-9])*[1-9]
     std::cout << automata.pattern_to_automaton("-[1-9]([0-9])*.([0-9])*[1-9]", "TEST") << std::endl;
-    //                                          ((a((b)c))d)
-    std::cout << automata.pattern_to_automaton("((((a(((b))c))d)))", "TEST") << std::endl;
+    // //                                          ((a((b)c))d)
+    // std::cout << automata.pattern_to_automaton("((((a(((b))c))d)))", "TEST") << std::endl;
     return 0;
 }
