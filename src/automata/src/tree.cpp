@@ -20,12 +20,20 @@ RegexpNode::RegexpNode(char value)
     case '(':
         precedence = 4;
         break;
-    default: // concatenation if not an operator
+    default:
+        // normal input if not an operator
+        // explicit concatenation operator gets added in the tree constructor
+        // after a normal input node is created
         precedence = 5;
     }
 }
+RegexpNode::~RegexpNode()
+{
+    // std::cout << "Destroying [" << value << "](" << precedence << ")" << "-" << uid << std::endl;
+}
 void RegexpNode::free()
 {
+    // std::cout << "Freeing [" << value << "](" << precedence << ")" << "-" << uid << std::endl;
     for (int i = 0; i < children.size(); i++)
     {
         children[i]->free();
@@ -97,11 +105,14 @@ void RegexpNode::flattenNode()
     Operator Node values:
         |  with prec 1 - Alternation
         *  with prec 3 - Duplication
-        .  with prec 2 - Concatenation  *will differentiate from decimal point by number of operands*
+        .  with prec 2 - Concatenation
         () Grouping represented implicitly by tree structure
+
+        Concatenation will differentiated from decimal point by precedence
 */
 RegexpTree::RegexpTree(std::string input, int subtreeDepth)
 {
+    std::cout << "Creating tree" << std::endl;
     this->input = input;
     if (input.length() == 0)
     {
@@ -126,6 +137,7 @@ RegexpTree::RegexpTree(std::string input, int subtreeDepth)
             i += grpLen + 1;
             curr->value = '.';
             curr->precedence = 2;
+            groupSubtree.root = nullptr;
         }
         else if (curr->precedence == 5)
         {
@@ -190,7 +202,12 @@ RegexpTree::RegexpTree(std::string input, int subtreeDepth)
 }
 RegexpTree::~RegexpTree()
 {
-    root.reset();
+    // std::cout << "Freeing tree" << std::endl;
+    if (root != nullptr)
+    {
+        root->free();
+    }
+    root = nullptr;
 }
 int RegexpTree::groupLength(int index, int offset)
 {
@@ -218,6 +235,16 @@ int RegexpTree::groupLength(int index, int offset)
         throw "Unbalanced parentheses";
     }
     return index - 2 - start;
+}
+void RegexpTree::concatenateTree(std::shared_ptr<RegexpTree> subTree)
+{
+    std::shared_ptr<RegexpNode> newRoot = std::make_shared<RegexpNode>('|');
+    newRoot->addChild(root);
+    newRoot->addChild(subTree->root);
+    root = newRoot;
+    subTree->root = nullptr;
+    root->flattenNode();
+    printTree();
 }
 void RegexpTree::printTree()
 {

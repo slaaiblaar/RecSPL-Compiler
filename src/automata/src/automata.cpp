@@ -1,8 +1,54 @@
 #include "automata.hpp"
 #include <iostream>
 #include <stack>
+Automaton::Automaton()
+{
+    // std::cout << "Automaton()" << std::endl;
+    start_state = std::make_shared<State>(AutomatonClass::NFA);
+    add_state(start_state);
+}
+Automaton::~Automaton()
+{
+    // std::cout << "~Automaton()" << std::endl;
+    if (start_state.use_count() > 0)
+    {
+        start_state->free();
+    }
+    // std::cout << "Automaton destroyed" << std::endl;
+    std::cout << tree.use_count() << std::endl;
+}
+
+// simply strings a bunch of states together
+std::shared_ptr<State> Automaton::append_keyword(std::string input, std::string token_class)
+{
+    // if NFA then add epsilon transition from start state to first state
+    // if (automaton_class != AutomatonClass::NFA)
+    // {
+    //     return nullptr;
+    // }
+
+    int index = 0;
+    std::shared_ptr<State> nfa_start = std::make_shared<State>(AutomatonClass::NFA);
+    add_state(nfa_start);
+    start_state->add_transition(nfa_start, '\0');
+    std::shared_ptr<State> prev_state = nullptr;
+    std::shared_ptr<State> current_state = nfa_start;
+    while (index < input.length())
+    {
+        prev_state = current_state;
+        current_state = std::make_shared<State>(AutomatonClass::NFA);
+        add_state(current_state);
+        add_transition(prev_state, current_state, input[index]);
+        ++index;
+    }
+    current_state->is_final = true;
+    current_state->token_class = token_class;
+
+    return nfa_start;
+}
+
 /**
- * pattern helpers in order of relevant operator precedence
+ * pattern helpers
  */
 std::string remove_parentheses_pairs(std::string input)
 {
@@ -52,9 +98,8 @@ std::string remove_parentheses_pairs(std::string input)
             // input[pos] == ')' is assumed
             if (input[pos - 1] == ')')
             {
-                // remove closing pair
+                // remove closing and opening pair
                 input.erase(pos, 1);
-                // remove opening pair
                 input.erase(open_pos, 1);
             }
         }
@@ -116,27 +161,104 @@ std::string remove_bracket_shorthand(std::string input, int start, int end)
     return input;
 }
 
-bool Automaton::pattern_to_automaton(std::string input, std::string token_class)
+bool Automaton::append_pattern(std::string input, std::string token_class)
 {
-    std::cout << "hey" << std::endl;
-    if (automaton_class != AutomatonClass::NFA || input.length() == 0)
-    {
-        return false;
-    }
-
     // Reduce number of possible regexp rules/operators
     input = remove_bracket_shorthand(input, 0, input.length());
     // Simplify pattern
     input = remove_parentheses_pairs(input);
     // Convert to tree structure
-    RegexpTree tree(input, 0);
-    tree.printTree();
-
+    // RegexpTree tree(input, 0);
+    // tree.printTree();
+    std::shared_ptr<RegexpTree> tree = std::make_shared<RegexpTree>(input, 0);
+    tree->printTree();
+    std::cout << "Tree use count: " << tree.use_count() << std::endl;
+    std::cout << "Creating NFA" << std::endl;
+    std::shared_ptr<State> nfa_start = std::make_shared<State>(AutomatonClass::NFA);
+    add_state(nfa_start);
+    std::shared_ptr<State> nfa_end = std::make_shared<State>(AutomatonClass::NFA);
+    add_state(nfa_end);
+    nfa_end->is_final = true;
+    nfa_end->token_class = token_class;
+    std::cout << "Adding transition from start to nfa_start" << std::endl;
+    start_state->add_transition(nfa_start, '\0');
+    tree_to_nfa(tree->root, nfa_start, nfa_end);
     return false;
+}
+
+std::shared_ptr<State> Automaton::tree_to_nfa(std::shared_ptr<RegexpNode> node, std::shared_ptr<State> nfa_start, std::shared_ptr<State> nfa_end)
+{
+    std::shared_ptr<State> curr_state;
+    if (node->value == '.' && node->precedence == 2)
+    {
+        curr_state = nfa_start;
+        std::shared_ptr<State> next_state;
+        for (auto child : node->children)
+        {
+            next_state = std::make_shared<State>(AutomatonClass::NFA);
+            add_state(next_state);
+            curr_state = tree_to_nfa(child, curr_state, next_state);
+            curr_state = next_state;
+        }
+        // curr_state->add_transition(nfa_end, '\0');
+        // return nfa_end;
+        curr_state->add_transition(nfa_end, '\0');
+        return nfa_end;
+    }
+    else if (node->value == '|')
+    {
+        std::cout << "S" << nfa_start->id << ": OR operator" << std::endl;
+        // std::shared_ptr<State> end = std::make_shared<State>(AutomatonClass::NFA);
+        for (auto child : node->children)
+        {
+            curr_state = std::make_shared<State>(AutomatonClass::NFA);
+            add_state(curr_state);
+
+            nfa_start->add_transition(curr_state, '\0');
+            std::cout << "S" << nfa_start->id << " -(" << '\0' << ")-> S" << curr_state->id << std::endl;
+            tree_to_nfa(child, curr_state, nfa_end);
+
+            // child_end->add_transition(end, '\0');
+        }
+        // end->add_transition(nfa_end, '\0');
+        return nfa_end;
+    }
+    else if (node->value == '*')
+    {
+        if (node->children.size() != 1)
+        {
+            std::cout << "Invalid * operator" << std::endl;
+            throw "Invalid * operator";
+        }
+        curr_state = std::make_shared<State>(AutomatonClass::NFA);
+        add_state(curr_state);
+        nfa_start->add_transition(curr_state, '\0');
+        nfa_start->add_transition(nfa_end, '\0');
+        tree_to_nfa(node->children[0], curr_state, nfa_start);
+        return nfa_end;
+    }
+    else
+    {
+        if (node->children.size() != 0 || node->precedence != 5)
+        {
+            std::cout << "Invalid node" << std::endl;
+            std::cout << "[" << node->value << "]" << "(" << node->precedence << ")" << "-" << node->uid << std::endl;
+            std::cout << node->children.size() << " children: ";
+            for (auto child : node->children)
+            {
+                std::cout << "[" << child->value << "]" << "(" << child->precedence << ")" << "-" << child->uid << " ";
+            }
+            throw "Invalid operator";
+        }
+        curr_state = nfa_start;
+        curr_state->add_transition(nfa_end, node->value);
+        return nfa_end;
+    }
 }
 
 void Automaton::add_state(std::shared_ptr<State> state)
 {
+    // std::cout << "Adding state: " << state->id << std::endl;
     states.push_back(state);
 }
 
@@ -246,4 +368,64 @@ std::string Automaton::get_substring()
         return "";
     }
     return input.substr(read_start, accept_pos - read_start);
+}
+// Prints output to terminal that is should go into render-automata.py
+void Automaton::print_automaton()
+{
+    std::cout << "NFA Rendering:\n```copy below\nfrom automata.fa.nfa import NFA\nautomaton = ";
+    if (automaton_class == AutomatonClass::DFA)
+    {
+        std::cout << "DFA(" << std::endl;
+    }
+    else
+    {
+        std::cout << "NFA(" << std::endl;
+    }
+    std::unordered_map<char, std::vector<int>> allTransitions;
+    std::vector<int> finalStates;
+    std::cout << "    states={ ";
+    for (auto state : states)
+    {
+        std::cout << "\"S" << state->id << "\", ";
+    }
+    std::cout << "},\n";
+    std::cout << "    transitions={\n";
+    for (auto state : states)
+    {
+        if (state->is_final)
+        {
+            finalStates.push_back(state->id);
+            // std::cout << "\t Accept Class: " << state->token_class << std::endl;
+            continue;
+        }
+        std::cout << "        \"S" << state->id << "\": { ";
+        for (auto transition : state->transitions)
+        {
+            if (transition.first != '\0')
+            {
+                allTransitions[transition.first].push_back(state->id);
+            }
+            std::cout << "\"" << transition.first << "\": { ";
+            for (auto to_state : transition.second)
+            {
+                std::cout << "\"S" << to_state->id << "\", ";
+            }
+            std::cout << "}, ";
+        }
+        std::cout << "},\n";
+    }
+    std::cout << "    },\n";
+    std::cout << "    initial_state=\"S" << start_state->id << "\",\n";
+    std::cout << "    final_states={ ";
+    for (auto state : finalStates)
+    {
+        std::cout << "\"S" << state << "\", ";
+    }
+    std::cout << "},\n";
+    std::cout << "    input_symbols={ ";
+    for (auto transition : allTransitions)
+    {
+        std::cout << "\"" << transition.first << "\", ";
+    }
+    std::cout << "}\n)\nautomaton.show_diagram(path=\"graph.png\")\n```\n";
 }

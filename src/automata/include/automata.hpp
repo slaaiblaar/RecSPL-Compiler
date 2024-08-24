@@ -4,10 +4,12 @@
 #include <memory>        // shared_ptr
 #include <unordered_map> // hashmap
 #include <string>
+// Regexp Tree Classes
 class RegexpNode : public std::enable_shared_from_this<RegexpNode>
 {
 public:
     RegexpNode(char value);
+    ~RegexpNode();
     int uid;
     // contains both operators and character literals
     // operators: |, *, . (concatenation)   (, )
@@ -34,9 +36,10 @@ public:
     std::shared_ptr<RegexpNode> root;
     std::string input;
     int groupLength(int index, int offset = 0);
+    void concatenateTree(std::shared_ptr<RegexpTree> subTree);
     void printTree();
-    void flattenTree();
 };
+// Automata Classes
 class Token
 {
 public:
@@ -46,18 +49,29 @@ public:
     std::string token_word;
     static int tokenCounter;
 };
-// class Automata;
-class State
+
+enum AutomatonClass
+{
+    NFA,
+    DFA
+};
+class State : public std::enable_shared_from_this<State>
 {
     friend class Automaton;
 
 public:
-    State();
+    State(AutomatonClass state_class);
+    ~State();
     int id;
+    std::vector<int> nfa_ids;
+    // differentiate between NFA states with one ID and DFA states with sets IDs
+    AutomatonClass state_class;
     bool is_final = false;
+    bool freeing = false;
     std::string token_class;
     void add_transition(std::shared_ptr<State> to, char soombol);
     bool can_transition(char soombol);
+    void free();
 
 private:
     static int id_counter;
@@ -67,19 +81,15 @@ private:
     std::unordered_map<char, std::vector<std::shared_ptr<State>>> transitions;
 };
 
-enum AutomatonClass
-{
-    NFA,
-    DFA
-};
-
-class Automaton
+class Automaton : public std::enable_shared_from_this<Automaton>
 {
 public:
-    Automaton(AutomatonClass automaton_class);
-    std::shared_ptr<State> string_to_automaton(std::string input, std::string token_class);
+    Automaton();
+    ~Automaton();
+    std::shared_ptr<State> append_keyword(std::string input, std::string token_class);
     std::string get_next_token();
-    bool pattern_to_automaton(std::string input, std::string token_class);
+    bool append_pattern(std::string input, std::string token_class);
+    std::shared_ptr<State> tree_to_nfa(std::shared_ptr<RegexpNode> node, std::shared_ptr<State> nfa_start, std::shared_ptr<State> nfa_end);
     void add_state(std::shared_ptr<State> state);
     void add_transition(std::shared_ptr<State> from, std::shared_ptr<State> to, char soombol);
     void add_transition(int from, int to, char soombol);
@@ -91,6 +101,8 @@ public:
     void reset();
     bool run(std::string input);
     std::string get_substring();
+    std::shared_ptr<RegexpTree> tree;
+    void print_automaton();
 
 private:
     AutomatonClass automaton_class;
