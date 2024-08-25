@@ -103,11 +103,12 @@ public:
     void set_input(std::string input);
     void reset();
     bool run(std::string input);
-    std::shared_ptr<State> dfa_state_exists(std::vector<std::shared_ptr<State>> compound_nfa_states);
+    std::shared_ptr<State> find_dfa_state(std::unordered_map<int, std::shared_ptr<State>> nfa_states);
     void get_compound_destinations(std::shared_ptr<State> from);
     std::string get_substring();
     std::shared_ptr<RegexpTree> tree;
-    void print_automaton();
+    void print_nfa();
+    void print_dfa();
     void construct_subsets();
 
 private:

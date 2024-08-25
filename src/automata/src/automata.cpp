@@ -277,15 +277,87 @@ std::shared_ptr<State> Automaton::tree_to_nfa(std::shared_ptr<RegexpNode> node, 
 void Automaton::construct_subsets()
 {
     std::cout << "Cunstructing Subsets\n";
-    // std::shared_ptr<State> current_state;
-    // /*
-    //     2D hashmap is massively overkill, but it's the simplest way to prevent
-    //     duplicate states in the compound state.
-    // */
-    // std::unordered_map<char, std::unordered_map<int, std::shared_ptr<State>>> transitions;
-    // while (current_state = subset_construction_queue.front())
-    // {
-    //     }
+    std::shared_ptr<State> current_state;
+    /*
+        2D hashmap is massively overkill, but it's the simplest way to prevent
+        duplicate transitions. I can simply write `transitions[symbol][id] = ptr
+        without worrying if there is already a transition for that state on that
+        symbol
+    */
+    std::unordered_map<char, std::unordered_map<int, std::shared_ptr<State>>> transitions;
+    while (!subset_construction_queue.empty())
+    {
+        current_state = subset_construction_queue.front();
+        subset_construction_queue.pop();
+        if (!subset_construction_queue.empty())
+            std::cout << "Current: S" << current_state->id << ", front: S" << subset_construction_queue.front()->id << std::endl;
+        std::cout << "Constructing subsets for transitions of S" << current_state->id << std::endl;
+        transitions.clear();
+        // for each nfa state in current state's epsilon closure set
+        for (auto nfa_equiv_state : current_state->nfa_equiv_states)
+        {
+            // for each transition from the nfa state
+            for (auto e_state_transition : nfa_equiv_state.second->transitions)
+            {
+                char symbol = e_state_transition.first;
+                if (symbol == '\0')
+                {
+                    continue;
+                }
+                std::vector<std::shared_ptr<State>> destination_states = e_state_transition.second;
+                // for each destination on the symbol
+                for (auto destination : destination_states)
+                {
+                    // for each state in the epsilon closure of the destination
+                    for (auto dest_e_state : destination->e_closure)
+                    {
+                        transitions[symbol][dest_e_state.first] = dest_e_state.second;
+                    }
+                }
+            }
+        }
+        // for each transition instantiated above
+        for (auto transition : transitions)
+        {
+            // check if the set of nfa states already exists as a dfa state
+            std::shared_ptr<State> destination = find_dfa_state(transition.second);
+            // if not create one
+            if (destination == nullptr)
+            {
+                destination = std::make_shared<State>(AutomatonClass::DFA);
+                dfa_states.push_back(destination);
+                // add set of nfa states to dfa state
+                for (auto nfa_state : transition.second)
+                {
+                    destination->nfa_equiv_states[nfa_state.first] = nfa_state.second;
+                    // make final if it contains a final nfa state
+                    if (nfa_state.second->is_final)
+                    {
+                        destination->is_final = true;
+                    }
+                }
+                // add to construction queue
+                std::cout << "Adding S" << destination->id << " to subset construction queue\n";
+                subset_construction_queue.emplace(destination);
+                if (destination->is_final)
+                {
+                    dfa_final_states.push_back(destination);
+                }
+            }
+            // add transition to current state
+            std::cout << "Adding transition from S" << current_state->id << " to " << "S" << destination->id << " on \'" << transition.first << "\'\n";
+            if (current_state->transitions[transition.first].size() > 0)
+            {
+                std::cout << "S" << current_state->id << " has more than 1 transition on \'" << transition.first << "\':";
+            }
+            current_state->transitions[transition.first].push_back(destination);
+            for (auto state : current_state->transitions[transition.first])
+            {
+                std::cout << " S" << state->id;
+            }
+            std::cout << std::endl;
+        }
+    }
 }
 void Automaton::add_state(std::shared_ptr<State> state)
 {
@@ -344,6 +416,7 @@ void Automaton::nfa_to_dfa()
     std::cout << "DFA Final States cleared\n";
     // new start state with e closure of nfa start state
     dfa_start_state = std::make_shared<State>(AutomatonClass::DFA);
+    std::cout << "New DFA start state: S" << dfa_start_state->id << std::endl;
     dfa_states.push_back(dfa_start_state);
     for (auto e_state : nfa_start_state->e_closure)
     {
@@ -351,29 +424,38 @@ void Automaton::nfa_to_dfa()
     }
     subset_construction_queue.push(dfa_start_state);
 
-    std::cout << "Epislon closure of NFA start state: ";
+    std::cout << "Equivalent NFA states of DFA start state: ";
     for (auto state : dfa_start_state->nfa_equiv_states)
     {
         std::cout << "S" << state.first << " ";
     }
     std::cout << std::endl;
+    subset_construction_queue.emplace(dfa_start_state);
     construct_subsets();
+    std::cout << "Subset construction completed\n";
 }
-std::shared_ptr<State> Automaton::dfa_state_exists(std::vector<std::shared_ptr<State>> compound_nfa_states)
+std::shared_ptr<State> Automaton::find_dfa_state(std::unordered_map<int, std::shared_ptr<State>> nfa_states)
 {
-    std::cout << compound_nfa_states.size() << std::endl;
-    for (auto state : dfa_states)
+    bool found = false;
+    for (std::shared_ptr<State> state : dfa_states)
     {
-        if (state->nfa_equiv_states.size() != compound_nfa_states.size())
+        found = true;
+        if (state->nfa_equiv_states.size() != nfa_states.size())
         {
+            found = false;
             continue;
         }
-        for (int i = 0; i < state->nfa_equiv_states.size(); i++)
+        for (auto nfa_state : nfa_states)
         {
-            if (state->nfa_equiv_states[i]->id != compound_nfa_states[i]->id)
+            if (state->nfa_equiv_states.find(nfa_state.first) == state->nfa_equiv_states.end())
             {
-                return state;
+                found = false;
+                break;
             }
+        }
+        if (found == true)
+        {
+            return state;
         }
     }
     return nullptr;
@@ -488,10 +570,10 @@ std::string Automaton::get_substring()
     }
     return input.substr(read_start, accept_pos - read_start);
 }
-// Prints output to terminal that is should go into render-automata.py
-void Automaton::print_automaton()
+// Prints output to terminal that should go into render-automata.py
+void Automaton::print_nfa()
 {
-    std::cout << "NFA Rendering:\n```copy below\nfrom automata.fa.nfa import NFA\nautomaton = ";
+    std::cout << "NFA Rendering:\n```copy below\nfrom automata.fa.nfa import NFA\nnfAutomaton = ";
     if (automaton_class == AutomatonClass::DFA)
     {
         std::cout << "DFA(" << std::endl;
@@ -546,5 +628,59 @@ void Automaton::print_automaton()
     {
         std::cout << "\"" << transition.first << "\", ";
     }
-    std::cout << "}\n)\nautomaton.show_diagram(path=\"graph.png\")\n```\n";
+    std::cout << "}\n)\nnfAutomaton.show_diagram(path=\"graph.png\")\n```\n";
+}
+
+void Automaton::print_dfa()
+{
+    std::cout << "NFA Rendering:\n```copy below\nfrom automata.fa.nfa import NFA\ndfAutomaton = ";
+    std::cout << "DFA(" << std::endl;
+
+    std::unordered_map<char, std::vector<int>> allTransitions;
+    std::vector<int> finalStates;
+    std::cout << "    states={ ";
+    for (auto state : dfa_states)
+    {
+        std::cout << "\"S" << state->id << "\", ";
+    }
+    std::cout << "},\n";
+    std::cout << "    transitions={\n";
+    for (auto state : dfa_states)
+    {
+        if (state->is_final)
+        {
+            finalStates.push_back(state->id);
+            // std::cout << "\t Accept Class: " << state->token_class << std::endl;
+            // continue;
+        }
+        std::cout << "        \"S" << state->id << "\": { ";
+        for (auto transition : state->transitions)
+        {
+            if (transition.first != '\0')
+            {
+                allTransitions[transition.first].push_back(state->id);
+            }
+            std::cout << "\"" << transition.first << "\": { ";
+            for (auto to_state : transition.second)
+            {
+                std::cout << "\"S" << to_state->id << "\", ";
+            }
+            std::cout << "}, ";
+        }
+        std::cout << "},\n";
+    }
+    std::cout << "    },\n";
+    std::cout << "    initial_state=\"S" << dfa_start_state->id << "\",\n";
+    std::cout << "    final_states={ ";
+    for (auto state : finalStates)
+    {
+        std::cout << "\"S" << state << "\", ";
+    }
+    std::cout << "},\n";
+    std::cout << "    input_symbols={ ";
+    for (auto transition : allTransitions)
+    {
+        std::cout << "\"" << transition.first << "\", ";
+    }
+    std::cout << "}\n)\ndfAutomaton.show_diagram(path=\"graph.png\")\n```\n";
 }

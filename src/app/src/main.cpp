@@ -42,9 +42,9 @@ int main()
     Automaton automaton;
     // std::cout << "\n"
     //           << automaton.append_keyword("a", "TEST") << std::endl;
-    // std::cout << automaton.append_pattern("\"[A-Z][a-z][a-z0-9]\"", "TEST") << std::endl;
+    std::cout << automaton.append_pattern("\"[A-Z][a-z][a-z0-9]\"", "TEST") << std::endl;
     //-[1-9]([0-9])*.([0-9])*[1-9]
-    std::cout << automaton.append_pattern("-[1-9]([0-9])*.([0-9])*[1-9]", "N") << std::endl;
+    // std::cout << automaton.append_pattern("-[1-9]([0-9])*.([0-9])*[1-9]", "N") << std::endl;
     // //                                          ((a((b)c))d)
     // std::cout << automaton.append_pattern("((((a(((b))c))d)))", "TEST") << std::endl;
     // std::cout << automaton.append_pattern("\"never\"", "TEST") << std::endl;
@@ -52,7 +52,7 @@ int main()
     // std::cout << automaton.append_pattern("\"give\"", "TEST") << std::endl;
     // std::cout << automaton.append_pattern("\"you\"", "TEST") << std::endl;
     // std::cout << automaton.append_pattern("\"up\"", "TEST") << std::endl;
-    // automaton.print_automaton();
+    // automaton.print_nfa();
 
     pugi::xml_node terminals = doc.child("CFG").child("TERMINALS");
     pugi::xml_node keywords_terminal = terminals.child("KEYWORD").first_child();
@@ -65,7 +65,8 @@ int main()
     //     automaton.append_keyword(keywords_terminal.child_value(), keywords_terminal.attribute("class").value());
     // } while ((keywords_terminal = keywords_terminal.next_sibling()) != pugi::xml_node());
     // prints NFA state to terminal in a format that's easy to manually insert into render-automata.py
-    automaton.print_automaton();
+    automaton.print_nfa();
     automaton.nfa_to_dfa();
+    automaton.print_dfa();
     return 0;
 }
