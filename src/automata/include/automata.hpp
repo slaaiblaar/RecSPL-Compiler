@@ -4,6 +4,7 @@
 #include <memory>        // shared_ptr
 #include <unordered_map> // hashmap
 #include <string>
+#include <queue>
 // Regexp Tree Classes
 class RegexpNode : public std::enable_shared_from_this<RegexpNode>
 {
@@ -63,8 +64,10 @@ public:
     State(AutomatonClass state_class);
     ~State();
     int id;
-    std::vector<int> nfa_ids;
-    // differentiate between NFA states with one ID and DFA states with sets IDs
+    std::unordered_map<int, std::shared_ptr<State>> nfa_equiv_states;
+    // maps char to vector of states for NFA
+    std::unordered_map<char, std::vector<std::shared_ptr<State>>> transitions;
+    // differentiate between NFA states with one ID and DFA states with ID sets
     AutomatonClass state_class;
     bool is_final = false;
     bool freeing = false;
@@ -77,8 +80,7 @@ private:
     static int id_counter;
     static std::unordered_map<std::string, int> op_precedence;
     static std::unordered_map<std::string, int> op_arity;
-    // maps char to vector of states for NFA
-    std::unordered_map<char, std::vector<std::shared_ptr<State>>> transitions;
+    std::unordered_map<int, std::shared_ptr<State>> e_closure;
 };
 
 class Automaton : public std::enable_shared_from_this<Automaton>
@@ -90,6 +92,7 @@ public:
     std::string get_next_token();
     bool append_pattern(std::string input, std::string token_class);
     std::shared_ptr<State> tree_to_nfa(std::shared_ptr<RegexpNode> node, std::shared_ptr<State> nfa_start, std::shared_ptr<State> nfa_end);
+    void nfa_to_dfa();
     void add_state(std::shared_ptr<State> state);
     void add_transition(std::shared_ptr<State> from, std::shared_ptr<State> to, char soombol);
     void add_transition(int from, int to, char soombol);
@@ -100,19 +103,27 @@ public:
     void set_input(std::string input);
     void reset();
     bool run(std::string input);
+    std::shared_ptr<State> dfa_state_exists(std::vector<std::shared_ptr<State>> compound_nfa_states);
+    void get_compound_destinations(std::shared_ptr<State> from);
     std::string get_substring();
     std::shared_ptr<RegexpTree> tree;
     void print_automaton();
+    void construct_subsets();
 
 private:
     AutomatonClass automaton_class;
-    std::shared_ptr<State> start_state;
+    std::shared_ptr<State> nfa_start_state;
+    std::vector<std::shared_ptr<State>> nfa_states;
+    std::vector<std::shared_ptr<State>> nfa_final_states;
+    std::shared_ptr<State> dfa_start_state;
+    std::vector<std::shared_ptr<State>> dfa_states;
+    std::vector<std::shared_ptr<State>> dfa_final_states;
     std::shared_ptr<State> current_state;
     int read_start = 0;
     int read_pos = 0;
     int accept_pos = 0;
-    std::vector<std::shared_ptr<State>> states;
     std::string input;
+    std::queue<std::shared_ptr<State>> subset_construction_queue;
 };
 
 #endif

@@ -25,26 +25,43 @@ State::State(AutomatonClass state_class)
 }
 State::~State()
 {
-    // std::cout << "Destroying state " << id << std::endl;
+    // std::cout << "Destroying " << (this->state_class == AutomatonClass::NFA ? "NFA" : "DFA") << " State " << id << std::endl;
 }
 
 void State::free()
 {
+    // prevent double free
     if (freeing)
     {
         return;
     }
+    // std::cout << "Freeing " << (this->state_class == AutomatonClass::NFA ? "NFA" : "DFA") << " State " << this->id << std::endl;
     freeing = true;
     // std::cout << "Freeing state " << id << std::endl;
     for (auto transition : transitions)
     {
         for (auto state : transition.second)
         {
-            state->free();
-            state = nullptr;
+            // prevent freeing NFA states when clearing DFA
+            // and vice versa
+            if (state->state_class == this->state_class)
+            {
+                state->free();
+                state = nullptr;
+            }
         }
     }
     transitions.clear();
+    for (auto nfa_state : nfa_equiv_states)
+    {
+        nfa_state.second->free();
+    }
+    nfa_equiv_states.clear();
+    for (auto e_state : e_closure)
+    {
+        e_state.second->free();
+    }
+    e_closure.clear();
 }
 void State::add_transition(std::shared_ptr<State> to, char soombol)
 {
