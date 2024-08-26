@@ -86,4 +86,7 @@ pkgs.mkShell {
     # visualAutomata
     automataLib
   ];
+  shellHook = ''
+    alias makerun='cmake . && make && ./bin/app'
+  '';
 }

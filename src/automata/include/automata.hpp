@@ -111,7 +111,7 @@ public:
     void print_dfa();
     void construct_subsets();
 
-private:
+    // private:
     AutomatonClass automaton_class;
     std::shared_ptr<State> nfa_start_state;
     std::vector<std::shared_ptr<State>> nfa_states;
@@ -123,6 +123,7 @@ private:
     int read_start = 0;
     int read_pos = 0;
     int accept_pos = 0;
+    std::shared_ptr<State> accept_state = nullptr;
     std::string input;
     std::queue<std::shared_ptr<State>> subset_construction_queue;
 };

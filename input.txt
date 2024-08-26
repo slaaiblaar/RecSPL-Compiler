@@ -1,0 +1,5 @@
+main num V_numvar , 
+begin
+    V_numvar = -0.01 ; 
+    print V_numvar ; 
+end

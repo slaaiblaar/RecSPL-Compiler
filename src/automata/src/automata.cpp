@@ -334,6 +334,7 @@ void Automaton::construct_subsets()
                     if (nfa_state.second->is_final)
                     {
                         destination->is_final = true;
+                        destination->token_class = nfa_state.second->token_class;
                     }
                 }
                 // add to construction queue
@@ -433,6 +434,11 @@ void Automaton::nfa_to_dfa()
     subset_construction_queue.emplace(dfa_start_state);
     construct_subsets();
     std::cout << "Subset construction completed\n";
+    this->current_state = dfa_start_state;
+    this->accept_pos = -1;
+    this->read_pos = 0;
+    this->read_start = 0;
+    this->accept_state = nullptr;
 }
 std::shared_ptr<State> Automaton::find_dfa_state(std::unordered_map<int, std::shared_ptr<State>> nfa_states)
 {
@@ -534,9 +540,11 @@ void Automaton::set_input(std::string input)
 
 void Automaton::reset()
 {
-    current_state = nfa_start_state;
-    read_start = read_pos;
-    accept_pos = -1;
+    this->current_state = dfa_start_state;
+    this->accept_pos = -1;
+    this->read_pos = 0;
+    this->read_start = 0;
+    this->accept_state = nullptr;
 }
 // make a run from current start pos until an accept state is reached or invalid transition
 // if accept state reached then update accept pos and return true
@@ -633,8 +641,8 @@ void Automaton::print_nfa()
 
 void Automaton::print_dfa()
 {
-    std::cout << "NFA Rendering:\n```copy below\nfrom automata.fa.nfa import NFA\ndfAutomaton = ";
-    std::cout << "DFA(" << std::endl;
+    std::cout << "DFA Rendering:\n```copy below\nfrom automata.fa.nfa import NFA\ndfAutomaton = ";
+    std::cout << "NFA(" << std::endl;
 
     std::unordered_map<char, std::vector<int>> allTransitions;
     std::vector<int> finalStates;

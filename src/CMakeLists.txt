@@ -1,8 +1,10 @@
+add_subdirectory(lexer)
 add_subdirectory(automata)
 add_subdirectory(pugixml)
 add_subdirectory(app)
 
 install(TARGETS
+    lexer
     automata
     pugixml
     app
@@ -10,6 +12,14 @@ install(TARGETS
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     PUBLIC_HEADER DESTINATION include
+)
+
+install(
+    FILES
+        ${CMAKE_BINRAY_DIR}/lexer_export.hpp
+        ${CMAKE_SOURCE_DIR}/lexer.hpp
+    DESTINATION 
+        include/lexer
 )
 
 install(
