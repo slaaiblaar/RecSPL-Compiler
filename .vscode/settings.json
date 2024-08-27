@@ -53,6 +53,8 @@
     "stdexcept": "cpp",
     "streambuf": "cpp",
     "typeinfo": "cpp",
-    "queue": "cpp"
+    "queue": "cpp",
+    "bitset": "cpp",
+    "regex": "cpp"
   }
 }

@@ -14,6 +14,8 @@ int main()
         "-1"};
 
     Lexer luthor;
+    luthor.read_input("./imput.txt");
     luthor.read_input("./input.txt");
+    luthor.lex();
     return 0;
 }

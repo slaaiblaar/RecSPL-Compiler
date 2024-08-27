@@ -112,7 +112,6 @@ void RegexpNode::flattenNode()
 */
 RegexpTree::RegexpTree(std::string input, int subtreeDepth)
 {
-    std::cout << "Creating tree" << std::endl;
     this->input = input;
     if (input.length() == 0)
     {
@@ -244,7 +243,6 @@ void RegexpTree::concatenateTree(std::shared_ptr<RegexpTree> subTree)
     root = newRoot;
     subTree->root = nullptr;
     root->flattenNode();
-    printTree();
 }
 void RegexpTree::printTree()
 {

@@ -2,7 +2,8 @@ set(TARGET_NAME automata)
 set(TARGET_INCLUDE_FOLDER ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(TARGET_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/automata.cpp
                    ${CMAKE_CURRENT_SOURCE_DIR}/src/state.cpp
-                   ${CMAKE_CURRENT_SOURCE_DIR}/src/tree.cpp)
+                   ${CMAKE_CURRENT_SOURCE_DIR}/src/tree.cpp
+                   ${CMAKE_CURRENT_SOURCE_DIR}/src/token.cpp)
 
 
 if(BUILD_SHARED_LIBS)

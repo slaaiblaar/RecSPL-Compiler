@@ -44,11 +44,11 @@ public:
 class Token
 {
 public:
-    Token(std::string type, std::string value);
+    Token(std::string word, std::string token_class);
     int token_id;
     std::string token_class;
     std::string token_word;
-    static int tokenCounter;
+    static int token_counter;
 };
 
 enum AutomatonClass
@@ -89,7 +89,6 @@ public:
     Automaton();
     ~Automaton();
     std::shared_ptr<State> append_keyword(std::string input, std::string token_class);
-    std::string get_next_token();
     bool append_pattern(std::string input, std::string token_class);
     std::shared_ptr<State> tree_to_nfa(std::shared_ptr<RegexpNode> node, std::shared_ptr<State> nfa_start, std::shared_ptr<State> nfa_end);
     void nfa_to_dfa();
@@ -101,15 +100,15 @@ public:
     void set_final_state(std::shared_ptr<State> state);
     void set_final_state(int id);
     void set_input(std::string input);
-    void reset();
-    bool run(std::string input);
+    void reset_dfa();
+    bool run();
     std::shared_ptr<State> find_dfa_state(std::unordered_map<int, std::shared_ptr<State>> nfa_states);
-    void get_compound_destinations(std::shared_ptr<State> from);
     std::string get_substring();
     std::shared_ptr<RegexpTree> tree;
     void print_nfa();
     void print_dfa();
     void construct_subsets();
+    Token get_token();
 
     // private:
     AutomatonClass automaton_class;
