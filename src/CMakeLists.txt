@@ -1,9 +1,11 @@
+add_subdirectory(parser)
 add_subdirectory(lexer)
 add_subdirectory(automata)
 add_subdirectory(pugixml)
 add_subdirectory(app)
 
 install(TARGETS
+    parser
     lexer
     automata
     pugixml
@@ -20,6 +22,14 @@ install(
         ${CMAKE_SOURCE_DIR}/lexer.hpp
     DESTINATION 
         include/lexer
+)
+
+install(
+    FILES
+        ${CMAKE_BINRAY_DIR}/parser_export.hpp
+        ${CMAKE_SOURCE_DIR}/parser.hpp
+    DESTINATION 
+        include/parser
 )
 
 install(

@@ -3,6 +3,7 @@
 #include "pugixml.hpp"
 #include "automata.hpp"
 #include "lexer.hpp"
+#include "parser.hpp"
 #include <iostream>
 int main()
 {
@@ -17,5 +18,6 @@ int main()
     luthor.read_input("./imput.txt");
     luthor.read_input("./input.txt");
     luthor.lex();
+    Parser p;
     return 0;
 }
