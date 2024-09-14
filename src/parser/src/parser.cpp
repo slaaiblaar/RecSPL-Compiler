@@ -186,7 +186,6 @@ void Parser::generate_first_sets()
         } while ((non_terminal = non_terminal.next_sibling()) != pugi::xml_node());
     }
 
-    // Optional: Print out the FIRST sets for debugging
     std::cout << "FIRST Sets:\n";
     for (const auto &pair : this->first)
     {
