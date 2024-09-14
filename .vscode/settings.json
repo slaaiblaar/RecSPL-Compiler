@@ -1,5 +1,6 @@
 {
   "files.associations": {
+    "*.embeddedhtml": "html",
     "utility": "cpp",
     "unordered_map": "cpp",
     "array": "cpp",
@@ -55,6 +56,30 @@
     "typeinfo": "cpp",
     "queue": "cpp",
     "bitset": "cpp",
-    "regex": "cpp"
+    "regex": "cpp",
+    "charconv": "cpp",
+    "format": "cpp",
+    "ios": "cpp",
+    "list": "cpp",
+    "locale": "cpp",
+    "ranges": "cpp",
+    "set": "cpp",
+    "span": "cpp",
+    "stack": "cpp",
+    "xfacet": "cpp",
+    "xhash": "cpp",
+    "xiosbase": "cpp",
+    "xlocale": "cpp",
+    "xlocbuf": "cpp",
+    "xlocinfo": "cpp",
+    "xlocmes": "cpp",
+    "xlocmon": "cpp",
+    "xlocnum": "cpp",
+    "xloctime": "cpp",
+    "xmemory": "cpp",
+    "xstring": "cpp",
+    "xtr1common": "cpp",
+    "xtree": "cpp",
+    "xutility": "cpp"
   }
 }
