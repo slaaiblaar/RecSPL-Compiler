@@ -16,6 +16,7 @@ Parser::Parser()
     }
     this->get_nullable();
     this->generate_first_sets();
+    this->generate_follow_sets();
 }
 
 void Parser::get_nullable()
@@ -188,6 +189,123 @@ void Parser::generate_first_sets()
 
     std::cout << "FIRST Sets:\n";
     for (const auto &pair : this->first)
+    {
+        std::cout << pair.first << ": { ";
+        for (const std::string &s : pair.second)
+        {
+            std::cout << s << " ";
+        }
+        std::cout << "}\n";
+    }
+}
+
+
+void Parser::generate_follow_sets()
+{
+    std::cout << "Generating FOLLOW sets\n";
+    pugi::xml_node productions = this->cfg_doc.child("CFG").child("PRODUCTIONRULES");
+    pugi::xml_node non_terminal = productions.first_child();
+
+    // Initialize FOLLOW sets with empty sets
+    do
+    {
+        this->follow[non_terminal.name()] = std::set<std::string>();
+    } while ((non_terminal = non_terminal.next_sibling()) != pugi::xml_node());
+
+    // Add the end of input marker ($) to the FOLLOW set of the start symbol (assumed to be the first non-terminal)
+    std::string start_symbol = productions.first_child().name();
+    this->follow[start_symbol].insert("$");
+
+    bool changed = true;
+    while (changed)
+    {
+        non_terminal = productions.first_child();
+        changed = false;
+
+        // Iterate through all production rules
+        do
+        {
+            std::string lhs = non_terminal.name();
+            pugi::xpath_node_set non_terminal_rhs_set = non_terminal.select_nodes("production");
+
+            for (pugi::xpath_node_set::const_iterator rhs_it = non_terminal_rhs_set.begin(); rhs_it != non_terminal_rhs_set.end(); ++rhs_it)
+            {
+                pugi::xml_node rhs = (*rhs_it).node();
+                std::vector<std::string> symbols;
+
+                // Collect all symbols in this production
+                for (pugi::xml_node symbol = rhs.first_child(); symbol != pugi::xml_node(); symbol = symbol.next_sibling())
+                {
+                    symbols.push_back(symbol.name());
+                }
+
+                // Now process the symbols to populate FOLLOW sets
+                for (size_t i = 0; i < symbols.size(); ++i)
+                {
+                    std::string B = symbols[i];
+
+                    // Only process non-terminals
+                    if (!this->is_terminal(B))
+                    {
+                        // Case 2: A → αBβ (something comes after B)
+                        if (i + 1 < symbols.size())
+                        {
+                            std::string beta = symbols[i + 1];
+
+                            // Add FIRST(β) to FOLLOW(B), except EPSILON
+                            if (this->is_terminal(beta))
+                            {
+                                if (this->follow[B].insert(beta).second)
+                                {
+                                    changed = true;
+                                }
+                            }
+                            else
+                            {
+                                for (const std::string &first_symbol : this->first[beta])
+                                {
+                                    if (first_symbol != "EPSILON")
+                                    {
+                                        if (this->follow[B].insert(first_symbol).second)
+                                        {
+                                            changed = true;
+                                        }
+                                    }
+                                }
+
+                                // If β is nullable, add FOLLOW(A) to FOLLOW(B)
+                                if (this->nullable[beta])
+                                {
+                                    for (const std::string &follow_symbol : this->follow[lhs])
+                                    {
+                                        if (this->follow[B].insert(follow_symbol).second)
+                                        {
+                                            changed = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        else // Case 3: A → αB (B is at the end of the production)
+                        {
+                            // Add FOLLOW(A) to FOLLOW(B)
+                            for (const std::string &follow_symbol : this->follow[lhs])
+                            {
+                                if (this->follow[B].insert(follow_symbol).second)
+                                {
+                                    changed = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } while ((non_terminal = non_terminal.next_sibling()) != pugi::xml_node());
+    }
+
+    // Optional: Print out the FOLLOW sets for debugging
+    std::cout << "FOLLOW Sets:\n";
+    for (const auto &pair : this->follow)
     {
         std::cout << pair.first << ": { ";
         for (const std::string &s : pair.second)
