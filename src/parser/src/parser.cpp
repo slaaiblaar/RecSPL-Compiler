@@ -117,7 +117,7 @@ void Parser::generate_first_sets()
     pugi::xml_node productions = this->cfg_doc.child("CFG").child("PRODUCTIONRULES");
     pugi::xml_node non_terminal = productions.first_child();
 
-    // Initialize FIRST sets
+    // initialize FIRST sets
     do
     {
         this->first[non_terminal.name()] = std::set<std::string>();  // Using a set to avoid duplicates
@@ -130,19 +130,19 @@ void Parser::generate_first_sets()
         changed = false;
         do
         {
-            // Iterate through each production for the non-terminal
+            // iterate through each production for the non-terminal
             pugi::xpath_node_set non_terminal_rhs_set = non_terminal.select_nodes("production");
             for (pugi::xpath_node_set::const_iterator rhs_it = non_terminal_rhs_set.begin(); rhs_it != non_terminal_rhs_set.end(); ++rhs_it)
             {
                 pugi::xml_node rhs = (*rhs_it).node();
                 pugi::xml_node symbol = rhs.first_child();
 
-                // Iterate through symbols in RHS until a terminal or non-nullable non-terminal is found
+                // iterate through symbols in RHS until a terminal or non-nullable non-terminal is found
                 while (symbol != pugi::xml_node())
                 {
                     std::string symbol_name = symbol.name();
 
-                    // If the symbol is a terminal, add it to FIRST set
+                    // if the symbol is a terminal, add it to FIRST set
                     if (this->is_terminal(symbol_name))
                     {
                         if (this->first[non_terminal.name()].insert(symbol_name).second)  // If newly added
@@ -151,9 +151,9 @@ void Parser::generate_first_sets()
                         }
                         break;
                     }
-                    else  // It's a non-terminal
+                    else  // it's a non-terminal
                     {
-                        // Add all non-epsilon FIRST symbols of the non-terminal to the current non-terminal
+                        // add all non-epsilon FIRST symbols of the non-terminal to the current non-terminal
                         for (const std::string &first_symbol : this->first[symbol_name])
                         {
                             if (first_symbol != "EPSILON")
@@ -165,7 +165,7 @@ void Parser::generate_first_sets()
                             }
                         }
 
-                        // If the non-terminal is not nullable, stop the loop
+                        // if the non-terminal is not nullable, stop the loop
                         if (!this->nullable[symbol_name])
                         {
                             break;
@@ -175,7 +175,7 @@ void Parser::generate_first_sets()
                     symbol = symbol.next_sibling();
                 }
 
-                // If all symbols in RHS are nullable, add EPSILON to the FIRST set
+                // if all symbols in RHS are nullable, add EPSILON to the FIRST set
                 if (symbol == pugi::xml_node())
                 {
                     if (this->first[non_terminal.name()].insert("EPSILON").second)
@@ -187,16 +187,16 @@ void Parser::generate_first_sets()
         } while ((non_terminal = non_terminal.next_sibling()) != pugi::xml_node());
     }
 
-    std::cout << "FIRST Sets:\n";
-    for (const auto &pair : this->first)
-    {
-        std::cout << pair.first << ": { ";
-        for (const std::string &s : pair.second)
-        {
-            std::cout << s << " ";
-        }
-        std::cout << "}\n";
-    }
+    // std::cout << "FIRST Sets:\n";
+    // for (const auto &pair : this->first)
+    // {
+    //     std::cout << pair.first << ": { ";
+    //     for (const std::string &s : pair.second)
+    //     {
+    //         std::cout << s << " ";
+    //     }
+    //     std::cout << "}\n";
+    // }
 }
 
 
@@ -303,15 +303,14 @@ void Parser::generate_follow_sets()
         } while ((non_terminal = non_terminal.next_sibling()) != pugi::xml_node());
     }
 
-    // Optional: Print out the FOLLOW sets for debugging
-    std::cout << "FOLLOW Sets:\n";
-    for (const auto &pair : this->follow)
-    {
-        std::cout << pair.first << ": { ";
-        for (const std::string &s : pair.second)
-        {
-            std::cout << s << " ";
-        }
-        std::cout << "}\n";
-    }
+    // std::cout << "FOLLOW Sets:\n";
+    // for (const auto &pair : this->follow)
+    // {
+    //     std::cout << pair.first << ": { ";
+    //     for (const std::string &s : pair.second)
+    //     {
+    //         std::cout << s << " ";
+    //     }
+    //     std::cout << "}\n";
+    // }
 }
