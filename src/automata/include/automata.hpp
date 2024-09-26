@@ -5,6 +5,8 @@
 #include <unordered_map> // hashmap
 #include <string>
 #include <queue>
+#include "pugixml.hpp"
+
 // Regexp Tree Classes
 class RegexpNode : public std::enable_shared_from_this<RegexpNode>
 {
@@ -66,13 +68,14 @@ public:
     int id;
     std::unordered_map<int, std::shared_ptr<State>> nfa_equiv_states;
     // maps char to vector of states for NFA
-    std::unordered_map<char, std::vector<std::shared_ptr<State>>> transitions;
+    std::unordered_map<std::string, std::vector<std::shared_ptr<State>>> transitions;
     // differentiate between NFA states with one ID and DFA states with ID sets
     AutomatonClass state_class;
     bool is_final = false;
     bool freeing = false;
     std::string token_class;
     void add_transition(std::shared_ptr<State> to, char soombol);
+    void add_transition(std::shared_ptr<State> to, std::string soombol);
     bool can_transition(char soombol);
     void free();
 
@@ -109,6 +112,7 @@ public:
     void print_dfa();
     void construct_subsets();
     Token get_token();
+    void cfg_to_nfa(pugi::xml_node productions);
 
     // private:
     AutomatonClass automaton_class;
@@ -125,6 +129,7 @@ public:
     std::shared_ptr<State> accept_state = nullptr;
     std::string input;
     std::queue<std::shared_ptr<State>> subset_construction_queue;
+    bool was_cfg = false;
 };
 
 #endif

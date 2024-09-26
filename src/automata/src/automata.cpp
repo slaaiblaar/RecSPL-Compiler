@@ -2,6 +2,7 @@
 #include <iostream>
 #include <stack>
 #include <algorithm>
+#include <fstream>
 // #include <pair>
 Automaton::Automaton()
 {
@@ -254,7 +255,7 @@ void Automaton::construct_subsets()
         without worrying if there is already a transition for that state on that
         symbol
     */
-    std::unordered_map<char, std::unordered_map<int, std::shared_ptr<State>>> transitions;
+    std::unordered_map<std::string, std::unordered_map<int, std::shared_ptr<State>>> transitions;
     while (!subset_construction_queue.empty())
     {
         current_state = subset_construction_queue.front();
@@ -266,8 +267,8 @@ void Automaton::construct_subsets()
             // for each transition from the nfa state
             for (auto e_state_transition : nfa_equiv_state.second->transitions)
             {
-                char symbol = e_state_transition.first;
-                if (symbol == '\0')
+                std::string symbol = e_state_transition.first;
+                if (symbol[0] == '\0')
                 {
                     continue;
                 }
@@ -329,6 +330,22 @@ void Automaton::add_state(std::shared_ptr<State> state)
 
 void Automaton::nfa_to_dfa()
 {
+    // std::cout << "Epsilon transitions:\n";
+    // for (auto current_state : nfa_states)
+    // {
+    //     std::cout << "S" << current_state->id << ":\n";
+    //     std::cout << "\tstd::string({'\\0'}: ";
+    //     for (std::shared_ptr<State> next_hop : current_state->transitions[std::string({'\0'})])
+    //     {
+    //         std::cout << next_hop->id << ", ";
+    //     }
+    //     std::cout << "\n\t\"\\0\": ";
+    //     for (std::shared_ptr<State> next_hop : current_state->transitions["\0"])
+    //     {
+    //         std::cout << next_hop->id << ", ";
+    //     }
+    //     std::cout << std::endl;
+    // }
     // calculate epsilon closure of nfa states
     bool e_closure_expanded = true;
     while (e_closure_expanded)
@@ -340,7 +357,7 @@ void Automaton::nfa_to_dfa()
             for (std::pair<int, std::shared_ptr<State>> e_state : current_state->e_closure)
             {
                 // for each epsilon transition of the above state
-                for (std::shared_ptr<State> next_hop : e_state.second->transitions['\0'])
+                for (std::shared_ptr<State> next_hop : e_state.second->transitions[std::string({'\0'})])
                 {
                     if (current_state->e_closure.find(next_hop->id) == current_state->e_closure.end())
                     {
@@ -351,11 +368,27 @@ void Automaton::nfa_to_dfa()
             }
         }
     }
-
-    for (auto state : dfa_states)
-    {
-        state->free();
-    }
+    // std::cout << "E-closures\n";
+    // for (auto state : nfa_states)
+    // {
+    //     std::cout << state->id << ": ";
+    //     for (auto s : state->e_closure)
+    //     {
+    //         if (s.second->token_class.length() > 0)
+    //         {
+    //             std::cout << s.second->token_class << ", ";
+    //         }
+    //         else
+    //         {
+    //             std::cout << s.first << ", ";
+    //         }
+    //     }
+    //     std::cout << std::endl;
+    // }
+    // for (auto state : dfa_states)
+    // {
+    //     state->free();
+    // }
     // clear possible old nfa
     dfa_states.clear();
     dfa_final_states.clear();
@@ -368,7 +401,7 @@ void Automaton::nfa_to_dfa()
     }
     subset_construction_queue.push(dfa_start_state);
 
-    subset_construction_queue.emplace(dfa_start_state);
+    // subset_construction_queue.emplace(dfa_start_state);
     construct_subsets();
     this->current_state = dfa_start_state;
     this->accept_pos = -1;
@@ -508,7 +541,7 @@ bool Automaton::run()
         {
             return false;
         }
-        current_state = current_state->transitions[soombol][0];
+        current_state = current_state->transitions[std::string({soombol})][0];
         if (current_state->is_final)
         {
             accept_pos = read_pos;
@@ -527,6 +560,104 @@ Token Automaton::get_token()
     return lex_token;
 }
 
+void Automaton::cfg_to_nfa(pugi::xml_node productions)
+{
+    this->was_cfg = true;
+    // reset automaton
+    if (nfa_start_state.use_count() > 0)
+    {
+        nfa_start_state->free();
+    }
+    if (dfa_start_state.use_count() > 0)
+    {
+        dfa_start_state->free();
+    }
+    nfa_states.clear();
+    nfa_final_states.clear();
+    dfa_states.clear();
+    dfa_final_states.clear();
+
+    nfa_start_state = std::make_shared<State>(AutomatonClass::NFA);
+    nfa_start_state->is_final = false;
+    nfa_start_state->e_closure[nfa_start_state->id] = nfa_start_state;
+    add_state(nfa_start_state);
+
+    std::unordered_map<std::string, std::shared_ptr<State>> productions_map;
+    pugi::xml_node lhs = productions.first_child();
+    do
+    {
+        std::shared_ptr<State> curr_state = std::make_shared<State>(AutomatonClass::NFA);
+        curr_state->e_closure[curr_state->id] = curr_state;
+        // token_class is first 4 letters of name
+        std::string tokenclass = lhs.name();
+        curr_state->token_class = tokenclass.substr(0, 4);
+        curr_state->is_final = false;
+        productions_map[lhs.name()] = curr_state;
+        std::cout << "LHS: " << lhs.name() << std::endl;
+        this->nfa_start_state->add_transition(curr_state, '\0');
+        this->nfa_states.push_back(curr_state);
+    } while ((lhs = lhs.next_sibling()) != pugi::xml_node());
+    lhs = productions.first_child();
+    do
+    {
+        std::shared_ptr<State> curr_state;
+        pugi::xpath_node_set rhs_nodes = lhs.select_nodes("production");
+        std::shared_ptr<State> prev_state;
+        for (pugi::xpath_node_set::const_iterator rhs_it = rhs_nodes.begin(); rhs_it != rhs_nodes.end(); ++rhs_it)
+        {
+            curr_state = productions_map[lhs.name()];
+            pugi::xml_node node = (*rhs_it).node().first_child();
+            do
+            {
+                prev_state = curr_state;
+                curr_state = std::make_shared<State>(AutomatonClass::NFA);
+                curr_state->e_closure[curr_state->id] = curr_state;
+                curr_state->is_final = false;
+                std::string symbol_str = node.name();
+                if (node.attribute("terminal").as_bool())
+                {
+                    if (symbol_str == "KEYWORD")
+                    {
+                        symbol_str = node.child("value").child_value();
+                    }
+                    else if (symbol_str == "EPSILON")
+                    {
+                        symbol_str = "\0";
+                    }
+                    else
+                    {
+                        symbol_str = node.first_child().child_value();
+
+                        switch (symbol_str[0])
+                        {
+                        case '"':
+                            symbol_str = "T_Token";
+                            break;
+                        case 'V':
+                            symbol_str = "V_Token";
+                            break;
+                        case 'F':
+                            symbol_str = "F_Token";
+                            break;
+                        default:
+                            symbol_str = "N_Token";
+                        }
+                    }
+                }
+                else
+                {
+                    prev_state->add_transition(productions_map[node.name()], "\0");
+                }
+                prev_state->add_transition(curr_state, symbol_str);
+                this->nfa_states.push_back(curr_state);
+            } while ((node = node.next_sibling()) != pugi::xml_node());
+            curr_state->is_final = true;
+            this->nfa_final_states.push_back(current_state);
+        }
+
+    } while ((lhs = lhs.next_sibling()) != pugi::xml_node());
+}
+
 std::string Automaton::get_substring()
 {
     if (accept_pos == -1)
@@ -539,111 +670,150 @@ std::string Automaton::get_substring()
 // MARK: print functions
 void Automaton::print_nfa()
 {
-    std::cout << "NFA Rendering:\n```copy below\nfrom automata.fa.nfa import NFA\nnfAutomaton = ";
+    std::ofstream python_generate_nfa("render-nfa.py");
+    python_generate_nfa << "from automata.fa.nfa import NFA\nnfAutomaton = ";
     if (automaton_class == AutomatonClass::DFA)
     {
-        std::cout << "DFA(" << std::endl;
+        python_generate_nfa << "DFA(" << std::endl;
     }
     else
     {
-        std::cout << "NFA(" << std::endl;
+        python_generate_nfa << "NFA(" << std::endl;
     }
-    std::unordered_map<char, std::vector<int>> allTransitions;
+    std::unordered_map<std::string, std::vector<int>> allTransitions;
     std::vector<int> finalStates;
-    std::cout << "    states={ ";
+    python_generate_nfa << "    states={ ";
     for (auto state : nfa_states)
     {
-        std::cout << "\"S" << state->id << "\", ";
+        if (was_cfg && state->token_class.length() > 0)
+        {
+            python_generate_nfa << "\"" << state->token_class << "\", ";
+        }
+        else
+        {
+            python_generate_nfa << "\"S" << state->id << "\", ";
+        }
     }
-    std::cout << "},\n";
-    std::cout << "    transitions={\n";
+    python_generate_nfa << "},\n";
+    python_generate_nfa << "    transitions={\n";
     for (auto state : nfa_states)
     {
+        // if (state->id != 1621)
+        // {
+        //     std::cout << "\n\tState " << state->id << std::endl;
+        //     std::cout << "\ttransitions: " << state->transitions.size() << std::endl;
+        // }
         if (state->is_final)
         {
+            // if (state->id != 1621)
+            // {
+            //     std::cout << "\tIs final" << std::endl;
+            // }
             finalStates.push_back(state->id);
             continue;
         }
-        std::cout << "        \"S" << state->id << "\": { ";
+        // if (state->id != 1621)
+        // {
+        //     std::cout << "\tIs not final" << std::endl;
+        // }
+        // std::cout << "        \"S" << state->id << "\": { ";
+        if (state->token_class.length() > 0)
+        {
+            python_generate_nfa << "\"" << state->token_class << "\": { ";
+        }
+        else
+        {
+            python_generate_nfa << "\"S" << state->id << "\": { ";
+        }
         for (auto transition : state->transitions)
         {
-            if (transition.first != '\0')
+            if (transition.first[0] != '\0' && transition.first != "")
             {
                 allTransitions[transition.first].push_back(state->id);
             }
-            std::cout << "\"" << transition.first << "\": { ";
+            // if-else if-else
+            python_generate_nfa << "\"" << (transition.first[0] == '\0' ? "" : (transition.first[0] == '"' ? "\\\"" : transition.first)) << "\": { ";
             for (auto to_state : transition.second)
             {
-                std::cout << "\"S" << to_state->id << "\", ";
+                // python_generate_nfa << "\"S" << to_state->id << "\", ";
+                if (was_cfg && to_state->token_class.length() > 0)
+                {
+                    python_generate_nfa << "\"" << to_state->token_class << "\", ";
+                }
+                else
+                {
+                    python_generate_nfa << "\"S" << to_state->id << "\", ";
+                }
             }
-            std::cout << "}, ";
+            python_generate_nfa << "}, ";
         }
-        std::cout << "},\n";
+        python_generate_nfa << "},\n";
     }
-    std::cout << "    },\n";
-    std::cout << "    initial_state=\"S" << nfa_start_state->id << "\",\n";
-    std::cout << "    final_states={ ";
+    python_generate_nfa << "    },\n";
+    python_generate_nfa << "    initial_state=\"S" << nfa_start_state->id << "\",\n";
+    python_generate_nfa << "    final_states={ ";
     for (auto state : finalStates)
     {
-        std::cout << "\"S" << state << "\", ";
+        python_generate_nfa << "\"S" << state << "\", ";
     }
-    std::cout << "},\n";
-    std::cout << "    input_symbols={ ";
+    python_generate_nfa << "},\n";
+    python_generate_nfa << "    input_symbols={ ";
     for (auto transition : allTransitions)
     {
-        std::cout << "\"" << transition.first << "\", ";
+        python_generate_nfa << "\"" << (transition.first[0] == '"' ? "\\\"" : transition.first) << "\", ";
     }
-    std::cout << "}\n)\nnfAutomaton.show_diagram(path=\"graph.png\")\n```\n";
+    python_generate_nfa << "}\n)\nnfAutomaton.show_diagram(path=\"nfa_graph.png\")\n";
 }
 
 void Automaton::print_dfa()
 {
-    std::cout << "DFA Rendering:\n```copy below\nfrom automata.fa.nfa import NFA\ndfAutomaton = ";
-    std::cout << "NFA(" << std::endl;
+    std::ofstream python_generate_dfa("render-dfa.py");
+    python_generate_dfa << "from automata.fa.nfa import NFA\ndfAutomaton = ";
+    python_generate_dfa << "NFA(" << std::endl;
 
-    std::unordered_map<char, std::vector<int>> allTransitions;
+    std::unordered_map<std::string, std::vector<int>> allTransitions;
     std::vector<int> finalStates;
-    std::cout << "    states={ ";
+    python_generate_dfa << "    states={ ";
     for (auto state : dfa_states)
     {
-        std::cout << "\"S" << state->id << "\", ";
+        python_generate_dfa << "\"S" << state->id << "\", ";
     }
-    std::cout << "},\n";
-    std::cout << "    transitions={\n";
+    python_generate_dfa << "},\n";
+    python_generate_dfa << "    transitions={\n";
     for (auto state : dfa_states)
     {
         if (state->is_final)
         {
             finalStates.push_back(state->id);
         }
-        std::cout << "        \"S" << state->id << "\": { ";
+        python_generate_dfa << "        \"S" << state->id << "\": { ";
         for (auto transition : state->transitions)
         {
-            if (transition.first != '\0')
+            if (transition.first[0] != '\0' && transition.first != "")
             {
                 allTransitions[transition.first].push_back(state->id);
             }
-            std::cout << "\"" << transition.first << "\": { ";
+            python_generate_dfa << "\"" << (transition.first[0] == '"' ? "\\\"" : transition.first) << "\": { ";
             for (auto to_state : transition.second)
             {
-                std::cout << "\"S" << to_state->id << "\", ";
+                python_generate_dfa << "\"S" << to_state->id << "\", ";
             }
-            std::cout << "}, ";
+            python_generate_dfa << "}, ";
         }
-        std::cout << "},\n";
+        python_generate_dfa << "},\n";
     }
-    std::cout << "    },\n";
-    std::cout << "    initial_state=\"S" << dfa_start_state->id << "\",\n";
-    std::cout << "    final_states={ ";
+    python_generate_dfa << "    },\n";
+    python_generate_dfa << "    initial_state=\"S" << dfa_start_state->id << "\",\n";
+    python_generate_dfa << "    final_states={ ";
     for (auto state : finalStates)
     {
-        std::cout << "\"S" << state << "\", ";
+        python_generate_dfa << "\"S" << state << "\", ";
     }
-    std::cout << "},\n";
-    std::cout << "    input_symbols={ ";
+    python_generate_dfa << "},\n";
+    python_generate_dfa << "    input_symbols={ ";
     for (auto transition : allTransitions)
     {
-        std::cout << "\"" << transition.first << "\", ";
+        python_generate_dfa << "\"" << (transition.first[0] == '"' ? "\\\"" : transition.first) << "\", ";
     }
-    std::cout << "}\n)\ndfAutomaton.show_diagram(path=\"graph.png\")\n```\n";
+    python_generate_dfa << "}\n)\ndfAutomaton.show_diagram(path=\"dfa_graph.png\")\n";
 }

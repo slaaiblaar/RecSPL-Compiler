@@ -65,12 +65,14 @@ void State::free()
 }
 void State::add_transition(std::shared_ptr<State> to, char soombol)
 {
-    // std::cout << "+ " << id << " -(" << soombol << ")-> ";
+    transitions[std::string({soombol})].push_back(to);
+}
+void State::add_transition(std::shared_ptr<State> to, std::string soombol)
+{
     transitions[soombol].push_back(to);
-    // std::cout << transitions[soombol][transitions.size() - 1]->id << std::endl;
 }
 
 bool State::can_transition(char soombol)
 {
-    return transitions.find(soombol) != transitions.end();
+    return transitions.find(std::string({soombol})) != transitions.end();
 }

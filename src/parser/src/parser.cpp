@@ -17,6 +17,7 @@ Parser::Parser()
     this->get_nullable();
     this->generate_first_sets();
     this->generate_follow_sets();
+    this->construct_parse_table();
 }
 
 void Parser::get_nullable()
@@ -152,6 +153,25 @@ void Parser::generate_first_sets()
                         {
                             symbol_name = symbol.child("value").child_value();
                         }
+                        else if (symbol_name != "EPSILON")
+                        {
+                            symbol_name = symbol.first_child().child_value();
+
+                            switch (symbol_name[0])
+                            {
+                            case '"':
+                                symbol_name = "T_Token";
+                                break;
+                            case 'V':
+                                symbol_name = "V_Token";
+                                break;
+                            case 'F':
+                                symbol_name = "F_Token";
+                                break;
+                            case '0':
+                                symbol_name = "N_Token";
+                            }
+                        }
                         if (this->first[non_terminal.name()].insert(symbol_name).second) // If newly added
                         {
                             changed = true;
@@ -268,6 +288,25 @@ void Parser::generate_follow_sets()
                             {
                                 symbol_str = beta.child("value").child_value();
                             }
+                            else if (symbol_str != "EPSILON")
+                            {
+                                symbol_str = beta.first_child().child_value();
+
+                                switch (symbol_str[0])
+                                {
+                                case '"':
+                                    symbol_str = "T_Token";
+                                    break;
+                                case 'V':
+                                    symbol_str = "V_Token";
+                                    break;
+                                case 'F':
+                                    symbol_str = "F_Token";
+                                    break;
+                                default:
+                                    symbol_str = "N_Token";
+                                }
+                            }
                             if (this->follow[B.name()].insert(symbol_str).second)
                             {
                                 changed = true;
@@ -327,4 +366,15 @@ void Parser::generate_follow_sets()
         }
         std::cout << "}\n";
     }
+}
+
+void Parser::construct_parse_table()
+{
+    // std::unordered_map<int, std::unordered_map<std::string, std::pair<std::string, int>>> parse_table;
+    Automaton production_automaton;
+    pugi::xml_node productions = this->cfg_doc.child("CFG").child("PRODUCTIONRULES");
+    production_automaton.cfg_to_nfa(productions);
+    production_automaton.print_nfa();
+    production_automaton.nfa_to_dfa();
+    production_automaton.print_dfa();
 }

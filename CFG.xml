@@ -107,6 +107,13 @@
             <production>
                 <BRANCH terminal="false" />
             </production>
+
+            <production>
+                <KEYWORD terminal="true">
+                    <value>return</value>
+                </KEYWORD>
+                <ATOMIC terminal="false" />
+            </production>
         </COMMAND>
 
         <ATOMIC>
@@ -492,6 +499,7 @@
             <value class="keyword">skip</value>
             <value class="keyword">halt</value>
             <value class="keyword">print</value>
+            <value class="keyword">return</value>
 
             <value class="keyword">&lt;input</value>
             <value class="keyword">=</value>

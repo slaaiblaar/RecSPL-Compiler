@@ -11,6 +11,7 @@ public:
     void get_nullable();
     void generate_first_sets();
     void generate_follow_sets();
+    void construct_parse_table();
     // void read_token_stream(std::string input);
 
 private:
@@ -20,7 +21,7 @@ private:
 
     // pugi::xml_parse_result token_stream;
     std::unordered_map<std::string, bool> nullable;
-    
-    bool is_terminal(const std::string& symbol); // helper function
+
+    bool is_terminal(const std::string &symbol); // helper function
 };
 #endif

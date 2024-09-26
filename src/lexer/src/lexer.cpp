@@ -32,7 +32,9 @@ Lexer::Lexer()
         dfa.append_keyword(keywords_terminal.child_value(), keywords_terminal.attribute("class").value());
     } while ((keywords_terminal = keywords_terminal.next_sibling()) != pugi::xml_node());
     // prints NFA state to terminal in a format that's easy to manually insert into render-automata.py
+    // dfa.print_nfa();
     dfa.nfa_to_dfa();
+    // dfa.print_dfa();
     std::string dfa_test_strings[] = {
         "main", "num", "text", "begin", "end", "skip", "halt", "print",
         "<input", "=", "(", ",", ")", "if", "then", "else", "not", "sqrt", "or",

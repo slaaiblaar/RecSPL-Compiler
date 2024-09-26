@@ -63,6 +63,21 @@
 	<TOK>
 		<ID>13</ID>
 		<CLASS>keyword</CLASS>
+		<WORD>print</WORD>
+	</TOK>
+	<TOK>
+		<ID>14</ID>
+		<CLASS>T</CLASS>
+		<WORD>"Hello"</WORD>
+	</TOK>
+	<TOK>
+		<ID>15</ID>
+		<CLASS>keyword</CLASS>
+		<WORD>;</WORD>
+	</TOK>
+	<TOK>
+		<ID>16</ID>
+		<CLASS>keyword</CLASS>
 		<WORD>end</WORD>
 	</TOK>
 </TOKENSTREAM>

@@ -27,6 +27,8 @@ target_link_options(${TARGET_NAME} PRIVATE ${linker_flags})
 target_include_directories(${TARGET_NAME}
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/exports>
+    ${CMAKE_CURRENT_SOURCE_DIR}/../pugixml/include
   PRIVATE 
     ${TARGET_INCLUDE_FOLDER}
 )
+target_link_libraries(${TARGET_NAME} PUBLIC pugixml)
