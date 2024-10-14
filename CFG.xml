@@ -1,7 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CFG>
     <PRODUCTIONRULES>
+        <PROGPRIME>
+            <!-- 0th Rule S' ::= S $ -->
+            <production>
+                <PROG terminal="false"/>
+                <KEYWORD terminal="true">
+                    <value>$</value>
+                </KEYWORD>
+            </production>
+        </PROGPRIME>
         <PROG>
+            <!-- PROG ::= main GLOBVARS ALGO FUNCTIONS -->
             <production>
                 <KEYWORD terminal="true">
                     <value>main</value>
@@ -10,14 +20,41 @@
                 <ALGO terminal="false" /> 
                 <FUNCTIONS terminal="false" />
             </production>
+            <!-- PROG ::= main ALGO FUNCTIONS                   # NEW RULE-->
+            <production>
+                <KEYWORD terminal="true">
+                    <value>main</value>
+                </KEYWORD> 
+                <ALGO terminal="false" /> 
+                <FUNCTIONS terminal="false" />
+            </production>
+            <!-- PROG ::= main GLOBVARS ALGO                    # NEW RULE-->
+            <production>
+                <KEYWORD terminal="true">
+                    <value>main</value>
+                </KEYWORD> 
+                <GLOBVARS terminal="false" /> 
+                <ALGO terminal="false" /> 
+            </production>
+            <!-- PROG ::= main ALGO                             # NEW RULE-->
+            <production>
+                <KEYWORD terminal="true">
+                    <value>main</value>
+                </KEYWORD> 
+                <ALGO terminal="false" /> 
+            </production>
         </PROG>
 
         <GLOBVARS>
+            <!-- GLOBVARS ::= VTYP VNAME ,                      # NEW RULE-->
             <production>
-                <EPSILON terminal="true">
-                </EPSILON>
+                <VTYP terminal="false" /> 
+                <VNAME terminal="false" /> 
+                <KEYWORD terminal="true">
+                    <value>,</value>
+                </KEYWORD>
             </production>
-
+            <!-- GLOBVARS ::= VTYP VNAME , GLOBVARS -->
             <production>
                 <VTYP terminal="false" /> 
                 <VNAME terminal="false" /> 
@@ -29,12 +66,13 @@
         </GLOBVARS>
 
         <VTYP>
+            <!-- VTYP ::= num -->
             <production>
                 <KEYWORD terminal="true">
                     <value>num</value>
                 </KEYWORD>
             </production>
-
+            <!-- VTYP ::= void -->
             <production>
                 <KEYWORD terminal="true">
                     <value>text</value>
@@ -43,6 +81,7 @@
         </VTYP>
 
         <VNAME>
+            <!-- VNAME ::= ID -->
             <production>
                 <ID terminal="true">
                     <pattern>V_[a-z][a-z0-9]*</pattern>
@@ -51,6 +90,7 @@
         </VNAME>
 
         <ALGO>
+            <!--ALGO ::= begin INSTRUC end -->
             <production>
                 <KEYWORD terminal="true">
                     <value>begin</value>
@@ -60,13 +100,26 @@
                     <value>end</value>
                 </KEYWORD>
             </production>
+            <!--ALGO ::= begin end                              # NEW RULE-->
+            <production>
+                <KEYWORD terminal="true">
+                    <value>begin</value>
+                </KEYWORD>
+                <KEYWORD terminal="true">
+                    <value>end</value>
+                </KEYWORD>
+            </production>
         </ALGO>
 
         <INSTRUC>
+            <!--ALGO ::= COMMAND ;                              # NEW RULE-->
             <production>
-                <EPSILON terminal="true"></EPSILON>
+                <COMMAND terminal="false" />
+                <KEYWORD terminal="true">
+                    <value>;</value>
+                </KEYWORD>
             </production>
-
+            <!--ALGO ::= COMMAND ; INSTRUC -->
             <production>
                 <COMMAND terminal="false" />
                 <KEYWORD terminal="true">
@@ -77,88 +130,30 @@
         </INSTRUC>
 
         <COMMAND>
+            <!-- COMMAND ::= skip -->
             <production>
                 <KEYWORD terminal="true">
                     <value>skip</value>
                 </KEYWORD>
             </production>
-
+            <!-- COMMAND ::= halt -->
             <production>
                 <KEYWORD terminal="true">
                     <value>halt</value>
                 </KEYWORD>
             </production>
-
+            <!-- COMMAND ::= print -->
             <production>
                 <KEYWORD terminal="true">
                     <value>print</value>
                 </KEYWORD>
                 <ATOMIC terminal="false" />
             </production>
-
+            <!-- COMMAND ::= ASSIGN -->
             <production>
                 <ASSIGN terminal="false" />
             </production>
-
-            <production>
-                <CALL terminal="false" />
-            </production>
-
-            <production>
-                <BRANCH terminal="false" />
-            </production>
-
-            <production>
-                <KEYWORD terminal="true">
-                    <value>return</value>
-                </KEYWORD>
-                <ATOMIC terminal="false" />
-            </production>
-        </COMMAND>
-
-        <ATOMIC>
-            <production>
-                <VNAME terminal="false" />
-            </production>
-
-            <production>
-                <CONST terminal="false" />
-            </production>
-        </ATOMIC>
-
-        <CONST>
-            <!-- TODO: check of expressions correct, test to see if works -->
-            <production>
-                <LITERAL terminal="true">
-                    <pattern>0|0.([0-9])*[1-9]|-0.([0-9])*[1-9]|[1-9]([0-9])*|-[1-9]([0-9])*|[1-9]([0-9])*.([0-9])*[1-9]|-[1-9]([0-9])*.([0-9])*[1-9]</pattern>
-                </LITERAL>
-            </production>
-
-            <production>
-                <LITERAL terminal="true">
-                    <pattern>"[A-Z][a-z][a-z][a-z][a-z][a-z][a-z][a-z]"|"[A-Z][a-z][a-z][a-z][a-z][a-z][a-z]"|"[A-Z][a-z][a-z][a-z][a-z][a-z]"|"[A-Z][a-z][a-z][a-z][a-z]"|"[A-Z][a-z][a-z][a-z]"|"[A-Z][a-z][a-z]"|"[A-Z][a-z]"|"[A-Z]"</pattern>
-                </LITERAL>
-            </production>
-        </CONST>
-
-        <ASSIGN>
-            <production>
-                <VNAME terminal="false" />
-                <KEYWORD terminal="true">
-                    <value>&lt;input</value>
-                </KEYWORD>
-            </production>
-
-            <production>
-                <VNAME terminal="false" />
-                <KEYWORD terminal="true">
-                    <value>=</value>
-                </KEYWORD>
-                <TERM terminal="false" />
-            </production>
-        </ASSIGN>
-
-        <CALL>
+            <!-- COMMAND ::= FNAME( ATOMIC , ATOMIC , ATOMIC )  # NEW RULE-->
             <production>
                 <FNAME terminal="false" />
                 <KEYWORD terminal="true">
@@ -177,9 +172,92 @@
                     <value>)</value>
                 </KEYWORD>
             </production>
-        </CALL>
+            <!-- COMMAND ::= BRANCH -->
+            <production>
+                <BRANCH terminal="false" />
+            </production>
+            <!-- COMMAND ::= return ATOMIC -->
+            <production>
+                <KEYWORD terminal="true">
+                    <value>return</value>
+                </KEYWORD>
+                <ATOMIC terminal="false" />
+            </production>
+        </COMMAND>
+
+        <ATOMIC>
+            <!-- ATOMIC ::= VNAME -->
+            <production>
+                <VNAME terminal="false" />
+            </production>
+            <!-- ATOMIC ::= CONST -->
+            <production>
+                <CONST terminal="false" />
+            </production>
+        </ATOMIC>
+
+        <CONST>
+            <!-- TODO: check of expressions correct, test to see if works -->
+            <!-- CONST ::= LITERAL -->
+            <production>
+                <LITERAL terminal="true">
+                    <!-- <pattern>0|0.([0-9])*[1-9]|-0.([0-9])*[1-9]|[1-9]([0-9])*|-[1-9]([0-9])*|[1-9]([0-9])*.([0-9])*[1-9]|-[1-9]([0-9])*.([0-9])*[1-9]</pattern> -->
+                    <pattern>0|0.([0-9])*[1-9]</pattern>
+                </LITERAL>
+            </production>
+            <!-- CONST ::= LITERAL -->
+            <production>
+                <LITERAL terminal="true">
+                    <!-- <pattern>"[A-Z][a-z][a-z][a-z][a-z][a-z][a-z][a-z]"|"[A-Z][a-z][a-z][a-z][a-z][a-z][a-z]"|"[A-Z][a-z][a-z][a-z][a-z][a-z]"|"[A-Z][a-z][a-z][a-z][a-z]"|"[A-Z][a-z][a-z][a-z]"|"[A-Z][a-z][a-z]"|"[A-Z][a-z]"|"[A-Z]"</pattern> -->
+                    <pattern>"[A-Z]"</pattern>
+                </LITERAL>
+            </production>
+        </CONST>
+
+        <ASSIGN>
+            <!-- ASSIGN ::= VNAME < input -->
+            <production>
+                <VNAME terminal="false" />
+                <KEYWORD terminal="true">
+                    <value>&lt;input</value>
+                </KEYWORD>
+            </production>
+            <!-- ASSIGN ::= VNAME = TERM -->
+            <production>
+                <VNAME terminal="false" />
+                <KEYWORD terminal="true">
+                    <value>=</value>
+                </KEYWORD>
+                <TERM terminal="false" />
+            </production>
+            <!-- ASSIGN ::= VNAME = FNAME( ATOMIC , ATOMIC , ATOMIC ) # NEW RULE-->
+            <production>
+                <VNAME terminal="false" />
+                <KEYWORD terminal="true">
+                    <value>=</value>
+                </KEYWORD>
+                <FNAME terminal="false" />
+                <KEYWORD terminal="true">
+                    <value>(</value>
+                </KEYWORD>
+                <ATOMIC terminal="false" />
+                <KEYWORD terminal="true">
+                    <value>,</value>
+                </KEYWORD>
+                <ATOMIC terminal="false" />
+                <KEYWORD terminal="true">
+                    <value>,</value>
+                </KEYWORD>
+                <ATOMIC terminal="false" />
+                <KEYWORD terminal="true">
+                    <value>)</value>
+                </KEYWORD>
+            </production>
+        </ASSIGN>
+
 
         <BRANCH>
+            <!-- BRANCH ::= if COND then ALGO else ALGO -->
             <production>
                 <KEYWORD terminal="true">
                     <value>if</value>
@@ -197,20 +275,18 @@
         </BRANCH>
 
         <TERM>
+            <!-- TERM ::= ATOMIC -->
             <production>
                 <ATOMIC terminal="false" />
             </production>
-
-            <production>
-                <CALL terminal="false" />
-            </production>
-
+            <!-- TERM ::= OP -->
             <production>
                 <OP terminal="false" />
             </production>
         </TERM>
 
         <OP>
+            <!-- OP ::= UNOP ( ARG ) -->
             <production>
                 <UNOP terminal="false" />
                 <KEYWORD terminal="true">
@@ -221,7 +297,7 @@
                     <value>)</value>
                 </KEYWORD>
             </production>
-            
+            <!-- OP ::= BINOP ( ARG , ARG ) -->
             <production>
                 <BINOP terminal="false" />
                 <KEYWORD terminal="true">
@@ -239,26 +315,25 @@
         </OP>
 
         <ARG>
+            <!-- ARG ::= TERM                                   # NEW RULE-->
             <production>
-                <ATOMIC terminal="false" />
-            </production>
-
-            <production>
-                <OP terminal="false" />
+                <TERM terminal="false" />
             </production>
         </ARG>
 
         <COND>
+            <!-- COND ::= SIMPLE -->
             <production>
                 <SIMPLE terminal="false" />
             </production>
-
+            <!-- COND ::= COMPOSIT -->
             <production>
                 <COMPOSIT terminal="false" />
             </production>
         </COND>
 
         <SIMPLE>
+            <!-- SIMPLE ::= BINOP ( ATOMIC , ATOMIC ) -->
             <production>
                 <BINOP terminal="false" />
                 <KEYWORD terminal="true">
@@ -276,6 +351,7 @@
         </SIMPLE>
 
         <COMPOSIT>
+            <!-- COMPOSITE ::= BINOP ( SIMPLE , SIMPLE ) -->
             <production>
                 <BINOP terminal="false" />
                 <KEYWORD terminal="true">
@@ -290,7 +366,7 @@
                     <value>)</value>
                 </KEYWORD>
             </production>
-
+            <!-- COMPOSITE ::= UNOP ( SIMPLE ) -->
             <production>
                 <UNOP terminal="false" />
                 <KEYWORD terminal="true">
@@ -304,12 +380,13 @@
         </COMPOSIT>
 
         <UNOP>
+            <!-- UNOP ::= not -->
             <production>
                 <KEYWORD terminal="true">
                     <value>not</value>
                 </KEYWORD>
             </production>
-
+            <!-- UNOP ::= sqrt -->
             <production>
                 <KEYWORD terminal="true">
                     <value>sqrt</value>
@@ -318,55 +395,58 @@
         </UNOP>
 
         <BINOP>
+            <!-- BINOP ::= add -->
             <production>
                 <KEYWORD terminal="true">
                     <value>add</value>
                 </KEYWORD>
             </production>
-
+            <!-- BINOP ::= sub -->
             <production>
                 <KEYWORD terminal="true">
                     <value>sub</value>
                 </KEYWORD>
             </production>
-
+            <!-- BINOP ::= mul -->
             <production>
                 <KEYWORD terminal="true">
                     <value>mul</value>
                 </KEYWORD>
             </production>
-
+            <!-- BINOP ::= div -->
             <production>
                 <KEYWORD terminal="true">
                     <value>div</value>
                 </KEYWORD>
             </production>
-
+            <!-- BINOP ::= and -->
             <production>
                 <KEYWORD terminal="true">
                     <value>and</value>
                 </KEYWORD>
             </production>
-
+            <!-- BINOP ::= or -->
             <production>
                 <KEYWORD terminal="true">
                     <value>or</value>
                 </KEYWORD>
             </production>
-
+            <!-- BINOP ::= eq -->
             <production>
                 <KEYWORD terminal="true">
                     <value>eq</value>
                 </KEYWORD>
             </production>
-
+            <!-- BINOP ::= grt -->
             <production>
                 <KEYWORD terminal="true">
                     <value>grt</value>
                 </KEYWORD>
             </production>
         </BINOP>
+
         <FNAME>
+            <!-- FNAME ::= ID -->
             <production>
                 <ID terminal="true">
                     <pattern>F_[a-z][a-z0-9]*</pattern>
@@ -375,11 +455,11 @@
         </FNAME>
 
         <FUNCTIONS>
+            <!-- FUNCTIONS ::= DECL                             # NEW RULE-->
             <production>
-                <EPSILON terminal="true">
-                </EPSILON>
+                <DECL terminal="false" />
             </production>
-
+            <!-- FUNCTIONS ::= DECL FUNCTIONS -->
             <production>
                 <DECL terminal="false" />
                 <FUNCTIONS terminal="false" />
@@ -387,6 +467,7 @@
         </FUNCTIONS>
 
         <DECL>
+            <!-- DECL ::= HEADER BODY -->
             <production>
                 <HEADER terminal="false" />
                 <BODY terminal="false" />
@@ -394,8 +475,33 @@
         </DECL>
 
         <HEADER>
+            <!-- HEADER ::= void FNAME( VNAME , VNAME , VNAME ) # NEW RULE-->
             <production>
-                <FTYP terminal="false" />
+                <KEYWORD terminal="true">
+                    <value>void</value>
+                </KEYWORD>
+                <FNAME terminal="false" />
+                <KEYWORD terminal="true">
+                    <value>(</value>
+                </KEYWORD>
+                <VNAME terminal="false" />
+                <KEYWORD terminal="true">
+                    <value>,</value>
+                </KEYWORD>
+                <VNAME terminal="false" />
+                <KEYWORD terminal="true">
+                    <value>,</value>
+                </KEYWORD>
+                <VNAME terminal="false" />
+                <KEYWORD terminal="true">
+                    <value>)</value>
+                </KEYWORD>
+            </production>
+            <!-- HEADER ::= num FNAME( VNAME , VNAME , VNAME )  # NEW RULE-->
+            <production>
+                <KEYWORD terminal="true">
+                    <value>num</value>
+                </KEYWORD>
                 <FNAME terminal="false" />
                 <KEYWORD terminal="true">
                     <value>(</value>
@@ -415,21 +521,8 @@
             </production>
         </HEADER>
 
-        <FTYP>
-            <production>
-                <KEYWORD terminal="true">
-                    <value>num</value>
-                </KEYWORD>
-            </production>
-
-            <production>
-                <KEYWORD terminal="true">
-                    <value>void</value>
-                </KEYWORD>
-            </production>
-        </FTYP>
-
         <BODY>
+            <!-- BODY ::= PROLOG LOCVARS ALGO EPILOG SUBFUNCS end -->
             <production>
                 <PROLOG terminal="false" />
                 <LOCVARS terminal="false" />
@@ -440,9 +533,20 @@
                     <value>end</value>
                 </KEYWORD>
             </production>
+            <!-- BODY ::= PROLOG LOCVARS ALGO EPILOG end        # NEW RULE-->
+            <production>
+                <PROLOG terminal="false" />
+                <LOCVARS terminal="false" />
+                <ALGO terminal="false" />
+                <EPILOG terminal="false" />
+                <KEYWORD terminal="true">
+                    <value>end</value>
+                </KEYWORD>
+            </production>
         </BODY>
 
         <PROLOG>
+            <!-- PROLOG ::= { -->
             <production>
                 <KEYWORD terminal="true">
                     <value>{</value>
@@ -451,6 +555,7 @@
         </PROLOG>
 
         <EPILOG>
+            <!-- EPILOG ::= } -->
             <production>
                 <KEYWORD terminal="true">
                     <value>}</value>
@@ -459,6 +564,7 @@
         </EPILOG>
 
         <LOCVARS>
+            <!-- LOCVARS ::= VTYP VNAME , VTYP VNAME , VTYP VNAME , -->
             <production>
                 <VTYP terminal="false" />
                 <VNAME terminal="false" />
@@ -479,6 +585,7 @@
         </LOCVARS>
 
         <SUBFUNCS>
+            <!-- SUBFUNCS ::= FUNCTIONS -->
             <production>
                 <FUNCTIONS terminal="false" />
             </production>
@@ -528,6 +635,7 @@
 
             <value class="keyword">{</value>
             <value class="keyword">}</value>
+            <value>$</value>
         </KEYWORD>
 
         <ID>
