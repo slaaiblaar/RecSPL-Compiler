@@ -55,8 +55,8 @@ public:
 
 enum AutomatonClass
 {
-    NFA,
-    DFA
+    NFA = 0,
+    DFA = 1
 };
 class State : public std::enable_shared_from_this<State>
 {
@@ -78,6 +78,9 @@ public:
     void add_transition(std::shared_ptr<State> to, std::string soombol);
     bool can_transition(char soombol);
     void free();
+    std::vector<std::string> rhs_nodes_list = {};
+    std::string lhs_name = "";
+    int prod_num = -1;
 
 private:
     static int id_counter;
@@ -113,7 +116,7 @@ public:
     void construct_subsets();
     Token get_token();
     void cfg_to_nfa(pugi::xml_node productions);
-
+    int prod_num = 0;
     // private:
     AutomatonClass automaton_class;
     std::shared_ptr<State> nfa_start_state;

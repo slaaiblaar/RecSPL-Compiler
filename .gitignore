@@ -6,3 +6,4 @@ exports
 Makefile
 compile_commands.json
 *.a
+CFG_*.xml

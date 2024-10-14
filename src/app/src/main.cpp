@@ -17,7 +17,9 @@ int main()
     Lexer luthor;
     luthor.read_input("./imput.txt");
     luthor.read_input("./input.txt");
+    std::cout << "INPUT READ\n";
     luthor.lex();
+    std::cout << "LEXED\n";
     Parser p;
     return 0;
 }

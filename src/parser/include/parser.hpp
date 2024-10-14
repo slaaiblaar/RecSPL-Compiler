@@ -4,6 +4,13 @@
 #include "pugixml.hpp"
 #include <unordered_map> // hashmap
 #include <set>
+enum Operation
+{
+    SHIFT = 'S',
+    GO = 'G',
+    REDUCE = 'R',
+    ACCEPT = 'A'
+};
 class Parser
 {
 public:

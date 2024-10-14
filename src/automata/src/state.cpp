@@ -66,13 +66,22 @@ void State::free()
 void State::add_transition(std::shared_ptr<State> to, char soombol)
 {
     transitions[std::string({soombol})].push_back(to);
+    // std::cout << "Added transition " << this->id << " -\"" << soombol << "\"-> " << to->id << std::endl;
 }
 void State::add_transition(std::shared_ptr<State> to, std::string soombol)
 {
     transitions[soombol].push_back(to);
+    // std::cout << "Added transition " << this->id << " -\"" << soombol << "\"-> " << to->id << std::endl;
 }
 
 bool State::can_transition(char soombol)
 {
-    return transitions.find(std::string({soombol})) != transitions.end();
+    auto states = transitions.find(std::string({soombol}));
+    if (transitions.find(std::string({soombol})) == transitions.end())
+        return false;
+    if (states->second.size() == 0)
+        return false;
+    if (states->second[0] == nullptr || states->second[0] == 0)
+        return false;
+    return true;
 }

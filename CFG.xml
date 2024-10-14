@@ -1,13 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CFG>
     <PRODUCTIONRULES>
-        <PROGPRIME>
-            <!-- 0th Rule S' ::= S $ -->
+        <PROGPRIMEPRIME>
             <production>
-                <PROG terminal="false"/>
+                <PROGPRIME terminal="false"/>
                 <KEYWORD terminal="true">
                     <value>$</value>
                 </KEYWORD>
+            </production>
+        </PROGPRIMEPRIME>
+        <PROGPRIME>
+            <production>
+                <PROG terminal="false"/>
             </production>
         </PROGPRIME>
         <PROG>

@@ -4,10 +4,12 @@
 #include <fstream>
 #include <sstream>
 #include <regex>
-
+#include <iomanip>
 Parser::Parser()
 {
+    std::cout << "PARSER\n\n\n";
     pugi::xml_parse_result result = this->cfg_doc.load_file("./CFG.xml");
+    std::cout << "FILE LOADED\n";
     // really shouldn't happen but w/e, TS habits
     if (!result)
     {
@@ -15,9 +17,13 @@ Parser::Parser()
         return;
     }
     this->get_nullable();
+    std::cout << "Nullable\n";
     this->generate_first_sets();
+    std::cout << "First\n";
     this->generate_follow_sets();
+    std::cout << "Follow\n";
     this->construct_parse_table();
+    std::cout << "Parse\n";
 }
 
 void Parser::get_nullable()
@@ -86,11 +92,11 @@ void Parser::get_nullable()
         } while ((non_terminal = non_terminal.next_sibling()) != pugi::xml_node());
     }
 
-    // std::cout << "Nullable Values:\n";
-    // for (auto const &pair : this->nullable)
-    // {
-    //     std::cout << pair.first << ": " << pair.second << std::endl;
-    // }
+    std::cout << "Nullable Values:\n";
+    for (auto const &pair : this->nullable)
+    {
+        std::cout << pair.first << ": " << pair.second << std::endl;
+    }
 }
 bool node_is_terminal(pugi::xml_node &node)
 {
@@ -370,11 +376,304 @@ void Parser::generate_follow_sets()
 
 void Parser::construct_parse_table()
 {
-    // std::unordered_map<int, std::unordered_map<std::string, std::pair<std::string, int>>> parse_table;
+    std::unordered_map<int, std::unordered_map<std::string, std::pair<Operation, int>>> parse_table;
+    std::unordered_map<std::string, int> nonterms;
+    std::unordered_map<std::string, int> terms;
     Automaton production_automaton;
     pugi::xml_node productions = this->cfg_doc.child("CFG").child("PRODUCTIONRULES");
     production_automaton.cfg_to_nfa(productions);
     production_automaton.print_nfa();
     production_automaton.nfa_to_dfa();
     production_automaton.print_dfa();
+    for (std::shared_ptr<State> s : production_automaton.dfa_states)
+    {
+        if (s->is_final && s->nfa_equiv_states.size() > 1)
+        {
+            std::vector<std::set<std::string>> follow_sets;
+            std::cout << s->id << ": \n";
+            for (auto nfas : s->nfa_equiv_states)
+            {
+                if (nfas.second->is_final)
+                {
+                    // std::cout << "    \033[33m" << nfas.first << "\033[0m ";
+                    // std::cout << "[" << nfas.second->prod_num << "](\033[33m" << nfas.second->lhs_name << "\033[0m ==> ";
+                    // for (auto n : nfas.second->rhs_nodes_list)
+                    // {
+                    //     std::cout << "\033[33m" << n << "\033[0m ";
+                    // }
+                    // std::cout << ") FOLLOW:";
+                    std::set<std::string> curr_foll = this->follow[s->lhs_name];
+                    follow_sets.push_back(curr_foll);
+
+                    // auto it = curr_foll.begin();
+                    // for (; it != curr_foll.end(); ++it)
+                    // {
+                    //     std::cout << " " << *it;
+                    // }
+                    // std::cout << "\n";
+                }
+                // else
+                //     std::cout << "    " << nfas.first;
+                // std::cout << std::endl;
+            }
+            for (auto nfas : s->nfa_equiv_states)
+            {
+                if (nfas.second->is_final)
+                {
+                    std::cout << "    \033[33m" << nfas.first << "\033[0m ";
+                    std::cout << "[" << nfas.second->prod_num << "](\033[33m" << nfas.second->lhs_name << "\033[0m ==> ";
+                    for (auto n : nfas.second->rhs_nodes_list)
+                    {
+                        std::cout << "\033[33m" << n << "\033[0m ";
+                    }
+                    std::cout << ") FOLLOW:";
+                    std::set<std::string> curr_foll = this->follow[s->lhs_name];
+
+                    auto it = curr_foll.begin();
+                    for (; it != curr_foll.end(); ++it)
+                    {
+                        std::cout << " " << *it;
+                    }
+                    // std::cout << "\n";
+                }
+                // else
+                std::cout << "    " << nfas.first;
+                std::cout << std::endl;
+            }
+            if (follow_sets.size() > 1)
+            {
+                std::cout << "    Overlapping:\n";
+
+                std::set<std::string> overlap;
+                for (int i_curr = 0; i_curr < follow_sets.size() - 1; ++i_curr)
+                {
+                    for (auto symbol : follow_sets[i_curr])
+                    {
+                        std::cout << symbol << " ";
+                        // if (overlap.find(symbol) == overlap.end())
+                        // {
+                        for (auto i_next = i_curr + 1; i_next != follow_sets.size(); ++i_next)
+                        {
+
+                            if (follow_sets[i_curr].find(symbol) != follow_sets[i_curr].end())
+                            {
+                                overlap.insert(symbol);
+                                break;
+                            }
+                        }
+                        // }
+                    }
+                    std::cout << std::endl;
+                }
+                if (overlap.size() > 0)
+                {
+                    std::cout << "    Overlap:";
+                    for (auto it = overlap.begin(); it != overlap.end(); ++it)
+                    {
+                        std::cout << " " << *it;
+                    }
+                    std::cout << std::endl;
+                }
+            };
+        }
+    }
+    pugi::xml_node lhs = productions.first_child();
+    // // Print productions
+    // do // while ((lhs = lhs.next_sibling()) != pugi::xml_node());
+    // {
+    //     pugi::xpath_node_set rhs_nodes = lhs.select_nodes("production");
+    //     std::string lhs_name = lhs.name();
+    //     // lhs_name = lhs_name;
+    //     for (pugi::xpath_node_set::const_iterator rhs_it = rhs_nodes.begin(); rhs_it != rhs_nodes.end(); ++rhs_it)
+    //     {
+    //         for (int x = 0; x < 9 - lhs_name.length(); ++x)
+    //         {
+    //             std::cout << " ";
+    //         }
+    //         std::cout << lhs_name;
+    //         std::cout << " ==>";
+    //         pugi::xml_node node = (*rhs_it).node().first_child();
+    //         std::string symbol_str;
+    //         do // while ((node = node.next_sibling()) != pugi::xml_node());
+    //         {
+    //             symbol_str = node.name();
+    //             std::string rhs_node_name = symbol_str;
+    //             if (node.attribute("terminal").as_bool())
+    //             {
+    //                 if (symbol_str == "KEYWORD")
+    //                 {
+    //                     symbol_str = node.child("value").child_value();
+    //                 }
+    //                 else if (symbol_str != "EPSILON")
+    //                 {
+    //                     symbol_str = node.first_child().child_value();
+
+    //                     switch (symbol_str[0])
+    //                     {
+    //                     case '"':
+    //                         symbol_str = "T_Token";
+    //                         break;
+    //                     case 'V':
+    //                         symbol_str = "V_Token";
+    //                         break;
+    //                     case 'F':
+    //                         symbol_str = "F_Token";
+    //                         break;
+    //                     default:
+    //                         symbol_str = "N_Token";
+    //                     }
+    //                 }
+    //             }
+    //             std::cout << " " << symbol_str;
+    //         } while ((node = node.next_sibling()) != pugi::xml_node());
+    //         std::cout << std::endl;
+    //     }
+    // } while ((lhs = lhs.next_sibling()) != pugi::xml_node());
+
+    std::unordered_map<int, std::shared_ptr<State>> production_rules;
+    for (std::shared_ptr<State> s : production_automaton.dfa_final_states)
+    {
+        production_rules[s->prod_num] = s;
+        std::cout << s;
+        std::cout << " [" << s->prod_num << "] : ";
+        std::cout << s->lhs_name << " ==>";
+        for (std::string n : s->rhs_nodes_list)
+        {
+            std::cout << " " << n;
+        }
+        std::cout << std::endl;
+    }
+    for (int i = 0; i < production_automaton.prod_num; ++i)
+    {
+        std::cout << production_rules[i] << std::endl;
+        std::cout << " [" << production_rules[i]->prod_num << "] : " << std::endl;
+        std::cout << production_rules[i]->lhs_name << " ==> ";
+        for (std::string n : production_rules[i]->rhs_nodes_list)
+        {
+            std::cout << n << " ";
+        }
+        if (production_rules[i]->rhs_nodes_list.size() == 0 || production_rules[i]->lhs_name.length() == 0)
+            std::cout << "(Empty state: " << production_rules[i]->id << ")";
+        std::cout << std::endl;
+    }
+    for (auto state : production_automaton.dfa_states)
+    {
+        std::cout << "Populating row " << state->id << std::endl;
+        for (auto transition : state->transitions)
+        {
+            std::pair<Operation, int> op;
+            std::string token = transition.first;
+            std::cout << "\t Symbol " << token;
+            if (token.length() >= 2 && token[1] >= 65 && token[1] <= 90)
+            {
+                op.first = Operation::GO;
+                nonterms[token] = std::max(nonterms[token], (int)token.length());
+                nonterms[token] = std::max(nonterms[token], 6);
+            }
+            else
+            {
+                op.first = Operation::SHIFT;
+                terms[token] = std::max(terms[token], (int)token.length());
+                terms[token] = std::max(terms[token], 6);
+            }
+            std::cout << ": " << ((char)op.first) << transition.second[0]->id << std::endl;
+            op.second = transition.second[0]->id;
+            parse_table[state->id][token] = op;
+        }
+        // std::pair<Operation, int> nonexist = parse_table[state->id]["asd"];
+        // std::cout << "Nonexistent asd: {" << nonexist.first << ", " << nonexist.second << "}\n";
+        // insert reduce actions
+        if (state->is_final)
+        {
+            std::cout << "\tState " << state->id << " accepts production " << state->prod_num << ": ";
+            std::cout << state->lhs_name << " ==>";
+            for (std::string n : state->rhs_nodes_list)
+            {
+                std::cout << " " << n;
+            }
+            std::cout << "\n\tAdding Reduce Action on symbols: \"";
+            // std::cout << "Token_Class " << state->lhs_name << "Prod_num " << state->prod_num << " Follow:\n";
+            for (auto fol_sym : follow[state->lhs_name])
+            {
+                std::cout << fol_sym << "\"";
+                if (parse_table[state->id][fol_sym].first == 0)
+                {
+                    std::cout << "Collision at " << state->id << " on " << fol_sym;
+                }
+                parse_table[state->id][fol_sym] = {Operation::REDUCE, state->prod_num};
+                terms[fol_sym] = std::max(2 + (int)(std::to_string(state->prod_num)).length(), terms[fol_sym]);
+                if (fol_sym == "$" && state->prod_num == 1)
+                {
+                    parse_table[state->id][fol_sym] = {Operation::ACCEPT, 0};
+                }
+
+                std::cout << "(" << ((char)parse_table[state->id][fol_sym].first) << parse_table[state->id][fol_sym].second << ") ";
+            }
+            std::cout << std::endl;
+        }
+    }
+    std::ofstream csv_file("parse-table.csv");
+    // std::cout << std::setw(4) << "";
+    csv_file << std::setw(4) << "State";
+    for (auto sym : nonterms)
+    {
+        // std::cout << " | " << std::setw(sym.second) << std::left << sym.first;
+        csv_file << " : " << std::setw(sym.second) << std::left << sym.first;
+    }
+    for (auto sym : terms)
+    {
+        // std::cout << " | " << std::setw(sym.second) << std::left << sym.first;
+        csv_file << " : " << std::setw(sym.second) << std::left << sym.first;
+    }
+    // std::cout << std::endl;
+    csv_file << std::endl;
+    // for (auto row : parse_table)
+    // {
+    //     std::cout << row.first << ": \n";
+    //     for (auto col : row.second)
+    //     {
+    //         std::cout << "\t" << col.first << ": " << ((char)(col.second.first)) << " " << col.second.second << "\n";
+    //     }
+    // }
+    // print parse table to csv file
+    for (auto state : parse_table)
+    {
+        // std::cout << state.first;
+        csv_file << "S" << state.first;
+        for (auto sym : nonterms)
+        {
+            auto action = state.second[sym.first];
+            if (action.first != 0)
+            {
+                std::string temp = std::to_string(action.second);
+                temp.insert(0, 1, (char)action.first);
+                // std::cout << " | " << std::setw(sym.second) << std::left << temp;
+                csv_file << " : " << std::setw(sym.second) << std::left << temp;
+            }
+            else
+            {
+                // std::cout << " | " << std::setw(sym.second) << std::left << "error";
+                csv_file << " : " << std::setw(sym.second) << std::left << "error";
+            }
+        }
+        for (auto sym : terms)
+        {
+            auto action = state.second[sym.first];
+            if ((char)action.first != 0)
+            {
+                std::string temp = std::to_string(action.second);
+                temp.insert(0, 1, action.first);
+                // std::cout << " | " << std::setw(sym.second) << std::left << temp;
+                csv_file << " : " << std::setw(sym.second) << std::left << temp;
+            }
+            else
+            {
+                // std::cout << " | " << std::setw(sym.second) << std::left << "error";
+                csv_file << " : " << std::setw(sym.second) << std::left << "error";
+            }
+        }
+        // std::cout << std::endl;
+        csv_file << std::endl;
+    }
+    csv_file.close();
 }

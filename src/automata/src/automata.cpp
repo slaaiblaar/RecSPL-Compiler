@@ -3,6 +3,7 @@
 #include <stack>
 #include <algorithm>
 #include <fstream>
+#include <cctype>
 // #include <pair>
 Automaton::Automaton()
 {
@@ -308,6 +309,9 @@ void Automaton::construct_subsets()
                             throw "Overlapping final states";
                         }
                         destination->token_class = nfa_state.second->token_class;
+                        destination->lhs_name = nfa_state.second->lhs_name;
+                        destination->rhs_nodes_list = nfa_state.second->rhs_nodes_list;
+                        destination->prod_num = nfa_state.second->prod_num;
                     }
                 }
                 // add to construction queue
@@ -320,7 +324,40 @@ void Automaton::construct_subsets()
             // add transition to current state
             current_state->transitions[transition.first].push_back(destination);
         }
+        // std::cout << "FOLLOW Sets:\n";
+        // for (const auto &pair : this->follow)
+        // {
+        //     std::cout << pair.first << ": { ";
+        //     for (const std::string &s : pair.second)
+        //     {
+        //         std::cout << "\"\033[33m" << s << "\033[0m\" ";
+        //     }
+        //     std::cout << "}\n";
+        // }
     }
+    // for (std::shared_ptr<State> s : dfa_states)
+    // {
+    //     if (s->is_final && s->nfa_equiv_states.size() > 1)
+    //     {
+    //         std::cout << s->id << ": \n";
+    //         for (auto nfas : s->nfa_equiv_states)
+    //         {
+    //             if (nfas.second->is_final)
+    //             {
+    //                 std::cout << "    \033[33m" << nfas.first << "\033[0m ";
+    //                 std::cout << "[" << nfas.second->prod_num << "](\033[33m" << nfas.second->lhs_name << "\033[0m ==> ";
+    //                 for (auto n : nfas.second->rhs_nodes_list)
+    //                 {
+    //                     std::cout << "\033[33m" << n << "\033[0m ";
+    //                 }
+    //                 std::cout << ")\n";
+    //             }
+    //             else
+    //                 std::cout << "    " << nfas.first;
+    //         }
+    //         std::cout << std::endl;
+    //     }
+    // }
 }
 void Automaton::add_state(std::shared_ptr<State> state)
 {
@@ -398,9 +435,23 @@ void Automaton::nfa_to_dfa()
     for (auto e_state : nfa_start_state->e_closure)
     {
         dfa_start_state->nfa_equiv_states[e_state.first] = e_state.second;
+        if (e_state.second->is_final)
+        {
+            if (dfa_start_state->is_final)
+            {
+                std::cout << "Collision on final state: \n";
+                std::cout << "(old_prod|new_prod) : (" << dfa_start_state->prod_num;
+                std::cout << "|" << e_state.second->prod_num << ")\n";
+            }
+            dfa_start_state->is_final = true;
+            dfa_start_state->prod_num = e_state.second->prod_num;
+            dfa_start_state->lhs_name = e_state.second->lhs_name;
+            dfa_start_state->rhs_nodes_list = e_state.second->rhs_nodes_list;
+            dfa_final_states.push_back(dfa_start_state);
+        }
     }
     subset_construction_queue.push(dfa_start_state);
-
+    std::cout << "DFA Start State: " << dfa_start_state->id << " [" << dfa_start_state << "]\n";
     // subset_construction_queue.emplace(dfa_start_state);
     construct_subsets();
     this->current_state = dfa_start_state;
@@ -534,19 +585,30 @@ bool Automaton::run()
     {
         ++read_pos;
     }
+    // std::cout << "RUNNING LEXER:\n";
     while (read_pos < input.size())
     {
         char soombol = input[read_pos];
+        // for (int s = 0; s < read_pos; ++s)
+        //     std::cout << " ";
+        // std::cout << soombol << std::endl;
+        // std::cout << "CAN TRANSITION FROM " << current_state;
+        // std::cout << " ON SYMBOL " << soombol << "?\n";
         if (!current_state->can_transition(soombol))
         {
+            //     std::cout << "CAN'T TRANSITION\n";
+            //     std::cout << "[Failed]\n";
             return false;
         }
+        // std::cout << "NOT FAILED\n";
         current_state = current_state->transitions[std::string({soombol})][0];
         if (current_state->is_final)
         {
             accept_pos = read_pos;
+            // std::cout << "[Accepted]\n";
             return true;
         }
+        // std::cout << "[Failed]\n";
         ++read_pos;
     }
 
@@ -581,7 +643,7 @@ void Automaton::cfg_to_nfa(pugi::xml_node productions)
     nfa_start_state->is_final = false;
     nfa_start_state->e_closure[nfa_start_state->id] = nfa_start_state;
     add_state(nfa_start_state);
-
+    // std::cout << "CFG NFA Start: " << nfa_start_state->id << std::endl;
     std::unordered_map<std::string, std::shared_ptr<State>> productions_map;
     pugi::xml_node lhs = productions.first_child();
     do
@@ -593,38 +655,46 @@ void Automaton::cfg_to_nfa(pugi::xml_node productions)
         curr_state->token_class = tokenclass.substr(0, 4);
         curr_state->is_final = false;
         productions_map[lhs.name()] = curr_state;
-        std::cout << "LHS: " << lhs.name() << std::endl;
+        // std::cout << "LHS: " << lhs.name() << std::endl;
         this->nfa_start_state->add_transition(curr_state, '\0');
         this->nfa_states.push_back(curr_state);
+        // std::cout << "New NFA Node: " << curr_state->id << std::endl;
     } while ((lhs = lhs.next_sibling()) != pugi::xml_node());
     lhs = productions.first_child();
-    do
+    do // while ((lhs = lhs.next_sibling()) != pugi::xml_node());
     {
         std::shared_ptr<State> curr_state;
         pugi::xpath_node_set rhs_nodes = lhs.select_nodes("production");
         std::shared_ptr<State> prev_state;
+        std::string lhs_name = lhs.name();
+        // lhs_name = lhs_name;
         for (pugi::xpath_node_set::const_iterator rhs_it = rhs_nodes.begin(); rhs_it != rhs_nodes.end(); ++rhs_it)
         {
             curr_state = productions_map[lhs.name()];
+            std::vector<std::string> rhs_nodes_list = {};
             pugi::xml_node node = (*rhs_it).node().first_child();
-            do
+            std::string symbol_str;
+            do // while ((node = node.next_sibling()) != pugi::xml_node());
             {
                 prev_state = curr_state;
                 curr_state = std::make_shared<State>(AutomatonClass::NFA);
                 curr_state->e_closure[curr_state->id] = curr_state;
                 curr_state->is_final = false;
-                std::string symbol_str = node.name();
+                symbol_str = node.name();
+                std::string rhs_node_name = symbol_str;
+                if (rhs_node_name == "KEYWORD")
+                {
+                    rhs_node_name = node.child("value").child_value();
+                    // std::transform(rhs_node_name.begin(), rhs_node_name.end(), rhs_node_name.begin(), ::toupper);
+                }
+                rhs_nodes_list.push_back(rhs_node_name);
                 if (node.attribute("terminal").as_bool())
                 {
                     if (symbol_str == "KEYWORD")
                     {
                         symbol_str = node.child("value").child_value();
                     }
-                    else if (symbol_str == "EPSILON")
-                    {
-                        symbol_str = "\0";
-                    }
-                    else
+                    else if (symbol_str != "EPSILON")
                     {
                         symbol_str = node.first_child().child_value();
 
@@ -652,7 +722,32 @@ void Automaton::cfg_to_nfa(pugi::xml_node productions)
                 this->nfa_states.push_back(curr_state);
             } while ((node = node.next_sibling()) != pugi::xml_node());
             curr_state->is_final = true;
-            this->nfa_final_states.push_back(current_state);
+            curr_state->lhs_name = lhs.name();
+            curr_state->rhs_nodes_list = rhs_nodes_list;
+            curr_state->prod_num = prod_num;
+            // special 0th production rule
+            // if (symbol_str == "$")
+            // {
+            //     curr_state->prod_num = 0;
+            //     --prod_num; // undo incoming increment
+            // }
+            ++prod_num;
+            this->nfa_final_states.push_back(curr_state);
+            // std::cout << curr_state->prod_num << " prod = " << curr_state->id << " state " << curr_state << std::endl;
+            // std::cout << curr_state << " [" << curr_state->prod_num << "] : ";
+            // std::cout << curr_state->lhs_name << " ==>";
+            // for (std::string n : curr_state->rhs_nodes_list)
+            // {
+            //     std::cout << " " << n;
+            // }
+            // std::cout << std::endl;
+            // std::cout << "[" << curr_state->prod_num << "] : ";
+            // std::cout << curr_state->lhs_name << " ==>";
+            // for (std::string n : curr_state->rhs_nodes_list)
+            // {
+            //     std::cout << " " << n;
+            // }
+            // std::cout << std::endl;
         }
 
     } while ((lhs = lhs.next_sibling()) != pugi::xml_node());
@@ -763,8 +858,17 @@ void Automaton::print_nfa()
         python_generate_nfa << "\"" << (transition.first[0] == '"' ? "\\\"" : transition.first) << "\", ";
     }
     python_generate_nfa << "}\n)\nnfAutomaton.show_diagram(path=\"nfa_graph.png\")\n";
+    python_generate_nfa.close();
 }
-
+std::string construct_final_name(std::shared_ptr<State> state)
+{
+    std::string prod = state->lhs_name;
+    for (int x = 0; x < state->rhs_nodes_list.size(); ++x)
+    {
+        prod.append("-" + state->rhs_nodes_list[x]);
+    }
+    return prod;
+}
 void Automaton::print_dfa()
 {
     std::ofstream python_generate_dfa("render-dfa.py");
@@ -772,31 +876,58 @@ void Automaton::print_dfa()
     python_generate_dfa << "NFA(" << std::endl;
 
     std::unordered_map<std::string, std::vector<int>> allTransitions;
-    std::vector<int> finalStates;
+    std::vector<std::string> finalStates;
     python_generate_dfa << "    states={ ";
-    for (auto state : dfa_states)
-    {
-        python_generate_dfa << "\"S" << state->id << "\", ";
-    }
-    python_generate_dfa << "},\n";
-    python_generate_dfa << "    transitions={\n";
     for (auto state : dfa_states)
     {
         if (state->is_final)
         {
-            finalStates.push_back(state->id);
+            std::string prod = construct_final_name(state);
+            python_generate_dfa << "\"" << prod << "\", ";
         }
-        python_generate_dfa << "        \"S" << state->id << "\": { ";
+        else
+        {
+            python_generate_dfa << "\"S" << state->id << "\", ";
+        }
+    }
+    python_generate_dfa << "},\n";
+    python_generate_dfa << "    transitions={\n";
+    // get list of states
+    for (auto state : dfa_states)
+    {
+        // lhs
+        if (state->is_final)
+        {
+            std::string prod = construct_final_name(state);
+            finalStates.push_back(prod);
+            python_generate_dfa << "\"" << prod << "\": { ";
+        }
+        else
+        {
+            python_generate_dfa << "        \"S" << state->id << "\": { ";
+        }
+        // for each rhs of lhs
         for (auto transition : state->transitions)
         {
+            // add transition symbol to map
             if (transition.first[0] != '\0' && transition.first != "")
             {
                 allTransitions[transition.first].push_back(state->id);
             }
+            // print symbol
             python_generate_dfa << "\"" << (transition.first[0] == '"' ? "\\\"" : transition.first) << "\": { ";
+            // print destination state
             for (auto to_state : transition.second)
             {
-                python_generate_dfa << "\"S" << to_state->id << "\", ";
+                if (to_state->is_final)
+                {
+                    std::string prod = construct_final_name(to_state);
+                    python_generate_dfa << "\"" << prod << "\", ";
+                }
+                else
+                {
+                    python_generate_dfa << "\"S" << to_state->id << "\", ";
+                }
             }
             python_generate_dfa << "}, ";
         }
@@ -807,7 +938,7 @@ void Automaton::print_dfa()
     python_generate_dfa << "    final_states={ ";
     for (auto state : finalStates)
     {
-        python_generate_dfa << "\"S" << state << "\", ";
+        python_generate_dfa << "\"" << state << "\", ";
     }
     python_generate_dfa << "},\n";
     python_generate_dfa << "    input_symbols={ ";
@@ -816,4 +947,5 @@ void Automaton::print_dfa()
         python_generate_dfa << "\"" << (transition.first[0] == '"' ? "\\\"" : transition.first) << "\", ";
     }
     python_generate_dfa << "}\n)\ndfAutomaton.show_diagram(path=\"dfa_graph.png\")\n";
+    python_generate_dfa.close();
 }

@@ -94,6 +94,8 @@ void Lexer::read_input(std::string file_path)
 
 void Lexer::lex()
 {
+    dfa.print_nfa();
+    dfa.print_dfa();
     std::vector<Token> tokens;
     if (input.length() == 0)
     {
@@ -101,6 +103,7 @@ void Lexer::lex()
         return;
     }
     dfa.set_input(this->input);
+    std::cout << "INPUT SET\n";
     while (dfa.read_pos < this->input.length())
     {
         dfa.reset_dfa();
@@ -108,6 +111,7 @@ void Lexer::lex()
         do
         {
             success = dfa.run();
+            std::cout << "DFA RAN\n";
         } while (success && !(dfa.read_pos < input.length() - 1 && isspace(input[dfa.read_pos + 1]) != 0));
         if (dfa.read_pos == input.length())
         {
