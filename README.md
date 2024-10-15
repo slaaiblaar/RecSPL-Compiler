@@ -89,7 +89,8 @@ Conflict:
 Resulting CFG (New rules marked with \*):
 
 ```
- PROGPRIME ==> PROG $
+ PROGPRIMEPRIME ==> PROGPRIME $
+ PROGPRIME ==> PROG
       PROG ==> main GLOBVARS ALGO FUNCTIONS
 *     PROG ==> main ALGO FUNCTIONS
 *     PROG ==> main GLOBVARS ALGO
