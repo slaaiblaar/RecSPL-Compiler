@@ -2,82 +2,82 @@
 <TOKENSTREAM>
 	<TOK>
 		<ID>1</ID>
-		<CLASS>keyword</CLASS>
+		<CLASS>KEYWORD</CLASS>
 		<WORD>main</WORD>
 	</TOK>
 	<TOK>
 		<ID>2</ID>
-		<CLASS>keyword</CLASS>
+		<CLASS>KEYWORD</CLASS>
 		<WORD>num</WORD>
 	</TOK>
 	<TOK>
 		<ID>3</ID>
-		<CLASS>V</CLASS>
+		<CLASS>V_Token</CLASS>
 		<WORD>V_numvar</WORD>
 	</TOK>
 	<TOK>
 		<ID>4</ID>
-		<CLASS>keyword</CLASS>
+		<CLASS>KEYWORD</CLASS>
 		<WORD>,</WORD>
 	</TOK>
 	<TOK>
 		<ID>5</ID>
-		<CLASS>keyword</CLASS>
+		<CLASS>KEYWORD</CLASS>
 		<WORD>begin</WORD>
 	</TOK>
 	<TOK>
 		<ID>6</ID>
-		<CLASS>V</CLASS>
+		<CLASS>V_Token</CLASS>
 		<WORD>V_numvar</WORD>
 	</TOK>
 	<TOK>
 		<ID>7</ID>
-		<CLASS>keyword</CLASS>
+		<CLASS>KEYWORD</CLASS>
 		<WORD>=</WORD>
 	</TOK>
 	<TOK>
 		<ID>8</ID>
-		<CLASS>N</CLASS>
+		<CLASS>N_Token</CLASS>
 		<WORD>-0.01</WORD>
 	</TOK>
 	<TOK>
 		<ID>9</ID>
-		<CLASS>keyword</CLASS>
+		<CLASS>KEYWORD</CLASS>
 		<WORD>;</WORD>
 	</TOK>
 	<TOK>
 		<ID>10</ID>
-		<CLASS>keyword</CLASS>
+		<CLASS>KEYWORD</CLASS>
 		<WORD>print</WORD>
 	</TOK>
 	<TOK>
 		<ID>11</ID>
-		<CLASS>V</CLASS>
+		<CLASS>V_Token</CLASS>
 		<WORD>V_numvar</WORD>
 	</TOK>
 	<TOK>
 		<ID>12</ID>
-		<CLASS>keyword</CLASS>
+		<CLASS>KEYWORD</CLASS>
 		<WORD>;</WORD>
 	</TOK>
 	<TOK>
 		<ID>13</ID>
-		<CLASS>keyword</CLASS>
+		<CLASS>KEYWORD</CLASS>
 		<WORD>print</WORD>
 	</TOK>
 	<TOK>
 		<ID>14</ID>
-		<CLASS>T</CLASS>
+		<CLASS>T_Token</CLASS>
 		<WORD>"Hello"</WORD>
 	</TOK>
 	<TOK>
 		<ID>15</ID>
-		<CLASS>keyword</CLASS>
+		<CLASS>KEYWORD</CLASS>
 		<WORD>;</WORD>
 	</TOK>
 	<TOK>
 		<ID>16</ID>
-		<CLASS>keyword</CLASS>
+		<CLASS>KEYWORD</CLASS>
 		<WORD>end</WORD>
 	</TOK>
 </TOKENSTREAM>

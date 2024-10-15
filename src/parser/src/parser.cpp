@@ -5,6 +5,7 @@
 #include <sstream>
 #include <regex>
 #include <iomanip>
+#include <cstdlib>
 Parser::Parser()
 {
     std::cout << "PARSER\n\n\n";
@@ -534,36 +535,37 @@ void Parser::construct_parse_table()
     for (std::shared_ptr<State> s : production_automaton.dfa_final_states)
     {
         production_rules[s->prod_num] = s;
-        std::cout << s;
-        std::cout << " [" << s->prod_num << "] : ";
-        std::cout << s->lhs_name << " ==>";
-        for (std::string n : s->rhs_nodes_list)
-        {
-            std::cout << " " << n;
-        }
-        std::cout << std::endl;
+        // std::cout << s;
+        // std::cout << " [" << s->prod_num << "] : ";
+        // std::cout << s->lhs_name << " ==>";
+        // for (std::string n : s->rhs_nodes_list)
+        // {
+        //     std::cout << " " << n;
+        // }
+        // std::cout << std::endl;
     }
-    for (int i = 0; i < production_automaton.prod_num; ++i)
-    {
-        std::cout << production_rules[i] << std::endl;
-        std::cout << " [" << production_rules[i]->prod_num << "] : " << std::endl;
-        std::cout << production_rules[i]->lhs_name << " ==> ";
-        for (std::string n : production_rules[i]->rhs_nodes_list)
-        {
-            std::cout << n << " ";
-        }
-        if (production_rules[i]->rhs_nodes_list.size() == 0 || production_rules[i]->lhs_name.length() == 0)
-            std::cout << "(Empty state: " << production_rules[i]->id << ")";
-        std::cout << std::endl;
-    }
+    // // print production number and rules
+    // for (int i = 0; i < production_automaton.prod_num; ++i)
+    // {
+    //     std::cout << production_rules[i] << std::endl;
+    //     std::cout << " [" << production_rules[i]->prod_num << "] : " << std::endl;
+    //     std::cout << production_rules[i]->lhs_name << " ==> ";
+    //     for (std::string n : production_rules[i]->rhs_nodes_list)
+    //     {
+    //         std::cout << n << " ";
+    //     }
+    //     if (production_rules[i]->rhs_nodes_list.size() == 0 || production_rules[i]->lhs_name.length() == 0)
+    //         std::cout << "(Empty state: " << production_rules[i]->id << ")";
+    //     std::cout << std::endl;
+    // }
     for (auto state : production_automaton.dfa_states)
     {
-        std::cout << "Populating row " << state->id << std::endl;
+        // std::cout << "Populating row " << state->id << std::endl;
         for (auto transition : state->transitions)
         {
             std::pair<Operation, int> op;
             std::string token = transition.first;
-            std::cout << "\t Symbol " << token;
+            // std::cout << "\t Symbol " << token;
             if (token.length() >= 2 && token[1] >= 65 && token[1] <= 90)
             {
                 op.first = Operation::GO;
@@ -576,7 +578,7 @@ void Parser::construct_parse_table()
                 terms[token] = std::max(terms[token], (int)token.length());
                 terms[token] = std::max(terms[token], 6);
             }
-            std::cout << ": " << ((char)op.first) << transition.second[0]->id << std::endl;
+            // std::cout << ": " << ((char)op.first) << transition.second[0]->id << std::endl;
             op.second = transition.second[0]->id;
             parse_table[state->id][token] = op;
         }
@@ -585,17 +587,17 @@ void Parser::construct_parse_table()
         // insert reduce actions
         if (state->is_final)
         {
-            std::cout << "\tState " << state->id << " accepts production " << state->prod_num << ": ";
-            std::cout << state->lhs_name << " ==>";
-            for (std::string n : state->rhs_nodes_list)
-            {
-                std::cout << " " << n;
-            }
-            std::cout << "\n\tAdding Reduce Action on symbols: \"";
+            // std::cout << "\tState " << state->id << " accepts production " << state->prod_num << ": ";
+            // std::cout << state->lhs_name << " ==>";
+            // for (std::string n : state->rhs_nodes_list)
+            // {
+            //     std::cout << " " << n;
+            // }
+            // std::cout << "\n\tAdding Reduce Action on symbols: \"";
             // std::cout << "Token_Class " << state->lhs_name << "Prod_num " << state->prod_num << " Follow:\n";
             for (auto fol_sym : follow[state->lhs_name])
             {
-                std::cout << fol_sym << "\"";
+                // std::cout << fol_sym << "\"";
                 if (parse_table[state->id][fol_sym].first == 0)
                 {
                     std::cout << "Collision at " << state->id << " on " << fol_sym;
@@ -607,7 +609,7 @@ void Parser::construct_parse_table()
                     parse_table[state->id][fol_sym] = {Operation::ACCEPT, 0};
                 }
 
-                std::cout << "(" << ((char)parse_table[state->id][fol_sym].first) << parse_table[state->id][fol_sym].second << ") ";
+                // std::cout << "(" << ((char)parse_table[state->id][fol_sym].first) << parse_table[state->id][fol_sym].second << ") ";
             }
             std::cout << std::endl;
         }
@@ -676,4 +678,165 @@ void Parser::construct_parse_table()
         csv_file << std::endl;
     }
     csv_file.close();
+
+    // parse token stream
+    pugi::xml_document tok_doc;
+    pugi::xml_parse_result result = tok_doc.load_file("./token_stream.xml");
+    if (!result)
+    {
+        throw "token_stream.xml does not exist";
+    }
+    pugi::xml_document ast_doc;
+    pugi::xml_node tok_str = tok_doc.child("TOKENSTREAM");
+    std::stack<std::pair<int, pugi::xml_node>> parse_stack;
+    parse_stack.emplace(std::pair(production_automaton.dfa_start_state->id, pugi::xml_node()));
+    bool accept = false;
+    pugi::xml_node curr_tok = tok_str.first_child();
+    int uid_counter = 0;
+    while (!accept && curr_tok != pugi::xml_node())
+    {
+        { // debug printing
+            std::cout << "Current stack:";
+            std::stack<std::pair<int, pugi::xml_node>> temp_stack;
+            while (!parse_stack.empty())
+            {
+                temp_stack.emplace(parse_stack.top());
+                parse_stack.pop();
+            }
+            while (!temp_stack.empty())
+            {
+                std::cout << " " << temp_stack.top().first;
+                parse_stack.emplace(temp_stack.top());
+                temp_stack.pop();
+            }
+            pugi::xml_node print_tok = curr_tok;
+            std::cout << "\nCurrent input:";
+            do
+            {
+                std::cout << " " << print_tok.child("WORD").child_value();
+            } while ((print_tok = print_tok.next_sibling()) != pugi::xml_node());
+            std::cout << "\n";
+        }
+        std::pair<int, pugi::xml_node> curr_state = parse_stack.top();
+        std::pair<Operation, int> curr_op = parse_table[curr_state.first][curr_tok.child("WORD").child_value()];
+        std::cout << "parse_table[" << curr_state.first << "][" << curr_tok.child("WORD").child_value() << "] = "
+                  << ((char)curr_op.first) << curr_op.second << "\n";
+        switch (curr_op.first)
+        {
+        case Operation::SHIFT:
+        {
+            pugi::xml_node new_node;
+            new_node.set_name("LEAF");
+            new_node
+                .append_child("UID")
+                .append_child(pugi::node_pcdata)
+                .set_value(std::to_string(uid_counter++).c_str());
+
+            new_node
+                .append_child("CLASS")
+                .append_child(pugi::node_pcdata)
+                .set_value(curr_tok.child("CLASS").child_value());
+
+            new_node
+                .append_child("WORD")
+                .append_child(pugi::node_pcdata)
+                .set_value(curr_tok.child("WORD").child_value());
+
+            curr_state = std::pair<int, pugi::xml_node>(curr_op.second, new_node);
+            parse_stack.emplace(curr_state);
+            std::cout << "New parse stack element: " << parse_stack.top().second.name() << "("
+                      << "UID=" << parse_stack.top().second.child("UID").child_value()
+                      << ", CLASS=" << parse_stack.top().second.child("CLASS").child_value()
+                      << ", WORD=" << parse_stack.top().second.child("WORD").child_value() << ")\n";
+            curr_tok = curr_tok.next_sibling();
+            break;
+        }
+        // Impossible, because only the case if a nonterminal is in the input stream, which is invalid
+        case Operation::GO:
+        {
+            std::cout << "\n\n"
+                      << curr_tok.child("WORD").child_value() << "\n\n";
+            throw "Hey wtf, nonterminal in token stream";
+            break;
+        }
+
+        case Operation::REDUCE:
+        {
+            std::string prod_LHS = production_rules[curr_op.second]->lhs_name;
+            std::vector<std::string> prod_RHS = production_rules[curr_op.second]->rhs_nodes_list;
+
+            pugi::xml_node new_node;
+            new_node.set_name("INTERNAL");
+            new_node.append_child("UID").append_child(pugi::node_pcdata).set_value(std::to_string(uid_counter++).c_str());
+            new_node.append_child("CLASS").append_child(pugi::node_pcdata).set_value("NONTERMINAL");
+            new_node.append_child("WORD").append_child(pugi::node_pcdata).set_value(prod_LHS.c_str());
+            std::vector<std::string>::reverse_iterator rit = prod_RHS.rbegin();
+            pugi::xml_node children = new_node.prepend_child("CHILDREN");
+            for (; rit != prod_RHS.rend(); ++rit)
+            {
+                curr_state = parse_stack.top();
+                if (*rit != curr_state.second.child("WORD").child_value())
+                {
+                    std::cout << "Top of stack: {" << curr_state.first << ", " << curr_state.second.child("WORD").child_value()
+                              << "} \nCurr Production Symbol: " << *rit << "\n\n";
+                    throw "\nInconsistent stack state\n";
+                }
+                pugi::xml_node child_node = children.prepend_child(curr_state.second.name());
+
+                child_node.append_child("UID")
+                    .append_child(pugi::node_pcdata)
+                    .set_value(curr_state.second.child("UID").child_value());
+                child_node.append_child("CLASS")
+                    .append_child(pugi::node_pcdata)
+                    .set_value(curr_state.second.child("CLASS").child_value());
+                child_node.append_child("WORD")
+                    .append_child(pugi::node_pcdata)
+                    .set_value(curr_state.second.child("WORD").child_value());
+
+                parse_stack.pop();
+            }
+            curr_state = parse_stack.top();
+            // should be a GO action
+            std::pair<Operation, int> next_action = parse_table[curr_state.first][prod_LHS];
+            if (next_action.first != Operation::GO)
+            {
+                std::cout << "\n\nReduced:  " << prod_LHS << " ==>";
+                {
+                    for (int i = 0; i < prod_RHS.size(); ++i)
+                        std::cout << " " << prod_RHS[i];
+                }
+                std::cout << "\nNext Action from State " << curr_state.first
+                          << ": " << ((char)next_action.first) << next_action.second;
+                throw "\n\nERROR: Action After Reduce Must Be GO\n\n";
+            }
+            parse_stack.emplace(std::pair(next_action.second, new_node));
+            break;
+        }
+
+        case Operation::ACCEPT:
+        {
+            accept = true;
+            break;
+        }
+        default:
+            std::cout << "ERROR\n";
+            throw "\nInvalid stack action\n";
+        }
+    }
+    if (accept)
+    {
+        ast_doc.append_child("AST").append_copy(parse_stack.top().second);
+        if (ast_doc.save_file("./AST.xml"))
+        {
+            std::cout << "\n\nSAVED AST TO AST.xml\n\n";
+        }
+        else
+        {
+            std::cout << "\n\nSOMETHING WENT WRONG WHEN SAVING AST TO AST.xml\n\n";
+        }
+    }
+    else
+    {
+        std::cout << "\n\nSomething went wrong\n\n";
+    }
 }

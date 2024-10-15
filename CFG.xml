@@ -597,72 +597,72 @@
     </PRODUCTIONRULES>
     <TERMINALS>
         <KEYWORD>
-            <value class="keyword">main</value>
+            <value class="KEYWORD">main</value>
 
-            <value class="keyword">num</value>
-            <value class="keyword">text</value>
+            <value class="KEYWORD">num</value>
+            <value class="KEYWORD">text</value>
 
-            <value class="keyword">begin</value>
-            <value class="keyword">end</value>
+            <value class="KEYWORD">begin</value>
+            <value class="KEYWORD">end</value>
 
-            <value class="keyword">;</value>
+            <value class="KEYWORD">;</value>
 
-            <value class="keyword">skip</value>
-            <value class="keyword">halt</value>
-            <value class="keyword">print</value>
-            <value class="keyword">return</value>
+            <value class="KEYWORD">skip</value>
+            <value class="KEYWORD">halt</value>
+            <value class="KEYWORD">print</value>
+            <value class="KEYWORD">return</value>
 
-            <value class="keyword">&lt;input</value>
-            <value class="keyword">=</value>
+            <value class="KEYWORD">&lt;input</value>
+            <value class="KEYWORD">=</value>
 
-            <value class="keyword">(</value>
-            <value class="keyword">,</value>
-            <value class="keyword">)</value>
+            <value class="KEYWORD">(</value>
+            <value class="KEYWORD">,</value>
+            <value class="KEYWORD">)</value>
 
-            <value class="keyword">if</value>
-            <value class="keyword">then</value>
-            <value class="keyword">else</value>
+            <value class="KEYWORD">if</value>
+            <value class="KEYWORD">then</value>
+            <value class="KEYWORD">else</value>
 
-            <value class="keyword">not</value>
-            <value class="keyword">sqrt</value>
+            <value class="KEYWORD">not</value>
+            <value class="KEYWORD">sqrt</value>
 
-            <value class="keyword">or</value>
-            <value class="keyword">and</value>
-            <value class="keyword">eq</value>
-            <value class="keyword">grt</value>
-            <value class="keyword">add</value>
-            <value class="keyword">sub</value>
-            <value class="keyword">mul</value>
-            <value class="keyword">div</value>
+            <value class="KEYWORD">or</value>
+            <value class="KEYWORD">and</value>
+            <value class="KEYWORD">eq</value>
+            <value class="KEYWORD">grt</value>
+            <value class="KEYWORD">add</value>
+            <value class="KEYWORD">sub</value>
+            <value class="KEYWORD">mul</value>
+            <value class="KEYWORD">div</value>
 
-            <value class="keyword">void</value>
+            <value class="KEYWORD">void</value>
 
-            <value class="keyword">{</value>
-            <value class="keyword">}</value>
-            <value>$</value>
+            <value class="KEYWORD">{</value>
+            <value class="KEYWORD">}</value>
+            <value class="KEYWORD">$</value>
         </KEYWORD>
 
         <ID>
-            <pattern class="F">F_[a-z][a-z0-9]*</pattern>
-            <pattern class="V">V_[a-z][a-z0-9]*</pattern>
+            <pattern class="F_Token">F_[a-z][a-z0-9]*</pattern>
+            <pattern class="V_Token">V_[a-z][a-z0-9]*</pattern>
         </ID>
 
         <LITERAL>
-            <pattern class="N">0</pattern>
-            <pattern class="N">0.([0-9])*[1-9]</pattern>
-            <pattern class="N">-0.([0-9])*[1-9]</pattern>
-            <pattern class="N">[1-9]([0-9])*</pattern>
-            <pattern class="N">-[1-9]([0-9])*</pattern>
-            <pattern class="N">[1-9]([0-9])*.([0-9])*[1-9]</pattern>
-            <pattern class="N">-[1-9]([0-9])*.([0-9])*[1-9]</pattern>
-            <pattern class="T">"[A-Z]"</pattern>
-            <pattern class="T">"[A-Z][a-z]"</pattern>
-            <pattern class="T">"[A-Z][a-z][a-z]"</pattern>
-            <pattern class="T">"[A-Z][a-z][a-z][a-z]"</pattern>
-            <pattern class="T">"[A-Z][a-z][a-z][a-z][a-z]"</pattern>
-            <pattern class="T">"[A-Z][a-z][a-z][a-z][a-z][a-z]"</pattern>
-            <pattern class="T">"[A-Z][a-z][a-z][a-z][a-z][a-z][a-z]"</pattern>
-            <pattern class="T">"[A-Z][a-z][a-z][a-z][a-z][a-z][a-z][a-z]"</pattern>
+            <pattern class="N_Token">0</pattern>
+            <pattern class="N_Token">0.([0-9])*[1-9]</pattern>
+            <pattern class="N_Token">-0.([0-9])*[1-9]</pattern>
+            <pattern class="N_Token">[1-9]([0-9])*</pattern>
+            <pattern class="N_Token">-[1-9]([0-9])*</pattern>
+            <pattern class="N_Token">[1-9]([0-9])*.([0-9])*[1-9]</pattern>
+            <pattern class="N_Token">-[1-9]([0-9])*.([0-9])*[1-9]</pattern>
+            <pattern class="T_Token">"[A-Z]"</pattern>
+            <pattern class="T_Token">"[A-Z][a-z]"</pattern>
+            <pattern class="T_Token">"[A-Z][a-z][a-z]"</pattern>
+            <pattern class="T_Token">"[A-Z][a-z][a-z][a-z]"</pattern>
+            <pattern class="T_Token">"[A-Z][a-z][a-z][a-z][a-z]"</pattern>
+            <pattern class="T_Token">"[A-Z][a-z][a-z][a-z][a-z][a-z]"</pattern>
+            <pattern class="T_Token">"[A-Z][a-z][a-z][a-z][a-z][a-z][a-z]"</pattern>
+            <pattern class="T_Token">"[A-Z][a-z][a-z][a-z][a-z][a-z][a-z][a-z]"</pattern>
         </LITERAL>
 
     </TERMINALS>
