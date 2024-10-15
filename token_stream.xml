@@ -80,4 +80,9 @@
 		<CLASS>KEYWORD</CLASS>
 		<WORD>end</WORD>
 	</TOK>
+	<TOK>
+		<ID>-1</ID>
+		<CLASS>KEYWORD</CLASS>
+		<WORD>$</WORD>
+	</TOK>
 </TOKENSTREAM>

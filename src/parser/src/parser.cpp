@@ -6,6 +6,59 @@
 #include <regex>
 #include <iomanip>
 #include <cstdlib>
+#include <regex>
+class DummyNode
+{
+public:
+    std::string NAME;
+    int UID;
+    std::string CLASS;
+    std::string WORD;
+    std::vector<std::shared_ptr<DummyNode>> children;
+    void print_tree(int depth)
+    {
+        for (int i = 0; i < depth; ++i)
+            std::cout << "    ";
+        std::cout << "<" << NAME << ">\n";
+        for (int i = 0; i < depth + 1; ++i)
+            std::cout << "    ";
+        std::cout << "<UID>" << UID << "<UID>\n";
+        for (int i = 0; i < depth + 1; ++i)
+            std::cout << "    ";
+        std::cout << "<CLASS>" << CLASS << "<CLASS>\n";
+        for (int i = 0; i < depth + 1; ++i)
+            std::cout << "    ";
+        std::cout << "<WORD>" << WORD << "<WORD>\n";
+        if (children.size() > 0)
+        {
+            for (int i = 0; i < depth + 1; ++i)
+                std::cout << "    ";
+            std::cout << "<CHILDREN>\n";
+            for (auto c : children)
+            {
+                c->print_tree(depth + 2);
+            }
+            for (int i = 0; i < depth + 1; ++i)
+                std::cout << "    ";
+            std::cout << "</CHILDREN>\n";
+        }
+        for (int i = 0; i < depth; ++i)
+            std::cout << "    ";
+        std::cout << "</" << NAME << ">\n";
+    }
+    void print_code()
+    {
+        if (NAME == "LEAF")
+        {
+            std::cout << WORD << " ";
+            return;
+        }
+        for (auto c : children)
+        {
+            c->print_code();
+        }
+    }
+};
 Parser::Parser()
 {
     std::cout << "PARSER\n\n\n";
@@ -544,20 +597,20 @@ void Parser::construct_parse_table()
         // }
         // std::cout << std::endl;
     }
-    // // print production number and rules
-    // for (int i = 0; i < production_automaton.prod_num; ++i)
-    // {
-    //     std::cout << production_rules[i] << std::endl;
-    //     std::cout << " [" << production_rules[i]->prod_num << "] : " << std::endl;
-    //     std::cout << production_rules[i]->lhs_name << " ==> ";
-    //     for (std::string n : production_rules[i]->rhs_nodes_list)
-    //     {
-    //         std::cout << n << " ";
-    //     }
-    //     if (production_rules[i]->rhs_nodes_list.size() == 0 || production_rules[i]->lhs_name.length() == 0)
-    //         std::cout << "(Empty state: " << production_rules[i]->id << ")";
-    //     std::cout << std::endl;
-    // }
+    // print production number and rules
+    for (int i = 0; i < production_automaton.prod_num; ++i)
+    {
+        std::cout << production_rules[i] << std::endl;
+        std::cout << " [" << production_rules[i]->prod_num << "] : " << std::endl;
+        std::cout << production_rules[i]->lhs_name << " ==> ";
+        for (std::string n : production_rules[i]->rhs_nodes_list)
+        {
+            std::cout << n << " ";
+        }
+        if (production_rules[i]->rhs_nodes_list.size() == 0 || production_rules[i]->lhs_name.length() == 0)
+            std::cout << "(Empty state: " << production_rules[i]->id << ")";
+        std::cout << std::endl;
+    }
     for (auto state : production_automaton.dfa_states)
     {
         // std::cout << "Populating row " << state->id << std::endl;
@@ -598,9 +651,11 @@ void Parser::construct_parse_table()
             for (auto fol_sym : follow[state->lhs_name])
             {
                 // std::cout << fol_sym << "\"";
-                if (parse_table[state->id][fol_sym].first == 0)
+                if (parse_table[state->id][fol_sym].first != 0)
                 {
-                    std::cout << "Collision at " << state->id << " on " << fol_sym;
+                    std::cout << "Collision at " << state->id << " on " << fol_sym << std::endl;
+                    std::cout << "    Current action: " << (char)parse_table[state->id][fol_sym].first << parse_table[state->id][fol_sym].second << "\n";
+                    std::cout << "    New     action: " << 'R' << state->prod_num << "\n";
                 }
                 parse_table[state->id][fol_sym] = {Operation::REDUCE, state->prod_num};
                 terms[fol_sym] = std::max(2 + (int)(std::to_string(state->prod_num)).length(), terms[fol_sym]);
@@ -611,7 +666,7 @@ void Parser::construct_parse_table()
 
                 // std::cout << "(" << ((char)parse_table[state->id][fol_sym].first) << parse_table[state->id][fol_sym].second << ") ";
             }
-            std::cout << std::endl;
+            // std::cout << std::endl;
         }
     }
     std::ofstream csv_file("parse-table.csv");
@@ -688,8 +743,8 @@ void Parser::construct_parse_table()
     }
     pugi::xml_document ast_doc;
     pugi::xml_node tok_str = tok_doc.child("TOKENSTREAM");
-    std::stack<std::pair<int, pugi::xml_node>> parse_stack;
-    parse_stack.emplace(std::pair(production_automaton.dfa_start_state->id, pugi::xml_node()));
+    std::stack<std::pair<int, std::shared_ptr<DummyNode>>> parse_stack;
+    parse_stack.emplace(std::pair(production_automaton.dfa_start_state->id, std::make_shared<DummyNode>()));
     bool accept = false;
     pugi::xml_node curr_tok = tok_str.first_child();
     int uid_counter = 0;
@@ -697,15 +752,16 @@ void Parser::construct_parse_table()
     {
         { // debug printing
             std::cout << "Current stack:";
-            std::stack<std::pair<int, pugi::xml_node>> temp_stack;
+            std::stack<std::pair<int, std::shared_ptr<DummyNode>>> temp_stack;
             while (!parse_stack.empty())
             {
                 temp_stack.emplace(parse_stack.top());
+                // temp_stack.emplace(std::pair<Operation, std::shared_ptr<DummyNode>>(parse_stack.top().first, parse_stack.top().second));
                 parse_stack.pop();
             }
             while (!temp_stack.empty())
             {
-                std::cout << " " << temp_stack.top().first;
+                std::cout << " " << temp_stack.top().first << "(" << temp_stack.top().second->WORD << ")";
                 parse_stack.emplace(temp_stack.top());
                 temp_stack.pop();
             }
@@ -717,37 +773,42 @@ void Parser::construct_parse_table()
             } while ((print_tok = print_tok.next_sibling()) != pugi::xml_node());
             std::cout << "\n";
         }
-        std::pair<int, pugi::xml_node> curr_state = parse_stack.top();
-        std::pair<Operation, int> curr_op = parse_table[curr_state.first][curr_tok.child("WORD").child_value()];
-        std::cout << "parse_table[" << curr_state.first << "][" << curr_tok.child("WORD").child_value() << "] = "
+        std::pair<int, std::shared_ptr<DummyNode>> curr_state = parse_stack.top();
+        std::string col_head = curr_tok.child("CLASS").child_value();
+        if (col_head == "KEYWORD")
+        {
+            col_head = curr_tok.child("WORD").child_value();
+        }
+        else
+        {
+            std::cout << "\tNot \"KEYWORD\": \"" << col_head << "\"\n";
+            std::cout << "\tLength (Expected " << (std::string("KEYWORD").length()) << ", Found" << col_head.length();
+            col_head = curr_tok.child("CLASS").child_value();
+        }
+        std::pair<Operation, int> curr_op = parse_table[curr_state.first][col_head];
+        std::cout << "parse_table[" << curr_state.first << "][" << col_head << "] = "
                   << ((char)curr_op.first) << curr_op.second << "\n";
         switch (curr_op.first)
         {
         case Operation::SHIFT:
         {
-            pugi::xml_node new_node;
-            new_node.set_name("LEAF");
-            new_node
-                .append_child("UID")
-                .append_child(pugi::node_pcdata)
-                .set_value(std::to_string(uid_counter++).c_str());
+            std::cout << "Shifting new node: ";
+            std::shared_ptr<DummyNode> new_node = std::make_shared<DummyNode>();
+            new_node->NAME = "LEAF";
+            new_node->UID = uid_counter++;
+            new_node->CLASS = curr_tok.child("CLASS").child_value();
+            new_node->WORD = curr_tok.child("WORD").child_value();
 
-            new_node
-                .append_child("CLASS")
-                .append_child(pugi::node_pcdata)
-                .set_value(curr_tok.child("CLASS").child_value());
+            std::cout << "UID=" << new_node->UID;
+            std::cout << ", CLASS=" << new_node->CLASS;
+            std::cout << ", WORD=" << new_node->WORD << "\n";
 
-            new_node
-                .append_child("WORD")
-                .append_child(pugi::node_pcdata)
-                .set_value(curr_tok.child("WORD").child_value());
-
-            curr_state = std::pair<int, pugi::xml_node>(curr_op.second, new_node);
+            curr_state = std::pair<int, std::shared_ptr<DummyNode>>(curr_op.second, new_node);
             parse_stack.emplace(curr_state);
-            std::cout << "New parse stack element: " << parse_stack.top().second.name() << "("
-                      << "UID=" << parse_stack.top().second.child("UID").child_value()
-                      << ", CLASS=" << parse_stack.top().second.child("CLASS").child_value()
-                      << ", WORD=" << parse_stack.top().second.child("WORD").child_value() << ")\n";
+            std::cout << "New parse stack element: " << parse_stack.top().second->NAME << "("
+                      << "UID=" << parse_stack.top().second->UID
+                      << ", CLASS=" << parse_stack.top().second->CLASS
+                      << ", WORD=" << parse_stack.top().second->WORD << ")\n";
             curr_tok = curr_tok.next_sibling();
             break;
         }
@@ -765,33 +826,96 @@ void Parser::construct_parse_table()
             std::string prod_LHS = production_rules[curr_op.second]->lhs_name;
             std::vector<std::string> prod_RHS = production_rules[curr_op.second]->rhs_nodes_list;
 
-            pugi::xml_node new_node;
-            new_node.set_name("INTERNAL");
-            new_node.append_child("UID").append_child(pugi::node_pcdata).set_value(std::to_string(uid_counter++).c_str());
-            new_node.append_child("CLASS").append_child(pugi::node_pcdata).set_value("NONTERMINAL");
-            new_node.append_child("WORD").append_child(pugi::node_pcdata).set_value(prod_LHS.c_str());
+            std::shared_ptr<DummyNode> new_node = std::make_shared<DummyNode>();
+            new_node->NAME = "INTERNAL";
+            new_node->UID = uid_counter++;
+            new_node->CLASS = "NONTERMINAL";
+            new_node->WORD = prod_LHS.c_str();
             std::vector<std::string>::reverse_iterator rit = prod_RHS.rbegin();
-            pugi::xml_node children = new_node.prepend_child("CHILDREN");
             for (; rit != prod_RHS.rend(); ++rit)
             {
                 curr_state = parse_stack.top();
-                if (*rit != curr_state.second.child("WORD").child_value())
+                if (*rit != curr_state.second->WORD)
                 {
-                    std::cout << "Top of stack: {" << curr_state.first << ", " << curr_state.second.child("WORD").child_value()
-                              << "} \nCurr Production Symbol: " << *rit << "\n\n";
-                    throw "\nInconsistent stack state\n";
+                    std::cout << "Token word does not match, token class is: " << curr_state.second->CLASS << "\n";
+                    if (curr_state.second->CLASS == "V_Token" && *rit == "VID")
+                    {
+                        pugi::xpath_node vid_node_expr = this->cfg_doc.select_node("TERMINALS/VID/pattern");
+                        if (vid_node_expr != pugi::xpath_node())
+                        {
+                            std::string vid_str = "^";
+                            vid_str.append(vid_node_expr.node().child_value());
+                            vid_str.append("$");
+                            std::cout << "Final regular expression: " << vid_str << "\n";
+                            std::regex vid_regex(vid_str, std::regex_constants::ECMAScript);
+                            if (std::regex_search(curr_state.second->WORD, vid_regex))
+                            {
+                                std::cout << "The token is a valid variable name\n";
+                            }
+                            else
+                            {
+                                std::cout << "The token is not a valid variable name\n";
+                            }
+                        }
+                    }
+                    else if (curr_state.second->CLASS == "F_Token" && *rit == "FID")
+                    {
+                        pugi::xpath_node fid_node_expr = this->cfg_doc.select_node("TERMINALS/FID/pattern");
+                        if (fid_node_expr != pugi::xpath_node())
+                        {
+                            std::string fid_str = "^";
+                            fid_str.append(fid_node_expr.node().child_value());
+                            fid_str.append("$");
+                            std::cout << "Final regular expression: " << fid_str << "\n";
+                            std::regex fid_regex(fid_str, std::regex_constants::ECMAScript);
+                            if (std::regex_search(curr_state.second->WORD, fid_regex))
+                            {
+                                std::cout << "The token is a valid function name\n";
+                            }
+                            else
+                            {
+                                std::cout << "The token is not a valid function name\n";
+                            }
+                        }
+                    }
+                    else if (*rit == "LITERAL" && (curr_state.second->CLASS == "N_Token" || curr_state.second->CLASS == "T_Token"))
+                    {
+                        pugi::xpath_node literal_node_expr = this->cfg_doc.select_node("TERMINALS/LITERAL");
+                        if (literal_node_expr != pugi::xpath_node())
+                        {
+                            pugi::xml_node literal_pattern = literal_node_expr.node().first_child();
+                            std::string literal_pattern_string = "^(";
+                            literal_pattern_string.append(literal_pattern.child("pattern").child_value());
+                            while ((literal_pattern = literal_pattern.next_sibling()) != pugi::xml_node())
+                            {
+                                literal_pattern_string.append("|");
+                                literal_pattern_string.append(literal_pattern.child("pattern").child_value());
+                            }
+                            literal_pattern_string.append(")$");
+                            std::regex decimal("\\.");
+                            literal_pattern_string = std::regex_replace(literal_pattern_string, decimal, "\\\\.");
+                            std::cout
+                                << "Final regular expression: " << literal_pattern_string << "\n";
+                            std::regex literal_regex(literal_pattern_string, std::regex_constants::ECMAScript);
+                            if (std::regex_search(curr_state.second->WORD, literal_regex))
+                            {
+                                std::cout << "The token is a valid literal value\n";
+                            }
+                            else
+                            {
+                                std::cout << "The token is not a valid literal value\n";
+                            }
+                        }
+                    }
+                    else
+                    {
+                        std::cout << "\tTop of stack: {" << curr_state.first << ", " << curr_state.second->WORD
+                                  << "} \n\tCurr Production Symbol: \"" << *rit << "\" Length " << rit->length();
+                        std::cout << "\tExpected: \"" << curr_state.second->WORD << "\" Length " << curr_state.second->WORD.length() << "\n";
+                        throw "\nInconsistent stack state\n";
+                    }
                 }
-                pugi::xml_node child_node = children.prepend_child(curr_state.second.name());
-
-                child_node.append_child("UID")
-                    .append_child(pugi::node_pcdata)
-                    .set_value(curr_state.second.child("UID").child_value());
-                child_node.append_child("CLASS")
-                    .append_child(pugi::node_pcdata)
-                    .set_value(curr_state.second.child("CLASS").child_value());
-                child_node.append_child("WORD")
-                    .append_child(pugi::node_pcdata)
-                    .set_value(curr_state.second.child("WORD").child_value());
+                new_node->children.insert(new_node->children.begin(), curr_state.second);
 
                 parse_stack.pop();
             }
@@ -825,15 +949,18 @@ void Parser::construct_parse_table()
     }
     if (accept)
     {
-        ast_doc.append_child("AST").append_copy(parse_stack.top().second);
-        if (ast_doc.save_file("./AST.xml"))
-        {
-            std::cout << "\n\nSAVED AST TO AST.xml\n\n";
-        }
-        else
-        {
-            std::cout << "\n\nSOMETHING WENT WRONG WHEN SAVING AST TO AST.xml\n\n";
-        }
+        // ast_doc.append_child("AST").append_copy(parse_stack.top().second);
+        // if (ast_doc.save_file("./AST.xml"))
+        // {
+        //     std::cout << "\n\nSAVED AST TO AST.xml\n\n";
+        // }
+        // else
+        // {
+        //     std::cout << "\n\nSOMETHING WENT WRONG WHEN SAVING AST TO AST.xml\n\n";
+        // }
+        parse_stack.top().second->print_tree(0);
+        parse_stack.top().second->print_code();
+        std::cout << "\n";
     }
     else
     {

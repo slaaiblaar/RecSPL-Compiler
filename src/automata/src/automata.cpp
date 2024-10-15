@@ -367,6 +367,12 @@ void Automaton::add_state(std::shared_ptr<State> state)
 
 void Automaton::nfa_to_dfa()
 {
+    // reset IDs
+    int idcounter = 0;
+    for (auto s : this->nfa_states)
+    {
+        s->id = idcounter++;
+    }
     // std::cout << "Epsilon transitions:\n";
     // for (auto current_state : nfa_states)
     // {
@@ -390,11 +396,20 @@ void Automaton::nfa_to_dfa()
         e_closure_expanded = false;
         for (auto current_state : nfa_states)
         {
+            // std::cout << current_state->id
             // for each state in the current state's epsilon closure set
             for (std::pair<int, std::shared_ptr<State>> e_state : current_state->e_closure)
             {
                 // for each epsilon transition of the above state
                 for (std::shared_ptr<State> next_hop : e_state.second->transitions[std::string({'\0'})])
+                {
+                    if (current_state->e_closure.find(next_hop->id) == current_state->e_closure.end())
+                    {
+                        current_state->e_closure[next_hop->id] = next_hop;
+                        e_closure_expanded = true;
+                    }
+                }
+                for (std::shared_ptr<State> next_hop : e_state.second->transitions[""])
                 {
                     if (current_state->e_closure.find(next_hop->id) == current_state->e_closure.end())
                     {
@@ -408,12 +423,37 @@ void Automaton::nfa_to_dfa()
     // std::cout << "E-closures\n";
     // for (auto state : nfa_states)
     // {
-    //     std::cout << state->id << ": ";
+    //     std::cout << state->id << ": \n";
     //     for (auto s : state->e_closure)
     //     {
     //         if (s.second->token_class.length() > 0)
     //         {
-    //             std::cout << s.second->token_class << ", ";
+    //             std::cout << "\t" << s.second->id << "(" << s.second->token_class << ") epsilons: \n";
+    //             for (auto t : s.second->transitions)
+    //             {
+    //                 if (t.first.length() == 0)
+    //                 {
+    //                     std::cout << " \t\t\"\":";
+    //                     for (auto dest : t.second)
+    //                     {
+    //                         std::cout << " " << dest->id;
+    //                     }
+    //                 }
+    //                 else if (t.first == "\0" || (t.first.length() == 1 && (t.first[0] == '\0' || t.first[0] == 0)))
+    //                 {
+    //                     std::cout << " \t\t{";
+    //                     for (auto c : t.first)
+    //                     {
+    //                         std::cout << "'" << ((int)c) << "', ";
+    //                     }
+    //                     std::cout << "}:";
+    //                     for (auto dest : t.second)
+    //                     {
+    //                         std::cout << " " << dest->id;
+    //                     }
+    //                 }
+    //                 std::cout << "\n";
+    //             }
     //         }
     //         else
     //         {
@@ -459,6 +499,11 @@ void Automaton::nfa_to_dfa()
     this->read_pos = 0;
     this->read_start = 0;
     this->accept_state = nullptr;
+    idcounter = 0;
+    for (auto s : this->dfa_states)
+    {
+        s->id = idcounter++;
+    }
 }
 std::shared_ptr<State> Automaton::find_dfa_state(std::unordered_map<int, std::shared_ptr<State>> nfa_states)
 {
@@ -862,11 +907,15 @@ void Automaton::print_nfa()
 }
 std::string construct_final_name(std::shared_ptr<State> state)
 {
-    std::string prod = state->lhs_name;
-    for (int x = 0; x < state->rhs_nodes_list.size(); ++x)
-    {
-        prod.append("-" + state->rhs_nodes_list[x]);
-    }
+    std::string prod = std::to_string(state->id);
+    prod.append(" (");
+    // prod.append(state->lhs_name);
+    // for (int x = 0; x < state->rhs_nodes_list.size(); ++x)
+    // {
+    //     prod.append("-" + state->rhs_nodes_list[x]);
+    // }
+    prod.append(std::to_string(state->prod_num));
+    prod.append(")");
     return prod;
 }
 void Automaton::print_dfa()

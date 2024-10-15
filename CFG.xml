@@ -87,9 +87,9 @@
         <VNAME>
             <!-- VNAME ::= ID -->
             <production>
-                <ID terminal="true">
+                <VID terminal="true">
                     <pattern>V_[a-z][a-z0-9]*</pattern>
-                </ID>
+                </VID>
             </production>
         </VNAME>
 
@@ -452,9 +452,9 @@
         <FNAME>
             <!-- FNAME ::= ID -->
             <production>
-                <ID terminal="true">
+                <FID terminal="true">
                     <pattern>F_[a-z][a-z0-9]*</pattern>
-                </ID>
+                </FID>
             </production>
         </FNAME>
 
@@ -642,10 +642,12 @@
             <value class="KEYWORD">$</value>
         </KEYWORD>
 
-        <ID>
-            <pattern class="F_Token">F_[a-z][a-z0-9]*</pattern>
+        <VID>
             <pattern class="V_Token">V_[a-z][a-z0-9]*</pattern>
-        </ID>
+        </VID>
+        <FID>
+            <pattern class="F_Token">F_[a-z][a-z0-9]*</pattern>
+        </FID>
 
         <LITERAL>
             <pattern class="N_Token">0</pattern>
