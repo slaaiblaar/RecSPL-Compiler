@@ -226,11 +226,57 @@ void Scope_Checker::generateRandomProgram() {
 // Constructor for node
 node::node() : UID(node_counter++) {}
 
-// Function to recursively generate an AST
+// // Function to recursively generate an AST
+// void generate_tree(std::shared_ptr<node> n, pugi::xml_node productions) {
+//     // Find the production rule for the current node's WORD
+//     pugi::xpath_node lhs_xpath_node = productions.select_node((std::string("//production[@lhs='") + n->WORD + "']").c_str());
+    
+//     if (!lhs_xpath_node) {
+//         // Terminal node (ID, KEYWORD, or LITERAL)
+//         n->NAME = "LEAF";
+//         n->UID = node_counter++;
+//         n->CLASS = "TERMINAL";
+
+//         // Logic for terminal nodes (keywords, literals, or identifiers)
+//         if (n->WORD == "ID") {
+//             n->WORD = "V_" + std::to_string(rand() % 100);  // Simulate an ID
+//         } else if (n->WORD == "LITERAL") {
+//             n->WORD = std::to_string(rand() % 100);  // Simulate a number
+//         } else {
+//             // Treat as a keyword (e.g., main, begin, end)
+//             n->WORD = "keyword_" + std::to_string(rand() % 5);
+//         }
+//     } else {
+//         // Non-terminal node
+//         n->NAME = "INTERNAL";
+//         n->CLASS = lhs_xpath_node.node().attribute("lhs").as_string();
+
+//         // Randomly select one production rule (rhs)
+//         pugi::xml_node lhs = lhs_xpath_node.node();
+//         std::vector<pugi::xml_node> rhs_list;
+//         for (pugi::xml_node rhs = lhs.child("rhs"); rhs; rhs = rhs.next_sibling("rhs")) {
+//             rhs_list.push_back(rhs);
+//         }
+
+//         // Select a random production (rhs) to expand
+//         pugi::xml_node rhs = rhs_list[rand() % rhs_list.size()];
+//         pugi::xml_node symbol = rhs.first_child();
+
+//         // Recursively generate children
+//         while (symbol) {
+//             std::shared_ptr<node> child = std::make_shared<node>();
+//             child->WORD = symbol.text().as_string();
+//             generate_tree(child, productions);
+//             n->children.push_back(child);  // Add child to current node
+//             symbol = symbol.next_sibling();
+//         }
+//     }
+// }
+
 void generate_tree(std::shared_ptr<node> n, pugi::xml_node productions) {
     // Find the production rule for the current node's WORD
     pugi::xpath_node lhs_xpath_node = productions.select_node((std::string("//production[@lhs='") + n->WORD + "']").c_str());
-    
+
     if (!lhs_xpath_node) {
         // Terminal node (ID, KEYWORD, or LITERAL)
         n->NAME = "LEAF";
@@ -246,6 +292,9 @@ void generate_tree(std::shared_ptr<node> n, pugi::xml_node productions) {
             // Treat as a keyword (e.g., main, begin, end)
             n->WORD = "keyword_" + std::to_string(rand() % 5);
         }
+
+        // Output debug information
+        std::cout << "Generated terminal node: " << n->WORD << " (CLASS: " << n->CLASS << ", UID: " << n->UID << ")\n";
     } else {
         // Non-terminal node
         n->NAME = "INTERNAL";
@@ -262,6 +311,13 @@ void generate_tree(std::shared_ptr<node> n, pugi::xml_node productions) {
         pugi::xml_node rhs = rhs_list[rand() % rhs_list.size()];
         pugi::xml_node symbol = rhs.first_child();
 
+        // Output debug information
+        std::cout << "Expanding non-terminal: " << n->WORD << " with rule: ";
+        for (pugi::xml_node sym = rhs.first_child(); sym; sym = sym.next_sibling()) {
+            std::cout << sym.text().as_string() << " ";
+        }
+        std::cout << "\n";
+
         // Recursively generate children
         while (symbol) {
             std::shared_ptr<node> child = std::make_shared<node>();
@@ -272,6 +328,7 @@ void generate_tree(std::shared_ptr<node> n, pugi::xml_node productions) {
         }
     }
 }
+
 
 // Function to initiate tree generation and simulate a random AST
 void Scope_Checker::testScopeChecker() {
