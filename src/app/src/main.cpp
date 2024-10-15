@@ -22,6 +22,13 @@ int main()
     // luthor.lex();
     // std::cout << "LEXED\n";
     // Parser p;
+  
+
+    std::cout << "Testing scope checker" << std::endl;
+ 
+    std::srand(std::time(0)); 
     Scope_Checker SC;
+    scopeChecker.testScopeChecker();
+
     return 0;
 }
