@@ -293,8 +293,7 @@ void generate_tree(std::shared_ptr<node> n, pugi::xml_node productions) {
             n->WORD = "keyword_" + std::to_string(rand() % 5);
         }
 
-        // Output debug information
-        std::cout << "Generated terminal node: " << n->WORD << " (CLASS: " << n->CLASS << ", UID: " << n->UID << ")\n";
+       // std::cout << "Generated terminal node: " << n->WORD << " (CLASS: " << n->CLASS << ", UID: " << n->UID << ")\n";
     } else {
         // Non-terminal node
         n->NAME = "INTERNAL";
@@ -323,18 +322,16 @@ void generate_tree(std::shared_ptr<node> n, pugi::xml_node productions) {
             std::shared_ptr<node> child = std::make_shared<node>();
             child->WORD = symbol.text().as_string();
             generate_tree(child, productions);
-            n->children.push_back(child);  // Add child to current node
+            n->children.push_back(child);  
             symbol = symbol.next_sibling();
         }
     }
 }
 
 
-// Function to initiate tree generation and simulate a random AST
 void Scope_Checker::testScopeChecker() {
     std::cout << "===== Running Random Program Test =====\n";
     
-    // Load the CFG.xml file using pugixml
     pugi::xml_document doc;
     if (!doc.load_file("CFG.xml")) {
         std::cerr << "Error loading CFG.xml\n";
@@ -350,7 +347,6 @@ void Scope_Checker::testScopeChecker() {
     root->WORD = "PROGPRIMEPRIME";
     root->UID = node_counter++;
 
-    // Generate the AST
     generate_tree(root, productions);
 
     std::cout << "===== Test Complete =====\n\n";
