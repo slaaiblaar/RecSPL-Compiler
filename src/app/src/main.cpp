@@ -24,11 +24,11 @@ int main()
     // Parser p;
   
 
-    // std::cout << "Testing scope checker" << std::endl;
+    std::cout << "Testing scope checker" << std::endl;
  
     // std::srand(std::time(0)); 
-    // Scope_Checker SC;
-    // scopeChecker.testScopeChecker();
+    Scope_Checker SC;
+    SC.testScopeChecker();
 
     return 0;
 }
