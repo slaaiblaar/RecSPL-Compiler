@@ -4,6 +4,7 @@
 #include "automata.hpp"
 #include "lexer.hpp"
 #include "parser.hpp"
+#include "scope_checker.hpp"
 #include <iostream>
 int main()
 {
@@ -14,12 +15,13 @@ int main()
         "\"Hellowor\"", "V_hello", "F_world", "-0.123", "1.01", "0", "123",
         "-1"};
 
-    Lexer luthor;
-    luthor.read_input("./imput.txt");
-    luthor.read_input("./input.txt");
-    std::cout << "INPUT READ\n";
-    luthor.lex();
-    std::cout << "LEXED\n";
-    Parser p;
+    // Lexer luthor;
+    // luthor.read_input("./imput.txt");
+    // luthor.read_input("./input.txt");
+    // std::cout << "INPUT READ\n";
+    // luthor.lex();
+    // std::cout << "LEXED\n";
+    // Parser p;
+    Scope_Checker SC;
     return 0;
 }
