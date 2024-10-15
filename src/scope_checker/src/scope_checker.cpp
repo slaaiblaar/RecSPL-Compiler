@@ -119,14 +119,12 @@
 //     return 0;
 // }
 
-// scope_checker.cpp
 #include "scope_checker.hpp"
 #include <cstdlib>
 #include <ctime>
 
 int node_counter = 0;  // Global UID counter
 
-// Constructor for Scope_Checker
 Scope_Checker::Scope_Checker() {
     std::cout << "Scope Checker initialized\n";
 }
@@ -209,7 +207,7 @@ void Scope_Checker::generateRandomOp() {
 }
 
 void Scope_Checker::generateRandomProgram() {
-    pushScope();  // Global scope
+    pushScope();  
 
     // Generate global variables
     for (int i = 0; i < 2; ++i) generateRandomVar();
@@ -220,15 +218,13 @@ void Scope_Checker::generateRandomProgram() {
     // Generate operations and scope checks
     for (int i = 0; i < 3; ++i) generateRandomOp();
 
-    popScope();  // End global scope
+    popScope();  
 }
 
-// Constructor for node
 node::node() : UID(node_counter++) {}
 
 // // Function to recursively generate an AST
 // void generate_tree(std::shared_ptr<node> n, pugi::xml_node productions) {
-//     // Find the production rule for the current node's WORD
 //     pugi::xpath_node lhs_xpath_node = productions.select_node((std::string("//production[@lhs='") + n->WORD + "']").c_str());
     
 //     if (!lhs_xpath_node) {
@@ -340,7 +336,7 @@ void Scope_Checker::testScopeChecker() {
 
     pugi::xml_node productions = doc.child("PRODUCTIONRULES");
 
-    // Create the root node for the AST
+    // root node for tree
     std::shared_ptr<node> root = std::make_shared<node>();
     root->NAME = "INTERNAL";
     root->CLASS = "PROGPRIMEPRIME";
