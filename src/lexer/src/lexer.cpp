@@ -17,12 +17,17 @@ Lexer::Lexer()
 
     pugi::xml_node terminals = doc.child("CFG").child("TERMINALS");
     pugi::xml_node keywords_terminal = terminals.child("KEYWORD").first_child();
-    pugi::xml_node id_terminal = terminals.child("ID").first_child();
+    pugi::xml_node vid_terminal = terminals.child("VID").first_child();
+    pugi::xml_node fid_terminal = terminals.child("FID").first_child();
     pugi::xml_node literal_terminal = terminals.child("LITERAL").first_child();
     do
     {
-        dfa.append_pattern(id_terminal.child_value(), id_terminal.attribute("class").value());
-    } while ((id_terminal = id_terminal.next_sibling()) != pugi::xml_node());
+        dfa.append_pattern(vid_terminal.child_value(), vid_terminal.attribute("class").value());
+    } while ((vid_terminal = vid_terminal.next_sibling()) != pugi::xml_node());
+    do
+    {
+        dfa.append_pattern(fid_terminal.child_value(), fid_terminal.attribute("class").value());
+    } while ((fid_terminal = fid_terminal.next_sibling()) != pugi::xml_node());
     do
     {
         dfa.append_pattern(literal_terminal.child_value(), literal_terminal.attribute("class").value());
@@ -143,6 +148,18 @@ void Lexer::lex()
         word.append_child(pugi::node_pcdata)
             .set_value(t.token_word.c_str());
     }
+    pugi::xml_node tok = token_stream.append_child("TOK");
+    pugi::xml_node id = tok.append_child("ID");
+    id.append_child(pugi::node_pcdata)
+        .set_value(std::to_string(-1).c_str());
+
+    pugi::xml_node tok_class = tok.append_child("CLASS");
+    tok_class.append_child(pugi::node_pcdata)
+        .set_value("KEYWORD");
+
+    pugi::xml_node word = tok.append_child("WORD");
+    word.append_child(pugi::node_pcdata)
+        .set_value("$");
 
     std::cout << "Saving tokens to \"token_stream.xml\": " << token_doc.save_file("./token_stream.xml") << std::endl;
 }
