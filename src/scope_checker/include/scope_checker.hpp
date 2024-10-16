@@ -49,7 +49,7 @@ private:
     void generateRandomProgram();
 };
 
-class node
+class node : public std::enable_shared_from_this<node>
 {
 public:
     std::string NAME;                            // Leaf or Internal node
@@ -58,6 +58,12 @@ public:
     std::string WORD;                            // Word representing the production
     std::vector<std::shared_ptr<node>> children; // Child nodes
     void printnode(int depth);
+    // {v_name: type}
+    std::unordered_map<std::string, std::string> v_table;
+    // {f_name: [returntype, arg1, arg1, arg3]}
+    std::unordered_map<std::string, std::string[4]> f_table;
+    bool pre_processed = false;
+    bool is_in_scope = true;
     node();
 };
 

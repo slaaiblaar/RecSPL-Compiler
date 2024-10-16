@@ -1,3 +1,4 @@
+add_subdirectory(fmt-master)
 add_subdirectory(scope_checker)
 add_subdirectory(parser)
 add_subdirectory(lexer)
@@ -6,6 +7,7 @@ add_subdirectory(pugixml)
 add_subdirectory(app)
 
 install(TARGETS
+    fmt
     scope_checker
     parser
     lexer

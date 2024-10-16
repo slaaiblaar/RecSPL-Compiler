@@ -14,6 +14,7 @@ target_include_directories(${TARGET_NAME}
     ${CMAKE_CURRENT_SOURCE_DIR}/../lexer/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../parser/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../scope_checker/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../fmt-master/include
     # Any other extra include required
 )
 
@@ -22,3 +23,4 @@ target_link_libraries(${TARGET_NAME} PUBLIC automata)
 target_link_libraries(${TARGET_NAME} PUBLIC lexer)
 target_link_libraries(${TARGET_NAME} PUBLIC parser)
 target_link_libraries(${TARGET_NAME} PUBLIC scope_checker)
+target_link_libraries(${TARGET_NAME} PUBLIC fmt)
