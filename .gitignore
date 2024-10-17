@@ -7,5 +7,5 @@ Makefile
 compile_commands.json
 *.a
 CFG_*.xml
-code_file.txt
-random_tree.xml
+code_file*.txt
+random_tree*.xml
