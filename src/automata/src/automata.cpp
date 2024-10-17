@@ -596,11 +596,27 @@ void Automaton::set_final_state(int id)
 
 void Automaton::set_input(std::string input)
 {
+    line_num = 1;
+    col_num = 0;
     this->input = input;
     current_state = dfa_start_state;
     read_start = 0;
     while (read_start < input.length() && isspace(input[read_start]))
     {
+        std::cout << "whitespace: {" << (long)input[read_start] << "}\n";
+        if (input[read_start] == '\n')
+        {
+            ++line_num;
+            col_num = 0;
+        }
+        else if (input[read_start] == 9)
+        {
+            col_num += 8;
+        }
+        else
+        {
+            ++col_num;
+        }
         ++read_start;
     }
     read_pos = read_start;
@@ -610,12 +626,27 @@ void Automaton::set_input(std::string input)
 void Automaton::reset_dfa()
 {
     this->current_state = dfa_start_state;
+    col_num += accept_pos - read_start + 1;
     this->read_start = accept_pos + 1;
     this->accept_pos = -1;
     this->accept_state = nullptr;
     // progress read pos to next significant character
     while (read_start < input.length() && isspace(input[read_start]))
     {
+        std::cout << "whitespace: {" << (long)input[read_start] << "}\n";
+        if (input[read_start] == 10)
+        {
+            ++line_num;
+            col_num = 1;
+        }
+        else if (input[read_start] == 9)
+        {
+            col_num += 8;
+        }
+        else
+        {
+            ++col_num;
+        }
         ++read_start;
     }
     read_pos = read_start;
@@ -625,24 +656,27 @@ void Automaton::reset_dfa()
 // if invalid transition then return false
 bool Automaton::run()
 {
+    std::cout << "Start state: " << dfa_start_state->id << "\n";
+    std::cout << "Curr state:  " << current_state->id << "\n";
     // input bound check
     if (accept_pos == read_pos)
     {
         ++read_pos;
     }
-    // std::cout << "RUNNING LEXER:\n";
+    std::cout << "RUNNING LEXER:\n";
+    std::cout << "start pos: " << read_start << "\n";
     while (read_pos < input.size())
     {
+        std::cout << "Curr pos: " << read_pos << "\n";
         char soombol = input[read_pos];
-        // for (int s = 0; s < read_pos; ++s)
-        //     std::cout << " ";
+        for (int s = read_start; s <= read_pos; ++s)
+            std::cout << input[s];
         // std::cout << soombol << std::endl;
-        // std::cout << "CAN TRANSITION FROM " << current_state;
-        // std::cout << " ON SYMBOL " << soombol << "?\n";
+        std::cout << ": \tCAN TRANSITION FROM " << current_state << "?\n";
         if (!current_state->can_transition(soombol))
         {
-            //     std::cout << "CAN'T TRANSITION\n";
-            //     std::cout << "[Failed]\n";
+            std::cout << "CAN'T TRANSITION\n";
+            std::cout << "[Failed]\n";
             return false;
         }
         // std::cout << "NOT FAILED\n";
@@ -650,7 +684,7 @@ bool Automaton::run()
         if (current_state->is_final)
         {
             accept_pos = read_pos;
-            // std::cout << "[Accepted]\n";
+            std::cout << "[Accepted]\n";
             return true;
         }
         // std::cout << "[Failed]\n";

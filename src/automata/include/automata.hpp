@@ -133,6 +133,8 @@ public:
     std::string input;
     std::queue<std::shared_ptr<State>> subset_construction_queue;
     bool was_cfg = false;
+    int line_num;
+    int col_num;
 };
 
 #endif

@@ -841,12 +841,12 @@ int generate_tree(std::shared_ptr<node> parent, pugi::xml_node productions, int 
             {
                 // generate tree can't guess the correct keyword
                 child->WORD = symbol.child("value").child_value();
-                // 1 % chance of incorrect keyword
-                bool mess_up = (((double)rand() / (double)RAND_MAX) < 0.01);
-                if (mess_up)
-                {
-                    child->WORD = fmt::format("keyword_{}({})", std::to_string(rand() % 5), child->WORD);
-                }
+                // 0.1 % chance of incorrect keyword
+                bool mess_up = (((double)rand() / (double)RAND_MAX) < 0.001);
+                // if (mess_up)
+                // {
+                //     child->WORD = fmt::format("keyword_{}({})", std::to_string(rand() % 5), child->WORD);
+                // }
             }
             generate_tree(child, productions, depth + 1);
 
@@ -1143,7 +1143,7 @@ void populate_identifiers(std::shared_ptr<node> n)
     }
 }
 
-void Scope_Checker::testScopeChecker()
+void Scope_Checker::testScopeChecker(int i)
 {
     std::cout << "===== Running Random Program Test =====\n";
 

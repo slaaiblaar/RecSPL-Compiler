@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <regex>
+#include <fmt/core.h>
 Lexer::Lexer()
 {
 
@@ -34,31 +35,36 @@ Lexer::Lexer()
     } while ((literal_terminal = literal_terminal.next_sibling()) != pugi::xml_node());
     do
     {
+
+        std::cout << "KEYWORD: " << keywords_terminal.child_value() << "\n";
         dfa.append_keyword(keywords_terminal.child_value(), keywords_terminal.attribute("class").value());
     } while ((keywords_terminal = keywords_terminal.next_sibling()) != pugi::xml_node());
+    // return;
     // prints NFA state to terminal in a format that's easy to manually insert into render-automata.py
     // dfa.print_nfa();
     dfa.nfa_to_dfa();
-    // dfa.print_dfa();
+    // return;
+    dfa.print_dfa();
     std::string dfa_test_strings[] = {
         "main", "num", "text", "begin", "end", "skip", "halt", "print",
         "<input", "=", "(", ",", ")", "if", "then", "else", "not", "sqrt", "or",
         "and", "eq", "grt", "add", "sub", "mul", "div", "void", "{", "}",
         "\"Hellowor\"", "V_hello", "F_world", "-0.123", "1.01", "0", "123",
-        "-1"};
+        "-1", "return"};
 
     for (std::string test_string : dfa_test_strings)
     {
         dfa.set_input(test_string);
         if (!dfa.run())
         {
-            std::cout << "Test string failed: " << test_string << std::endl;
-            std::cout << "Final State: " << dfa.current_state->id << std::endl;
+            // std::cout << "Test string failed: " << test_string << std::endl;
+            // std::cout << "Final State: " << dfa.current_state->id << std::endl;
+            throw;
         }
         else
         {
-            std::cout << "Test string passed: " << test_string << std::endl;
-            std::cout << "Token class: " << dfa.current_state->token_class << std::endl;
+            // std::cout << "Test string passed: " << test_string << std::endl;
+            // std::cout << "Token class: " << dfa.current_state->token_class << std::endl;
         }
         dfa.reset_dfa();
     }
@@ -72,6 +78,7 @@ void Lexer::set_input(std::string input)
 
 void Lexer::read_input(std::string file_path)
 {
+    this->file_name = file_path;
     if (file_path.length() == 0)
     {
         std::cout << "Empty file path\n";
@@ -89,7 +96,7 @@ void Lexer::read_input(std::string file_path)
     std::string str;
     while (getline(input_file, str))
     {
-        input_stream << str << " ";
+        input_stream << str << "\n";
     }
     input_file.close();
     str = input_stream.str();
@@ -97,7 +104,7 @@ void Lexer::read_input(std::string file_path)
     std::cout << "\"" << this->input << "\"" << std::endl;
 }
 
-void Lexer::lex()
+bool Lexer::lex()
 {
     dfa.print_nfa();
     dfa.print_dfa();
@@ -105,10 +112,11 @@ void Lexer::lex()
     if (input.length() == 0)
     {
         std::cout << "Input not set";
-        return;
+        return false;
     }
     dfa.set_input(this->input);
     std::cout << "INPUT SET\n";
+    bool complete_lex = true;
     while (dfa.read_pos < this->input.length())
     {
         dfa.reset_dfa();
@@ -124,8 +132,17 @@ void Lexer::lex()
         }
         if (dfa.accept_pos == -1)
         {
-            std::cout << "invalid syntax at position " << dfa.read_start << std::endl;
-            std::cout << "read_start: " << dfa.read_start << ", read_pos: " << dfa.read_pos << ", accept_pos: " << dfa.accept_pos << std::endl;
+            std::string invalid_token = "";
+            for (int i = dfa.read_start; i < dfa.input.length(); ++i)
+            {
+                if (isspace(dfa.input[i]))
+                {
+                    invalid_token = dfa.input.substr(dfa.read_start, i - dfa.read_start);
+                    break;
+                }
+            }
+            std::cout << fmt::format("Invalid syntax in file \"{}\":{}:{}: \"{}\"\n", this->file_name, dfa.line_num, dfa.col_num, invalid_token);
+            complete_lex = false;
             break;
         }
         tokens.push_back(dfa.get_token());
@@ -162,4 +179,11 @@ void Lexer::lex()
         .set_value("$");
 
     std::cout << "Saving tokens to \"token_stream.xml\": " << token_doc.save_file("./token_stream.xml") << std::endl;
+    if (!complete_lex)
+    {
+        std::cerr << "Lexing Failed\n";
+        // TODO: throw once testing is complete
+    }
+
+    return complete_lex;
 }
