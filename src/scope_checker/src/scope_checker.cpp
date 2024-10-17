@@ -248,19 +248,27 @@ void Scope_Checker::generateRandomProgram()
     popScope();
 }
 
-void printftable(std::shared_ptr<node> n)
+std::string printftable(std::shared_ptr<node> n)
 {
+    std::string ftable = "";
     for (auto it = n->f_table.begin(); it != n->f_table.end(); ++it)
     {
-        std::cout << it->first << "() => " << it->second[0] << ", ";
+        ftable = fmt::format("{}{}() ==> {}, ", ftable, it->first, it->second[0]);
     }
+    return ftable;
 }
-void printvtable(std::shared_ptr<node> n)
+std::string printvtable(std::shared_ptr<node> n)
 {
+    std::string vtable = "";
     for (auto it = n->v_table.begin(); it != n->v_table.end(); ++it)
     {
-        std::cout << it->first << ": " << it->second << ", ";
+        vtable = fmt::format("{}{}: {}, ", vtable, it->first, it->second);
     }
+    return vtable;
+    // for (auto it = n->v_table.begin(); it != n->v_table.end(); ++it)
+    // {
+    //     std::cout << it->first << ": " << it->second << ", ";
+    // }
 }
 void indent(int depth)
 {
@@ -298,18 +306,16 @@ std::string print_code(std::shared_ptr<node> n, int depth, std::ofstream &code_f
 {
     auto c = n->children;
     std::string product;
-    std::string indentation = "<-->";
-    if (!(n->CLASS == "KEYWORD" || n->CLASS == "LITERAL" || n->CLASS == "VID" || n->CLASS == "FID"))
-        std::cout << '[' << n->CLASS.substr(0, 4) << "]{\n";
+    std::string indentation = std::string(depth * 4, ' ');
+    std::cout << indentation << '[' << n->CLASS << "]{\n";
     // indent(depth);
-    // std::cout << n->CLASS << "\n";
     if (n->CLASS == "PROGPRIMEPRIME")
     {
-        print_code(n->children[0], depth, code_file);
+        product = print_code(n->children[0], depth, code_file);
     }
     else if (n->CLASS == "PROGPRIME")
     {
-        print_code(n->children[0], depth, code_file);
+        product = print_code(n->children[0], depth, code_file);
     }
     else if (n->CLASS == "PROG")
     {
@@ -318,61 +324,95 @@ std::string print_code(std::shared_ptr<node> n, int depth, std::ofstream &code_f
         std::string algo = "";
         std::string functions = "";
         int index = 1;
+
         if (n->children[1]->CLASS == "GLOBVARS")
         {
             globvars = print_code(n->children[1], depth, code_file);
-            algo = print_code(n->children[2], depth + 1, code_file);
+            algo = print_code(n->children[2], depth, code_file);
             index = 2;
         }
         else
         {
-            algo = print_code(n->children[1], depth + 1, code_file);
+            algo = print_code(n->children[1], depth, code_file);
         }
+
         if (n->children.size() == index + 2)
         {
             functions = print_code(n->children[index + 1], depth, code_file);
         }
-        product = main_str;
-        int num_insertions = 1;
+        // product = main_str;
+        int num_insertions = 1; // main
         if (globvars.length() > 0)
         {
-            ++num_insertions;
+            ++num_insertions; // globvars
             // product.append("{}\n");
             // product = fmt::format(product, globvars);
         }
-        ++num_insertions;
+        ++num_insertions; // algo
         // product.append("{}\n");
         // product = fmt::format(product, algo);
         if (functions.length() > 0)
         {
-            ++num_insertions;
+            ++num_insertions; // functions
             // product.append("{}\n");
             // product = fmt::format(product, functions);
         }
-        if (num_insertions == 2)
-        {
-            product == fmt::format("{}{}", main_str, algo);
-        }
-        else if (num_insertions == 3)
-        {
-            if (globvars.length() > 0)
-            {
-                product == fmt::format("{}{}{}", main_str, globvars, algo);
-            }
-            else
-            {
-                product == fmt::format("{}{}{}", main_str, algo, functions);
-            }
-        }
-        else
-        {
-            product == fmt::format("{}{}{}{}", main_str, globvars, algo, functions);
-        }
+        std::cout << "PROG Num insertions: " << num_insertions << "\n";
+        // if (num_insertions == 2) // only main and algo
+        // {
+        //     std::cout << "MAIN: \n"
+        //               << main_str << "\n";
+        //     std::cout << "ALGO: \n"
+        //               << algo << "\n";
+        //     product == fmt::format("{}{}", main_str, algo);
+        // }
+        // else if (num_insertions == 3)
+        // {
+        //     if (globvars.length() > 0)
+        //     {
+        //         std::cout << "MAIN: \n"
+        //                   << main_str << "\n";
+        //         std::cout << "GLOBVARS: \n"
+        //                   << globvars << "\n";
+        //         std::cout << "ALGO: \n"
+        //                   << algo << "\n";
+        //         product == fmt::format("{}{}{}", main_str, globvars, algo);
+        //     }
+        //     else
+        //     {
+        //         std::cout << "MAIN: \n"
+        //                   << main_str << "\n";
+        //         std::cout << "ALGO: \n"
+        //                   << algo << "\n";
+        //         std::cout << "FUNCTIONS: \n"
+        //                   << functions << "\n";
+        //         product == fmt::format("{}{}{}", main_str, algo, functions);
+        //     }
+        //     product = fmt::format
+        // }
+        // else
+        // {
+        //     std::cout << "MAIN: \n"
+        //               << main_str << "\n";
+        //     std::cout << "GLOBVARS: \n"
+        //               << globvars << "\n";
+        //     std::cout << "ALGO: \n"
+        //               << algo << "\n";
+        //     std::cout << "FUNCTIONS: \n"
+        //               << functions << "\n";
+        //     product == fmt::format("{}{}{}{}", main_str, globvars, algo, functions);
+        // }
+        std::string indentation = std::string(4, ' ');
+        product = fmt::format("{}\n{}\n{}\n{}", main_str, globvars, algo, functions);
+
+        std::cout << "PRODUCT: \n"
+                  << product << "\n"
+                  << "PROG DONE\n";
     }
     else if (n->CLASS == "INSTRUC")
     {
         product = "{}{}{}\n";
-        std::string indentation = std::string("    ", depth);
+        std::string indentation = std::string(depth * 4, ' ');
         std::string command = print_code(n->children[0], depth, code_file);
         std::string semicolon = print_code(n->children[1], depth, code_file);
         std::string instruc;
@@ -440,7 +480,7 @@ std::string print_code(std::shared_ptr<node> n, int depth, std::ofstream &code_f
     }
     else if (n->CLASS == "SUBFUNCS")
     {
-        product = print_code(n->children[0], depth, code_file);
+        product = print_code(n->children[0], depth + 1, code_file);
     }
     else if (n->CLASS == "DECL")
     {
@@ -449,7 +489,7 @@ std::string print_code(std::shared_ptr<node> n, int depth, std::ofstream &code_f
         std::string body = print_code(n->children[1], depth, code_file);
         product = fmt::format("{}\n{}", head, body);
     }
-    else if (n->CLASS == "VTYP")
+    else if (n->CLASS == "VTYP" || n->CLASS == "PROLOG" || n->CLASS == "EPILOG")
     {
         product = print_code(n->children[0], depth, code_file);
     }
@@ -465,9 +505,10 @@ std::string print_code(std::shared_ptr<node> n, int depth, std::ofstream &code_f
     {
         product = print_code(n->children[0], depth, code_file);
     }
-    else if (n->CLASS == "KEYWORD" || n->CLASS == "VID" || n->CLASS == "FID" || n->CLASS == "LITERAL" || n->CLASS == "PROLOG" || n->CLASS == "EPILOG")
+    else if (n->CLASS == "KEYWORD" || n->CLASS == "VID" || n->CLASS == "FID" || n->CLASS == "LITERAL")
     {
         product = fmt::format("{} ", n->WORD);
+        // std::cout << n->WORD <<
     }
     else if (n->CLASS == "ARG")
     {
@@ -499,9 +540,27 @@ std::string print_code(std::shared_ptr<node> n, int depth, std::ofstream &code_f
             product = fmt::format("{}{}", vtyp, vname);
         }
     }
-    // else if (n->CLASS == "OP")
-    // {
-    // }
+    else if (n->CLASS == "OP")
+    {
+        if (c.size() > 4)
+        {
+            std::string binop = print_code(c[0], depth, code_file);
+            std::string open = print_code(c[1], depth, code_file);
+            std::string arg1 = print_code(c[2], depth, code_file);
+            std::string comma = print_code(c[3], depth, code_file);
+            std::string arg2 = print_code(c[4], depth, code_file);
+            std::string close = print_code(c[5], depth, code_file);
+            product = fmt::format("{}{}{}{}{}{}", binop, open, arg1, comma, arg2, close);
+        }
+        else
+        {
+            std::string unop = print_code(c[0], depth, code_file);
+            std::string open = print_code(c[1], depth, code_file);
+            std::string arg = print_code(c[2], depth, code_file);
+            std::string close = print_code(c[3], depth, code_file);
+            product = fmt::format("{}{}{}{}", unop, open, arg, close);
+        }
+    }
     else if (n->CLASS == "ASSIGN")
     {
         auto c = n->children;
@@ -531,22 +590,41 @@ std::string print_code(std::shared_ptr<node> n, int depth, std::ofstream &code_f
             product = fmt::format("{}{}{}{}{}{}{}{}{}{}", vname, assignment, fname, open, atomic1, comma1, atomic2, comma2, atomic3, close);
         }
     }
-    // else if (n->CLASS == "COMPOSIT")
-    // {
-    // }
-    // else if (n->CLASS == "SIMPLE")
-    // {
-    // }
-    // else if (n->CLASS == "UNOP")
-    // {
-    // }
-    // else if (n->CLASS == "BINOP")
-    // {
-    //     for (auto c : n->children)
-    //     {
-    //         print_code(c, depth, code_file);
-    //     }
-    // }
+    else if (n->CLASS == "COMPOSIT")
+    {
+        if (c.size() > 4)
+        {
+            std::string op = print_code(c[0], depth, code_file);
+            std::string open = print_code(c[1], depth, code_file);
+            std::string simple1 = print_code(c[2], depth, code_file);
+            std::string comma = print_code(c[3], depth, code_file);
+            std::string simple2 = print_code(c[4], depth, code_file);
+            std::string close = print_code(c[5], depth, code_file);
+            product = fmt::format("{}{}{}{}{}{}", op, open, simple1, comma, simple2, close);
+        }
+        else
+        {
+            std::string op = print_code(c[0], depth, code_file);
+            std::string open = print_code(c[1], depth, code_file);
+            std::string simple = print_code(c[2], depth, code_file);
+            std::string close = print_code(c[3], depth, code_file);
+            product = fmt::format("{}{}{}{}", op, open, simple, close);
+        }
+    }
+    else if (n->CLASS == "SIMPLE")
+    {
+        std::string op = print_code(c[0], depth, code_file);
+        std::string open = print_code(c[1], depth, code_file);
+        std::string atomic1 = print_code(c[2], depth, code_file);
+        std::string comma = print_code(c[3], depth, code_file);
+        std::string atomic2 = print_code(c[4], depth, code_file);
+        std::string close = print_code(c[5], depth, code_file);
+        product = fmt::format("{}{}{}{}{}{}", op, open, atomic1, comma, atomic2, close);
+    }
+    else if (n->CLASS == "UNOP" || n->CLASS == "BINOP")
+    {
+        product = print_code(c[0], depth, code_file);
+    }
     else if (n->CLASS == "LOCVARS")
     {
         std::string vtyp1 = print_code(c[0], depth, code_file);
@@ -588,7 +666,7 @@ std::string print_code(std::shared_ptr<node> n, int depth, std::ofstream &code_f
     // }
     else if (n->CLASS == "BODY")
     {
-        std::string indentation = std::string("    ", depth);
+        std::string indentation = std::string((depth) * 4, ' ');
         std::string prolog = print_code(c[0], depth, code_file);
         std::string locvars = print_code(c[1], depth + 1, code_file);
         std::string algo = print_code(c[2], depth + 1, code_file);
@@ -596,114 +674,124 @@ std::string print_code(std::shared_ptr<node> n, int depth, std::ofstream &code_f
         if (c.size() == 5)
         {
             std::string end = print_code(c[4], depth, code_file);
-            product = fmt::format("{}{}\n{}\n{}\n{}{}\n{}{}", indentation, prolog, locvars, algo, indentation, epilog, indentation, end);
+            product = fmt::format("{}{}\n{}    {}\n{}\n{}{}\n{}{}", indentation, prolog, indentation, locvars, algo, indentation, epilog, indentation, end);
         }
         else
         {
             std::string subfuncs = print_code(c[4], depth, code_file);
             std::string end = print_code(c[5], depth, code_file);
+            product = fmt::format("{}{}\n{}    {}\n{}\n{}{}\n{}\n{}{}", indentation, prolog, indentation, locvars, algo, indentation, epilog, subfuncs, indentation, end);
         }
     }
     else if (n->CLASS == "ALGO")
     {
         std::string begin = print_code(n->children[0], depth, code_file);
         std::string end = print_code(n->children[n->children.size() - 1], depth, code_file);
-        std::string indentation = std::string("    ", depth);
+        std::string indentation = std::string(depth * 4, ' ');
         if (n->children.size() > 2)
         {
             std::string instruc = print_code(n->children[1], depth + 1, code_file);
             // std::string indentation2 = std::string("    ", depth + 1);
 
-            product = fmt::format("{}{}\n{}{}{}\n", begin, indentation, instruc, indentation, end);
+            product = fmt::format("{}{}\n{}{}{}", indentation, begin, instruc, indentation, end);
         }
         else
         {
-            product = fmt::format("{}{}\n{}{}\n", indentation, begin, indentation, end);
+            product = fmt::format("{}{}\n{}{}", indentation, begin, indentation, end);
         }
     }
-    // else if (n->CLASS == "BRANCH")
-    // {
-    //     // indent(depth);
-    //     std::cout << std::string(indentation, depth);
-    //     code_file << std::string(indentation, depth);
-    //     auto children = n->children;
-    //     print_code(children[0], depth, code_file); // if
-    //     print_code(children[1], depth, code_file); // COND
-    //     std::cout << "\n";
-    //     code_file << "\n";
-    //     // indent(depth);
-    //     std::cout << std::string(indentation, depth);
-    //     code_file << std::string(indentation, depth);
-    //     print_code(children[2], depth, code_file); // then
-    //     std::cout << "\n";
-    //     code_file << "\n";
-    //     print_code(children[3], depth + 1, code_file); // ALGO
-    //     std::cout << "\n";
-    //     code_file << "\n";
-    //     print_code(children[4], depth, code_file); // else
-    //     std::cout << "\n";
-    //     code_file << "\n";
-    //     print_code(children[5], depth + 1, code_file); // ALGO
-    // }
+    else if (n->CLASS == "BRANCH")
+    {
+        // indent(depth);
+        // std::cout << std::string(indentation, depth);
+        // code_file << std::string(indentation, depth);
+        auto children = n->children;
+        std::string _if = print_code(children[0], depth, code_file);  // if
+        std::string cond = print_code(children[1], depth, code_file); // COND
+        // std::cout << "\n";
+        // code_file << "\n";
+        // indent(depth);
+        // std::cout << std::string(indentation, depth);
+        code_file << std::string(indentation, depth);
+        std::string _then = print_code(children[2], depth, code_file); // then
+        // std::cout << "\n";
+        // code_file << "\n";
+        std::string t_algo = print_code(children[3], depth + 1, code_file); // ALGO
+        // std::cout << "\n";
+        // code_file << "\n";
+        std::string _else = print_code(children[4], depth, code_file); // else
+        // std::cout << "\n";
+        // code_file << "\n";
+        std::string e_algo = print_code(children[5], depth + 1, code_file); // ALGO
+        std::string indentation = std::string(depth * 4, ' ');
+        product = fmt::format("{}{}{}\n{}{}\n{}\n{}{}\n{}", indentation, _if, cond, indentation, _then, t_algo, indentation, _else, e_algo);
+    }
     else
     {
         std::cout << "\nPrinting not defined for class " << n->CLASS << "\n";
         throw "exception";
     }
-    std::cout << "PRODUCT:\n\n"
-              << product << std::endl
-              << std::endl;
-    if (!(n->CLASS == "KEYWORD" || n->CLASS == "LITERAL" || n->CLASS == "VID" || n->CLASS == "FID"))
-        std::cout
-            << "\n}[" << n->CLASS.substr(0, 4) << ']';
+    if (product.length() == 0)
+    {
+        std::cout << indentation << "Product is empty\n";
+    }
+    else
+    {
+        std::cout << product << std::endl;
+    }
+    std::cout << std::endl
+              << indentation
+              << "}["
+              << n->CLASS
+              << "]\n";
     return product;
 }
-void node::printnode(int depth)
+std::string node::printnode(int depth, std::string called_from)
 {
-    pugi::xml_document doc;
-    if (!doc.load_file("CFG.xml"))
-    {
-        std::cerr << "Error loading CFG.xml\n";
-        return;
-    }
-    pugi::xml_node terminal = doc.child("CFG").child("TERMINALS").child(this->CLASS.c_str());
-    for (int i = 0; i < depth; ++i)
-    {
-        std::cout << "    ";
-    }
-    std::cout << "<" << this->WORD << " uid=\"" << this->UID << "\" class=\"" << this->CLASS << "\" in_scope=\"" << is_in_scope << "\"";
-    // std::cout << "<" << this->NAME << " word=\"" << this->WORD << "\" uid=\"" << this->UID << "\" class=\"" << this->CLASS << "\"";
-    // if (terminal != pugi::xml_node())
+    static std::unordered_map<int, bool> nodes_printed;
+    std::string root_indent = std::string(depth * 2, ' ');
+    std::string product;
+    // pugi::xml_document doc;
+    // if (!doc.load_file("CFG.xml"))
     // {
-    //     std::cout << " value=\"" << this->WORD << "\"/>";
-    //     return;
+    //     std::cerr << "Error loading CFG.xml\n";
+    //     return "";
     // }
-    std::cout << ">\n";
-    for (int i = 0; i < depth + 1; ++i)
+    // pugi::xml_node terminal = doc.child("CFG").child("TERMINALS").child(this->CLASS.c_str());
+    // std::cout << "<" << this->WORD << " uid=\"" << this->UID << "\" class=\"" << this->CLASS << "\" in_scope=\"" << is_in_scope << "\"";
+    std::string head = fmt::format("{}<{} word=\"{}\" uid=\"{}\" class=\"{}\" printed=\"{}\">\n", root_indent, this->NAME, this->WORD, this->UID, this->CLASS, this->was_printed);
+    std::cout << head << root_indent << this << " called from " << called_from << std::endl;
+    if (nodes_printed[this->UID])
     {
-        std::cout << "    ";
+        std::cout << head << fmt::format("Something went wrong, {}({}) was already printed\n", this->WORD, this->UID);
+        throw "";
+        return "";
     }
-    std::cout << "<FTABLE> ";
-    printftable(shared_from_this());
-    std::cout << "</FTABLE>\n";
-    for (int i = 0; i < depth + 1; ++i)
-    {
-        std::cout << "    ";
-    }
-    std::cout << "<VTABLE> ";
-    printvtable(shared_from_this());
-    std::cout << "</VTABLE>\n";
+    nodes_printed[this->UID] = true;
+    std::string inner_indent = std::string((depth + 1) * 2, ' ');
+    // std::cout << "<FTABLE> ";
+    std::string str_ftable = printftable(shared_from_this());
+    // std::cout << "</FTABLE>\n";
+    str_ftable = fmt::format("{}<FTABLE>{}</FTABLE>\n", inner_indent, str_ftable);
+    // std::cout << "<VTABLE> ";
+    std::string str_vtable = printvtable(shared_from_this());
+    // std::cout << "</VTABLE>\n";
+    str_vtable = fmt::format("{}<VTABLE>{}</VTABLE>\n", inner_indent, str_vtable);
+    std::string children = "";
     if (this->children.size() > 0)
     {
         for (auto c : this->children)
         {
-            c->printnode(depth + 1);
+            if (c->was_printed)
+                continue;
+            children = fmt::format("{}{}", children, c->printnode(depth + 1, std::to_string(this->UID)));
         }
     }
-    std::cout << std::string("    ", depth);
-    std::cout
-        << "</" << this->WORD << ">\n";
-    // std::cout << "</" << this->NAME << ">\n";
+    children = fmt::format("{}<CHILDREN>\n{}{}</CHILDREN>\n", inner_indent, children, inner_indent);
+    product = fmt::format("{}{}{}{}{}</{}>\n", head, str_ftable, str_vtable, children, root_indent, this->WORD);
+    // std::cout
+    //     << "</" << this->WORD << ">\n";
+    return product;
 }
 
 node::node() : UID(node_counter++) {}
@@ -1347,7 +1435,7 @@ void Scope_Checker::testScopeChecker()
     // root node for tree
     int num_nodes = 0;
     std::shared_ptr<node> root = std::make_shared<node>();
-    while (num_nodes < 200)
+    while (num_nodes < 300)
     {
         // root->NAME = "INTERNAL";
         root->CLASS = "PROGPRIMEPRIME";
@@ -1359,9 +1447,16 @@ void Scope_Checker::testScopeChecker()
     std::cout << "Populating ftables\n";
     construct_ftables(root, 0);
     populate_identifiers(root);
-    // root->printnode(0);
     std::ofstream code_file("code_file.txt");
-    std::cout << print_code(root, 0, code_file);
+    std::string plaintext_code = print_code(root, 0, code_file);
+    std::cout << "\nPLAINTEXT:\n";
+    std::cout << plaintext_code << "\n^^^^^^^^^^^^^^^^^^^^^\n";
+    std::cout << num_nodes << std::endl;
+    std::ofstream rand_tree("random_tree.xml");
+    std::string tree = root->printnode(0, "testScopeChecker()");
+    rand_tree << tree;
+    rand_tree.close();
+    code_file << plaintext_code;
     code_file.close();
 
     std::cout
