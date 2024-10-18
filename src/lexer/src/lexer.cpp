@@ -196,6 +196,12 @@ void Lexer::print_tokens(std::string fname)
         pugi::xml_node word = tok.append_child("WORD");
         word.append_child(pugi::node_pcdata)
             .set_value(t.token_word.c_str());
+        pugi::xml_node row = tok.append_child("ROW");
+        row.append_child(pugi::node_pcdata)
+            .set_value(std::to_string(t.row).c_str());
+        pugi::xml_node col = tok.append_child("COL");
+        col.append_child(pugi::node_pcdata)
+            .set_value(std::to_string(t.row).c_str());
     }
     pugi::xml_node tok = token_stream.append_child("TOK");
     pugi::xml_node id = tok.append_child("ID");

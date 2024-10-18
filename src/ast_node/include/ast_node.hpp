@@ -11,6 +11,7 @@
 #include <vector>
 #include <memory>
 #include <fmt/core.h>
+#include <thread>
 class node : public std::enable_shared_from_this<node>
 {
 public:
@@ -27,7 +28,10 @@ public:
     bool was_printed = false;
     bool is_in_scope = true;
     long node_id;
-    static long node_id_counter;
+    int prod = -1;
+    int row = -1;
+    int col = -1;
+    thread_local static long node_id_counter;
     void clear_node();
     node();
     ~node();
@@ -57,7 +61,7 @@ public:
         // std::cout << fmt::format("node({}).num_children()", UID);
         return this->children.size();
     };
-    std::vector<std::shared_ptr<node>> get_children()
+    std::vector<std::shared_ptr<node>> &get_children()
     {
         // std::cout << fmt::format("node({}).get_children()", UID);
         return this->children;

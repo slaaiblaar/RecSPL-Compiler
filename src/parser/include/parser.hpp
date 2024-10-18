@@ -20,7 +20,7 @@ public:
     void get_nullable();
     void generate_first_sets();
     void generate_follow_sets();
-    std::shared_ptr<node> parse(std::string dest_name = "ast.xml");
+    std::shared_ptr<node> parse(std::string dest_name = "ast.xml", std::string token_file = "./token_stream.xml");
     // void read_token_stream(std::string input);
     std::string cfg_file = "CFG.xml";
 

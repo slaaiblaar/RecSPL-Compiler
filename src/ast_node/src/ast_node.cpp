@@ -3,7 +3,7 @@
 #include <regex>
 int node_counter = 0; // Global UID counter
 
-long node::node_id_counter = 0;
+thread_local long node::node_id_counter = 0;
 void node::clear_node()
 {
     for (auto c : this->children)
@@ -201,17 +201,21 @@ std::string node::print_code(int depth, std::ofstream &code_file)
     }
     else if (this->CLASS == "GLOBVARS")
     {
+        std::cout << std::string(depth * 2, ' ') << "printing GLOBVARS ==>";
+        for (auto c : this->get_children())
+        {
+            std::cout << " " << c->WORD;
+        }
+        std::cout << "\n";
         std::string vtyp = this->get_child(0)->print_code(depth, code_file);
         std::string vname = this->get_child(1)->print_code(depth, code_file);
-        if (c.size() > 2)
+        std::string comma = this->get_child(2)->print_code(depth, code_file);
+        std::string globvars = "";
+        if (c.size() > 3)
         {
-            std::string globvars = this->get_child(2)->print_code(depth, code_file);
-            product = fmt::format("{}{}{}", vtyp, vname, globvars);
+            globvars = this->get_child(3)->print_code(depth, code_file);
         }
-        else
-        {
-            product = fmt::format("{}{}", vtyp, vname);
-        }
+        product = fmt::format("{}{}{}{}\n", vtyp, vname, comma, globvars);
     }
     else if (this->CLASS == "OP")
     {
@@ -408,7 +412,7 @@ std::string node::printnode(int depth, std::string called_from)
     }
     std::string root_indent = std::string(depth * 2, ' ');
     std::string product;
-    std::string head = fmt::format("{}<{} word=\"{}\" uid=\"{}\" class=\"{}\" printed=\"{}\" node_id=\"{}\">\n", root_indent, this->NAME, escape_chars(this->WORD), this->UID, this->CLASS, this->was_printed, std::to_string(this->node_id));
+    std::string head = fmt::format("{}<{} word=\"{}\" uid=\"{}\" class=\"{}\" printed=\"{}\" node_id=\"{}\" prod=\"{}\">\n", root_indent, this->NAME, escape_chars(this->WORD), this->UID, this->CLASS, this->was_printed, std::to_string(this->node_id), this->prod);
     if (nodes_printed.find(this->UID) != nodes_printed.end())
     {
         std::cerr << head << fmt::format("Something went wrong, {}({}) was already printed\n\n", escape_chars(this->WORD), this->UID);

@@ -87,6 +87,7 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
     thread_local static int num_number_f = 0;
     thread_local static int num_void_f = 0;
     thread_local static int node_counter = 0;
+    thread_local static int globvar_counter = 0;
     // static int num_terminals = 0;
     if (depth == -1)
     {
@@ -98,6 +99,7 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
         num_text_v = 0;
         num_number_f = 0;
         num_void_f = 0;
+        globvar_counter = 0;
     }
     // std::cout << std::string(depth, ' ') << parent->CLASS << "\n";
     // Find the production rule for the current node's WORD
@@ -123,44 +125,68 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
         // std::cout << std::string(depth, ' ') << parent->CLASS << " point NT point 2\n";
         // Select a random production (rhs) to expand
         pugi::xml_node rhs;
-        bool force_var = (num_number_v < 3 || num_number_v < 3);
-        bool force_func = (num_number_f < 3 || num_void_f < 3);
-        if (force_var || force_func || depth > 60 || node_counter > 1200)
+        if (parent->CLASS == "GLOBVARS")
         {
-            // std::cout << std::string(depth, ' ') << parent->CLASS << fmt::format(" point NT point 3 force_var={} force_func={}\n", force_var, force_func);
-            if (parent->WORD == "GLOBVARS")
+            ++globvar_counter;
+        }
+        // bool force_var = (num_number_v < 3 || num_number_v < 3);
+        // bool force_func = (num_number_f < 3 || num_void_f < 3);
+        // bool force_globvar = (globvar_counter < 2) && test == component::PARSER;
+        // bool force_short_tree = false;
+        bool force_var = false;
+        bool force_func = false;
+        bool force_globvar = false;
+        bool force_short_tree = false;
+        int prod_num = -1;
+        if (force_short_tree && force_globvar || force_var || force_func || depth > 70 || node_counter > 600)
+        {
+            if (parent->WORD == "PROG")
             {
-                if (force_var)
+                if (force_var || force_globvar)
                 {
-                    rhs = rhs_list[1];
-                    if (rhs.child("GLOBVARS") == pugi::xml_node())
+                    std::cout << std::string(depth * 2, ' ') << "Adding GLOBVAR via PROG\n";
+                    prod_num = 0;
+                }
+                else if (force_short_tree)
+                {
+                    prod_num = 1;
+                }
+            }
+            // std::cout << std::string(depth, ' ') << parent->CLASS << fmt::format(" point NT point 3 force_var={} force_func={}\n", force_var, force_func);
+            else if (parent->WORD == "GLOBVARS")
+            {
+                if (force_var || force_globvar)
+                {
+                    // rhs = rhs_list[1];
+                    std::cout << std::string(depth * 2, ' ') << "Adding GLOBVAR recursively\n";
+                    prod_num = 1;
+                    if (rhs_list[prod_num].child("GLOBVARS") == pugi::xml_node())
                     {
                         std::cerr << "\nProduction 0 of FUNCTIONS is not FUNCTIONS ==> DECL FUNCTIONS\n";
                     }
                 }
-                else if (!force_func)
+                else if (force_short_tree || !force_func)
                 {
-                    rhs = rhs_list[0];
-                    if (rhs.child("FUNCTIONS") != pugi::xml_node())
-                    {
-                        std::cerr << "\nProduction 0 of FUNCTIONS is not FUNCTIONS ==> DECL\n";
-                    }
+                    // rhs = rhs_list[0];
+                    prod_num = 0;
                 }
             }
             else if (parent->WORD == "FUNCTIONS")
             {
                 if (force_func)
                 {
-                    rhs = rhs_list[1];
-                    if (rhs.child("FUNCTIONS") == pugi::xml_node())
+                    // rhs = rhs_list[1];
+                    prod_num = 1;
+                    if (rhs_list[prod_num].child("FUNCTIONS") == pugi::xml_node())
                     {
                         std::cerr << "\nProduction 0 of FUNCTIONS is not FUNCTIONS ==> DECL FUNCTIONS\n";
                     }
                 }
-                else if (!force_var)
+                else if (force_short_tree || !force_var)
                 {
-                    rhs = rhs_list[0];
-                    if (rhs.child("FUNCTIONS") != pugi::xml_node())
+                    // rhs = rhs_list[0];
+                    prod_num = 0;
+                    if (rhs_list[prod_num].child("FUNCTIONS") != pugi::xml_node())
                     {
                         std::cerr << "\nProduction 0 of FUNCTIONS is not FUNCTIONS ==> DECL\n";
                     }
@@ -168,8 +194,9 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
             }
             else if (parent->WORD == "INSTRUC")
             {
-                rhs = rhs_list[0];
-                if (rhs.child("INSTRUC") != pugi::xml_node())
+                // rhs = rhs_list[0];
+                prod_num = 0;
+                if (rhs_list[prod_num].child("INSTRUC") != pugi::xml_node())
                 {
                     std::cerr << "\nProduction 0 of INSTRUC is not INSTRUC ==> COMMAND ;\n";
                 }
@@ -178,19 +205,33 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
             {
                 do
                 {
-                    rhs = rhs_list[rand() % rhs_list.size()];
-                } while (rhs.child("BRANCH") != pugi::xml_node());
+                    // rhs = rhs_list[rand() % rhs_list.size()];
+                    prod_num = rand() % rhs_list.size();
+                } while (rhs_list[prod_num].child("BRANCH") != pugi::xml_node());
             }
             else
             {
-                rhs = rhs_list[rand() % rhs_list.size()];
+                // rhs = rhs_list[rand() % rhs_list.size()];
+                prod_num = rand() % rhs_list.size();
             }
         }
-        if (rhs == pugi::xml_node())
+        if (prod_num == -1)
         {
             // std::cout << std::string(depth, ' ') << parent->CLASS << " point NT point 4\n";
-            rhs = rhs_list[rand() % rhs_list.size()];
+            // rhs = rhs_list[rand() % rhs_list.size()];
+            prod_num = rand() % rhs_list.size();
         }
+        rhs = rhs_list[prod_num];
+        if (parent->WORD == "GLOBVARS")
+        {
+            std::cout << std::string(depth * 2, ' ') << parent->WORD << " ==>";
+            for (auto c : rhs)
+            {
+                std::cout << " " << c.name();
+            }
+            std::cout << "\n";
+        }
+        parent->prod = prod_num;
         // std::cout << std::string(depth, ' ') << parent->CLASS << " point NT point 5\n";
 
         pugi::xml_node symbol = rhs.first_child();
@@ -265,7 +306,10 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
                     }
                 }
             }
-
+            if (parent->WORD == "GLOBVARS")
+            {
+                std::cout << std::string(depth * 2, ' ') << "Adding child " << child->WORD << "\n";
+            }
             symbol = symbol.next_sibling();
         }
     }
@@ -585,7 +629,12 @@ void Tester::test_scope_checker()
 
 void Tester::run_tests(int thread_number)
 {
+    // test_lexer(thread_number);
+    test_parser(thread_number);
+}
 
+void Tester::test_lexer(int thread_number)
+{
     std::cout << "===== Running Random Program Test =====\n";
     // this->cfg_file = fmt::format("CFG{}.xml", thread_number);
     pugi::xml_document doc;
@@ -696,6 +745,193 @@ void Tester::run_tests(int thread_number)
         {
             std::cout << lr;
         }
+    }
+    std::cout << fmt::format("\033[3{}mThread {}\033[0m testing completed\n", 2 + thread_number, thread_number);
+}
+bool compare_nodes(std::shared_ptr<node> l, std::shared_ptr<node> r)
+{
+    std::cout << fmt::format("(C:W:N): L ({}:{}:{}) , R ({}:{}:{})\n", l->CLASS, l->WORD, l->NAME, r->CLASS, r->WORD, r->NAME);
+
+    if (l->WORD != r->WORD
+        //  || l->CLASS != r->CLASS
+    )
+    {
+        std::cout << "NOT THE SAME\n";
+        return false;
+    }
+    auto l_children = l->get_children();
+    auto r_children = r->get_children();
+    if (l_children.size() > 0 || r_children.size() > 0)
+    {
+        std::cout << "Comparing children\nL: ";
+        for (auto c : l_children)
+        {
+            std::cout << " " << c->WORD;
+        }
+        std::cout << "\nR: ";
+        for (auto c : r_children)
+        {
+            std::cout << " " << c->WORD;
+        }
+        std::cout << "\n";
+        auto l_it = l_children.begin();
+        auto r_it = r_children.begin();
+        // std::cout << fmt::format("Num children: L:{}, R:{}\n", l_children.size(), r_children.size());
+        if (l_children.size() != r_children.size())
+        {
+            std::cout << "NOT THE SAME\n";
+            return false;
+        }
+        for (; r_it != r_children.end() && l_it != l_children.end(); ++r_it, ++l_it)
+        {
+            if (!compare_nodes(*l_it, *r_it))
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+void Tester::test_parser(int thread_number)
+{
+
+    std::cout << "===== Running Random Program Test =====\n";
+    // this->cfg_file = fmt::format("CFG{}.xml", thread_number);
+    pugi::xml_document doc;
+    if (!doc.load_file(cfg_file.c_str()))
+    {
+        std::cerr << fmt::format("run_tests Error loading {}\n", cfg_file);
+        return;
+    }
+
+    pugi::xml_node productions = doc.child("CFG").child("PRODUCTIONRULES");
+
+    // root node for tree
+    std::shared_ptr<node> root = std::make_shared<node>();
+    // std::time_t now = std::time(NULL);
+    // srand(now);
+    std::time_t now = std::time(0);
+    srand(now);
+    int num_nodes = 0;
+    Lexer l(this->cfg_file);
+    bool bad_parse = false;
+    for (int i = 0; !bad_parse && i < 100; ++i)
+    {
+        std::shared_ptr<node> root = std::make_shared<node>();
+        srand(rand());
+        int num_nodes = 0;
+
+        // do
+        {
+            this->messed_up_word = std::pair<int, std::string>(-1, "NONE");
+            root->clear_node();
+            root->CLASS = "PROGPRIMEPRIME";
+            num_nodes = this->generate_tree(root, productions, -1, component::PARSER);
+        }
+        // while (num_nodes > 200);
+
+        std::ofstream rand_tree;
+        std::ofstream code_file;
+
+        construct_ftables(root, 0, component::PARSER);
+
+        this->num_terminals = 0;
+        populate_identifiers(root, component::PARSER);
+        std::string tree = root->printnode(0, "testScopeChecker()");
+        tree = root->printnode(0, "testScopeChecker()");
+        std::ofstream tree_file(fmt::format("thread_{}_generated_ast.xml", thread_number));
+        tree_file << tree;
+        tree_file.close();
+        code_file.open(fmt::format("thread_{}_code_file.txt", thread_number));
+        std::string plaintext_code = root->print_code(0, code_file);
+        code_file << plaintext_code;
+        code_file.close();
+        // // do something with lexer
+        l.read_input(fmt::format("./thread_{}_code_file.txt", thread_number));
+        bool lex_res = l.lex(true, fmt::format("./thread_{}_token_stream.xml", thread_number));
+        if (!lex_res)
+        {
+            std::cout << "Lexing failed\n";
+            return;
+        }
+        Parser p(this->cfg_file);
+        std::shared_ptr<node> parsed_root = p.parse(fmt::format("./thread_{}_parsed_ast.xml", thread_number), fmt::format("./thread_{}_token_stream.xml", thread_number));
+        // code_file.open(fmt::format("thread_{}_generated_code_file.txt", thread_number));
+        // plaintext_code = parsed_root->print_code(0, code_file);
+        // code_file << plaintext_code;
+        // code_file.close();
+        // root is PROGPRIMEPRIME
+        std::shared_ptr<node> generated_root = root->get_child(0)->get_child(0);
+        if (compare_nodes(generated_root, parsed_root))
+        {
+            std::cout << i << ": Parser succeeded\n";
+        }
+        else
+        {
+            std::cout << i << ": Parser failed\n";
+            bad_parse = true;
+        }
+        // pugi::xml_document tok_doc;
+        // pugi::xml_parse_result result = tok_doc.load_file(fmt::format("./thread_{}_token_stream.xml", thread_number).c_str());
+        // pugi::xml_node tok_str = tok_doc.child("TOKENSTREAM");
+        // pugi::xml_node curr_tok = tok_str.first_child();
+        // int tok_counter = 0;
+        // while (curr_tok != pugi::xml_node())
+        // {
+        //     ++tok_counter;
+        //     curr_tok = curr_tok.next_sibling();
+        // }
+        // bool incorrect_pass = this->messed_up_word.first > 0 && lex_res && l.dfa.input.find(this->messed_up_word.second) != std::string::npos;
+        // std::vector<std::string> lex_results;
+        // if (this->messed_up_word.first > 0 && !lex_res)
+        // {
+        //     lex_results.push_back(fmt::format("\033[3{}m{}\033[0m:   Successfully failed lexing\n\tNumber of tokens lexed:{}, Incorrect token: {}: \"{}\"\n", 2 + thread_number, thread_number, tok_counter, this->messed_up_word.first, this->messed_up_word.second));
+        //     lex_results.push_back(fmt::format("\033[3{}m{}\033[0m\tLexer error message: \"{}\"\n\n", 2 + thread_number, thread_number, l.message));
+        // }
+        // else if (this->messed_up_word.first <= 0 && !lex_res)
+        // {
+        //     std::cout << "REALLY SHOULDN'T BE HERE\n";
+        //     lex_results.push_back(fmt::format("\033[3{}m{}\033[0m: Unsuccessfully failed when it should have passed\n\tNumber of tokens lexed:{}\n", 2 + thread_number, thread_number, tok_counter));
+        //     lex_results.push_back(fmt::format("\033[3{}m{}\033[0m\tLexer error message: \"{}\"\n\n", 2 + thread_number, thread_number, l.message));
+        //     l.dfa.print_dfa(fmt::format("failed_test_artefacts/thread_{}_render-dfa.txt", thread_number), fmt::format("failed_test_artefacts/thread_{}_dfa_graph_incorrectly_failed.txt", thread_number));
+        //     l.print_tokens(fmt::format("failed_test_artefacts/thread_{}_token_stream_incorrectly_failed.xml", thread_number));
+
+        //     code_file.open(fmt::format("failed_test_artefacts/thread_{}_code_file_incorrectly_failed.txt", thread_number));
+        //     std::string plaintext_code = root->print_code(0, code_file);
+        //     code_file << plaintext_code;
+
+        //     code_file.close();
+        //     rand_tree.open(fmt::format("failed_test_artefacts/thread_{}_rand_tree_incorrectly_failed.xml", thread_number));
+        //     rand_tree << root->printnode(0, "TESTING");
+        //     rand_tree.close();
+        //     bad_lex = true;
+        // }
+        // else if (incorrect_pass)
+        // {
+        //     lex_results.push_back(fmt::format("\033[3{}m{}\033[0m: Unsuccessfully passed when it should have failed\n", 2 + thread_number, thread_number));
+        //     lex_results.push_back(fmt::format("\033[3{}m{}\033[0m\tNumber of tokens lexed:{}, Incorrect token: {}: \"{}\"\n\n", 2 + thread_number, thread_number, tok_counter, this->messed_up_word.first, this->messed_up_word.second));
+        //     l.dfa.print_dfa(fmt::format("failed_test_artefacts/thread_{}_render-dfa.txt", thread_number), fmt::format("failed_test_artefacts/thread_{}_dfa_graph_incorrectly_passed.txt", thread_number));
+        //     l.print_tokens(fmt::format("failed_test_artefacts/thread_{}_token_stream_incorrectly_passed.xml", thread_number));
+
+        //     std::string plaintext_code = root->print_code(0, code_file);
+        //     code_file.open(fmt::format("failed_test_artefacts/thread_{}_code_file_incorrectly_passed.txt", thread_number));
+        //     code_file << plaintext_code;
+
+        //     code_file.close();
+        //     code_file.close();
+        //     rand_tree.open(fmt::format("failed_test_artefacts/thread_{}_rand_tree_incorrectly_passed.xml", thread_number));
+        //     rand_tree << root->printnode(0, "TESTING");
+        //     rand_tree.close();
+        //     bad_lex = true;
+        // }
+        // else if (this->messed_up_word.first <= 0 && lex_res)
+        // {
+        //     lex_results.push_back(fmt::format("\033[3{}m{}\033[0m:   Successfully passed lexing\n\tNumber of tokens lexed:{}, number of generated terminals: {}\n\n", 2 + thread_number, thread_number, tok_counter, this->num_terminals));
+        // }
+        // for (auto lr : lex_results)
+        // {
+        //     std::cout << lr;
+        // }
     }
     std::cout << fmt::format("\033[3{}mThread {}\033[0m testing completed\n", 2 + thread_number, thread_number);
 }

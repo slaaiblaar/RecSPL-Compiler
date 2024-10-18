@@ -51,6 +51,8 @@ public:
     std::string token_class;
     std::string token_word;
     thread_local static int token_counter;
+    int row = -1;
+    int col = -1;
 };
 
 enum AutomatonClass

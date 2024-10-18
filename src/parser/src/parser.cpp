@@ -374,7 +374,7 @@ void Parser::generate_follow_sets()
     }
 }
 
-std::shared_ptr<node> Parser::parse(std::string dest_name)
+std::shared_ptr<node> Parser::parse(std::string dest_name, std::string token_file)
 {
     std::unordered_map<int, std::unordered_map<std::string, std::pair<Operation, int>>> parse_table;
     std::unordered_map<std::string, int> nonterms;
@@ -682,7 +682,7 @@ std::shared_ptr<node> Parser::parse(std::string dest_name)
 
     // parse token stream
     pugi::xml_document tok_doc;
-    pugi::xml_parse_result result = tok_doc.load_file("./token_stream.xml");
+    pugi::xml_parse_result result = tok_doc.load_file(token_file.c_str());
     if (!result)
     {
         throw "token_stream.xml does not exist";
@@ -744,6 +744,9 @@ std::shared_ptr<node> Parser::parse(std::string dest_name)
             new_node->UID = uid_counter++;
             new_node->CLASS = curr_tok.child("CLASS").child_value();
             new_node->WORD = curr_tok.child("WORD").child_value();
+            new_node->row = std::atoi(curr_tok.child("ROW").child_value());
+            new_node->col = std::atoi(curr_tok.child("COL").child_value());
+            // new_node->CLASS = new_node->WORD;
 
             std::cout << "UID=" << new_node->UID;
             std::cout << ", CLASS=" << new_node->CLASS;
@@ -771,18 +774,25 @@ std::shared_ptr<node> Parser::parse(std::string dest_name)
         {
             std::string prod_LHS = production_rules[curr_op.second]->lhs_name;
             std::vector<std::string> prod_RHS = production_rules[curr_op.second]->rhs_nodes_list;
-            std::cout << "REDUCTING [" << curr_op.second << "]: " << production_rules[curr_op.second]->lhs_name;
+            std::cout << "REDUCING    [" << curr_op.second << "]: " << production_rules[curr_op.second]->lhs_name;
             std::cout << " ==>";
             for (auto n : production_rules[curr_op.second]->rhs_nodes_list)
             {
                 std::cout << " " << n;
             }
+            // std::cout << "Current Stack State:                  :     " << production_rules[curr_op.second]->lhs_name;
+            // std::cout << " ==>";
+            // for (auto n : production_rules[curr_op.second]->rhs_nodes_list)
+            // {
+            //     std::cout << " " << n;
+            // }
             std::cout << "\n";
             std::shared_ptr<node> new_node = std::make_shared<node>();
             new_node->NAME = "INTERNAL";
             new_node->UID = uid_counter++;
             new_node->CLASS = "NONTERMINAL";
             new_node->WORD = prod_LHS.c_str();
+            new_node->prod = curr_op.second;
             std::vector<std::string>::reverse_iterator rit = prod_RHS.rbegin();
             for (; rit != prod_RHS.rend(); ++rit)
             {
@@ -867,10 +877,18 @@ std::shared_ptr<node> Parser::parse(std::string dest_name)
                         throw "\nInconsistent stack state\n";
                     }
                 }
+                std::cout << "Adding " << curr_state.second->WORD << " to " << new_node->WORD << "\n";
                 new_node->get_children().insert(new_node->get_children().begin(), curr_state.second);
-
+                std::cout << "Added " << new_node->get_children()[0]->WORD << "\n";
                 parse_stack.pop();
             }
+            std::cout << "REDUCED     [" << curr_op.second << "]: " << new_node->WORD;
+            std::cout << " ==>";
+            for (auto n : new_node->get_children())
+            {
+                std::cout << " " << n->WORD;
+            }
+            std::cout << "\n";
             curr_state = parse_stack.top();
             // should be a GO action
             std::pair<Operation, int> next_action = parse_table[curr_state.first][prod_LHS];
@@ -896,11 +914,28 @@ std::shared_ptr<node> Parser::parse(std::string dest_name)
         }
         default:
             std::cout << fmt::format("ERROR: NO ACTION FOR STATE {} ON INPUT SYMBOL {}.\n", curr_state.first, curr_tok.child("WORD").child_value());
-            throw;
+            std::cout << fmt::format("{}:{}:{} ERROR: Invalid syntax {}", token_file, std::atoi(curr_tok.child("ROW").child_value()), std::atoi(curr_tok.child("COL").child_value()), curr_tok.child("WORD").child_value());
+            // "./token_stream.xml" is the default used when not testing
+            if (token_file != "./token_stream.xml")
+            {
+                throw;
+            }
+            else
+            {
+                std::shared_ptr<node> fake_root = std::make_shared<node>();
+                fake_root->NAME = "ERROR";
+                fake_root->UID = -1;
+                fake_root->CLASS = curr_tok.child("CLASS").child_value();
+                fake_root->WORD = curr_tok.child("WORD").child_value();
+                fake_root->row = std::atoi(curr_tok.child("ROW").child_value());
+                fake_root->col = std::atoi(curr_tok.child("COL").child_value());
+                return fake_root;
+            }
         }
     }
     if (accept)
     {
+        std::cout << "Token stream accepted\n";
         // ast_doc.append_child("AST").append_copy(parse_stack.top().second);
         // if (ast_doc.save_file("./AST.xml"))
         // {
@@ -910,7 +945,7 @@ std::shared_ptr<node> Parser::parse(std::string dest_name)
         // {
         //     std::cout << "\n\nSOMETHING WENT WRONG WHEN SAVING AST TO AST.xml\n\n";
         // }
-        std::string tree = parse_stack.top().second->printnode(0, "");
+        std::string tree = parse_stack.top().second->printnode(0, "Parser");
         std::cout << "Parsed Syntax Tree";
         // std::cout << tree;
         std::ofstream ast(dest_name);

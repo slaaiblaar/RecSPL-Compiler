@@ -248,7 +248,7 @@ std::shared_ptr<State> Automaton::tree_to_nfa(std::shared_ptr<RegexpNode> node, 
 */
 void Automaton::construct_subsets()
 {
-    std::cout << "Cunstructing Subsets\n";
+    std::cout << "Constructing Subsets\n";
     std::shared_ptr<State> current_state;
     /*
         2D hashmap is massively overkill, but it's the simplest way to prevent
@@ -260,6 +260,7 @@ void Automaton::construct_subsets()
     while (!subset_construction_queue.empty())
     {
         current_state = subset_construction_queue.front();
+        std::cout << current_state->id << " ";
         // std::cout << "  Curr state: \n      " << current_state->id;
         subset_construction_queue.pop();
         transitions.clear();
@@ -757,6 +758,8 @@ Token Automaton::get_token()
 {
     std::string word = input.substr(read_start, accept_pos - read_start + 1);
     Token lex_token(word, current_state->token_class);
+    lex_token.col = col_num;
+    lex_token.row = line_num;
     return lex_token;
 }
 
