@@ -27,5 +27,6 @@ public:
     void populate_identifiers(std::shared_ptr<node> n, component test);
     void construct_ftables(std::shared_ptr<node> n, int depth, component test);
     std::pair<int, std::string> messed_up_word = std::pair<int, std::string>(-1, "NONE");
+    std::string cfg_file = "CFG.xml";
 };
 #endif

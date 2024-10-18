@@ -1,8 +1,8 @@
 #include "automata.hpp"
 #include <iostream>
 #include <stack>
-int State::id_counter = 0;
-std::unordered_map<std::string, int> State::op_precedence = {
+thread_local int State::id_counter = 0;
+thread_local std::unordered_map<std::string, int> State::op_precedence = {
     {"*", 1},
     {"+", 1},
     {"?", 1},
@@ -10,7 +10,7 @@ std::unordered_map<std::string, int> State::op_precedence = {
     {"(", 4},
     {")", 4},
 };
-std::unordered_map<std::string, int> State::op_arity = {
+thread_local std::unordered_map<std::string, int> State::op_arity = {
     {"*", 1},
     {"+", 1},
     {"?", 1},

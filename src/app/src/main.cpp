@@ -12,6 +12,7 @@
 void test_function(int num)
 {
     Tester test;
+    test.cfg_file = fmt::format("CFG{}.xml", num);
     test.run_tests(num);
 }
 int main()
@@ -49,9 +50,28 @@ int main()
     // t2.join();
     // t3.join();
     // t4.join();
-    for (int i = 0; i < 4; ++i)
+    int num_threads = 4;
+    std::vector<std::shared_ptr<std::thread>> thread_vector;
+    for (int i = 1; i <= num_threads; ++i)
     {
-        test_function(i);
+        pugi::xml_document thread_doc;
+        if (!thread_doc.load_file(fmt::format("CFG{}.xml", i).c_str()))
+        {
+            pugi::xml_document original_doc;
+            if (!original_doc.load_file("CFG.xml"))
+            {
+                std::cout << "Cannot load CFG file\n";
+            }
+            original_doc.save_file(fmt::format("CFG{}.xml", i).c_str());
+        }
+        thread_vector.push_back(std::make_shared<std::thread>(std::thread(test_function, i)));
+    }
+    // for (int i = 1; i <= i; ++i)
+    // {
+    // }
+    for (auto t : thread_vector)
+    {
+        t->join();
     }
     return 0;
 }

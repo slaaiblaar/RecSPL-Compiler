@@ -6,7 +6,7 @@
 #include <string>
 #include <queue>
 #include "pugixml.hpp"
-
+#include <thread>
 // Regexp Tree Classes
 class RegexpNode : public std::enable_shared_from_this<RegexpNode>
 {
@@ -29,7 +29,7 @@ public:
     void printNode(int depth, int offset);
     void free();
     void flattenNode();
-    static int uidCounter;
+    thread_local static int uidCounter;
 };
 class RegexpTree
 {
@@ -50,7 +50,7 @@ public:
     int token_id;
     std::string token_class;
     std::string token_word;
-    static int token_counter;
+    thread_local static int token_counter;
 };
 
 enum AutomatonClass
@@ -83,9 +83,9 @@ public:
     int prod_num = -1;
 
 private:
-    static int id_counter;
-    static std::unordered_map<std::string, int> op_precedence;
-    static std::unordered_map<std::string, int> op_arity;
+    thread_local static int id_counter;
+    thread_local static std::unordered_map<std::string, int> op_precedence;
+    thread_local static std::unordered_map<std::string, int> op_arity;
     std::unordered_map<int, std::shared_ptr<State>> e_closure;
 };
 

@@ -399,8 +399,8 @@ std::string escape_chars(std::string s)
 }
 std::string node::printnode(int depth, std::string called_from)
 {
-    static std::unordered_map<int, bool> nodes_printed;
-    static bool re_print_error = false;
+    thread_local static std::unordered_map<int, bool> nodes_printed;
+    thread_local static bool re_print_error = false;
     if (this->CLASS == "PROGPRIMEPRIME" || depth == 0)
     {
         nodes_printed.clear();

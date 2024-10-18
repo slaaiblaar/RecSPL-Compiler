@@ -26,7 +26,7 @@
 class Scope_Checker
 {
 public:
-    Scope_Checker();
+    Scope_Checker(std::string cfg_file = "CFG.xml");
 
     void pushScope();
     void popScope();
@@ -35,6 +35,7 @@ public:
     void addVariable(const std::string &varName, const std::string &type);
     void addFunction(const std::string &funcName, const std::string &returnType);
     void testScopeChecker(int);
+    std::string cfg_file = "CFG.xml";
 
 private:
     struct SymbolTable

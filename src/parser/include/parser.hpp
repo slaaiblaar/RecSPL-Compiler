@@ -16,12 +16,13 @@ enum Operation
 class Parser
 {
 public:
-    Parser();
+    Parser(std::string cfg_file);
     void get_nullable();
     void generate_first_sets();
     void generate_follow_sets();
     std::shared_ptr<node> parse(std::string dest_name = "ast.xml");
     // void read_token_stream(std::string input);
+    std::string cfg_file = "CFG.xml";
 
 private:
     pugi::xml_document cfg_doc;

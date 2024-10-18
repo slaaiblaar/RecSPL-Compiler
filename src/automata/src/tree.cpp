@@ -4,7 +4,7 @@
 #include <string>
 #include <iterator>
 
-int RegexpNode::uidCounter = 0;
+thread_local int RegexpNode::uidCounter = 0;
 RegexpNode::RegexpNode(char value)
 {
     this->value = value;

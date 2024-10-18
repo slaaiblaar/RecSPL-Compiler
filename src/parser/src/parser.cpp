@@ -7,10 +7,10 @@
 #include <iomanip>
 #include <cstdlib>
 #include <regex>
-Parser::Parser()
+Parser::Parser(std::string cfg_file) : cfg_file(cfg_file)
 {
     std::cout << "PARSER\n\n\n";
-    pugi::xml_parse_result result = this->cfg_doc.load_file("./CFG.xml");
+    pugi::xml_parse_result result = this->cfg_doc.load_file(cfg_file.c_str());
     std::cout << "FILE LOADED\n";
     // really shouldn't happen but w/e, TS habits
     if (!result)

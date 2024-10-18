@@ -4,7 +4,7 @@
 class Lexer
 {
 public:
-    Lexer();
+    Lexer(std::string cfg_file);
     void set_input(std::string input);
     void read_input(std::string file_path);
     bool lex(bool testing, std::string dest_file = "token_stream.xml");
@@ -12,6 +12,7 @@ public:
     std::vector<Token> tokens;
     void print_tokens(std::string fname = "token_stream.xml");
     std::string message = "";
+    std::string cfg_file = "CFG.xml";
 
 private:
     std::string input;
