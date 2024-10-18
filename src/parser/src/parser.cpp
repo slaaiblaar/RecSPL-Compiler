@@ -895,8 +895,8 @@ std::shared_ptr<node> Parser::parse(std::string dest_name)
             break;
         }
         default:
-            std::cout << "ERROR\n";
-            throw "\nInvalid stack action\n";
+            std::cout << fmt::format("ERROR: NO ACTION FOR STATE {} ON INPUT SYMBOL {}.\n", curr_state.first, curr_tok.child("WORD").child_value());
+            throw;
         }
     }
     if (accept)

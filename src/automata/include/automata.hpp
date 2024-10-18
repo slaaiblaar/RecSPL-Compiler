@@ -76,7 +76,7 @@ public:
     std::string token_class;
     void add_transition(std::shared_ptr<State> to, char soombol);
     void add_transition(std::shared_ptr<State> to, std::string soombol);
-    bool can_transition(char soombol);
+    bool can_transition(char soombol, bool debug = false);
     void free();
     std::vector<std::string> rhs_nodes_list = {};
     std::string lhs_name = "";
@@ -107,12 +107,12 @@ public:
     void set_final_state(int id);
     void set_input(std::string input);
     void reset_dfa();
-    bool run();
+    bool run(bool debug = false);
     std::shared_ptr<State> find_dfa_state(std::unordered_map<int, std::shared_ptr<State>> nfa_states);
     std::string get_substring();
     std::shared_ptr<RegexpTree> tree;
     void print_nfa();
-    void print_dfa();
+    void print_dfa(std::string source_file = "render-dfa.py", std::string fname = "dfa_graph.png");
     void construct_subsets();
     Token get_token();
     void cfg_to_nfa(pugi::xml_node productions);

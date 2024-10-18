@@ -248,7 +248,7 @@ std::shared_ptr<State> Automaton::tree_to_nfa(std::shared_ptr<RegexpNode> node, 
 */
 void Automaton::construct_subsets()
 {
-    // std::cout << "Cunstructing Subsets\n";
+    std::cout << "Cunstructing Subsets\n";
     std::shared_ptr<State> current_state;
     /*
         2D hashmap is massively overkill, but it's the simplest way to prevent
@@ -260,37 +260,61 @@ void Automaton::construct_subsets()
     while (!subset_construction_queue.empty())
     {
         current_state = subset_construction_queue.front();
+        // std::cout << "  Curr state: \n      " << current_state->id;
         subset_construction_queue.pop();
         transitions.clear();
         // for each nfa state in current state's epsilon closure set
+        // std::cout << "  NFA Equiv transitions: \n";
         for (auto nfa_equiv_state : current_state->nfa_equiv_states)
         {
+            // if (nfa_equiv_state.second->is_final)
+            // {
+            //     std::cout << "    \033[33m" << nfa_equiv_state.second->id << "\033[0m";
+            // }
+            // else
+            //     std::cout << "    " << nfa_equiv_state.second->id;
+            // std::cout << "    " << nfa_equiv_state.second->id;
             // for each transition from the nfa state
             for (auto e_state_transition : nfa_equiv_state.second->transitions)
             {
                 std::string symbol = e_state_transition.first;
-                if (symbol[0] == '\0')
+                if (symbol.length() == 0 || symbol[0] == '\0')
                 {
                     continue;
                 }
                 std::vector<std::shared_ptr<State>> destination_states = e_state_transition.second;
+                // std::cout << " '\033[33m" << symbol << "\033[0m':";
                 // for each destination on the symbol
                 for (auto destination : destination_states)
                 {
+                    // std::cout << " " << destination->id;
+                    // if (destination->is_final)
+                    // {
+                    //     std::cout << "  \033[33m" << destination->id << "\033[0m";
+                    // }
+                    // else
+                    //     std::cout << "  " << destination->id;
                     // for each state in the epsilon closure of the destination
                     for (auto dest_e_state : destination->e_closure)
                     {
                         transitions[symbol][dest_e_state.first] = dest_e_state.second;
                     }
                 }
+                // std::cout << "\n";
             }
+            // std::cout << "\n";
         }
+        // if (transitions.size() > 0)
+        // {
+        //     std::cout << "\n    Combining transitions:\n      ";
+        // }
         // for each transition instantiated above
         for (auto transition : transitions)
         {
             // check if the set of nfa states already exists as a dfa state
             std::shared_ptr<State> destination = find_dfa_state(transition.second);
             // if not create one
+            // std::cout << " " << transition.first << " ";
             if (destination == nullptr)
             {
                 destination = std::make_shared<State>(AutomatonClass::DFA);
@@ -320,10 +344,17 @@ void Automaton::construct_subsets()
                 {
                     dfa_final_states.push_back(destination);
                 }
+                // if (destination->is_final)
+                // {
+                //     std::cout << "(new \033[33m" << destination->id << "\033[0m)";
+                // }
+                // else
+                //     std::cout << "(new " << destination->id << ")";
             }
             // add transition to current state
             current_state->transitions[transition.first].push_back(destination);
         }
+        // std::cout << "\n";
         // std::cout << "FOLLOW Sets:\n";
         // for (const auto &pair : this->follow)
         // {
@@ -491,15 +522,18 @@ void Automaton::nfa_to_dfa()
         }
     }
     subset_construction_queue.push(dfa_start_state);
-    std::cout << "DFA Start State: " << dfa_start_state->id << " [" << dfa_start_state << "]\n";
+    // std::cout << "DFA Start State: " << dfa_start_state->id << " [" << dfa_start_state << "]\n";
     // subset_construction_queue.emplace(dfa_start_state);
     construct_subsets();
+    // std::cout << "Subset construction Complete\n";
     this->current_state = dfa_start_state;
     this->accept_pos = -1;
     this->read_pos = 0;
     this->read_start = 0;
     this->accept_state = nullptr;
     idcounter = 0;
+    // std::cout << "Resetting state Ids\n";
+
     for (auto s : this->dfa_states)
     {
         s->id = idcounter++;
@@ -603,7 +637,7 @@ void Automaton::set_input(std::string input)
     read_start = 0;
     while (read_start < input.length() && isspace(input[read_start]))
     {
-        std::cout << "whitespace: {" << (long)input[read_start] << "}\n";
+        // std::cout << "whitespace: {" << (long)input[read_start] << "}\n";
         if (input[read_start] == '\n')
         {
             ++line_num;
@@ -633,7 +667,7 @@ void Automaton::reset_dfa()
     // progress read pos to next significant character
     while (read_start < input.length() && isspace(input[read_start]))
     {
-        std::cout << "whitespace: {" << (long)input[read_start] << "}\n";
+        // std::cout << "whitespace: {" << (long)input[read_start] << "}\n";
         if (input[read_start] == 10)
         {
             ++line_num;
@@ -654,40 +688,65 @@ void Automaton::reset_dfa()
 // make a run from current start pos until an accept state is reached or invalid transition
 // if accept state reached then update accept pos and return true
 // if invalid transition then return false
-bool Automaton::run()
+bool Automaton::run(bool debug)
 {
-    std::cout << "Start state: " << dfa_start_state->id << "\n";
-    std::cout << "Curr state:  " << current_state->id << "\n";
+    if (debug)
+    {
+        std::cout << "Start state: " << dfa_start_state->id << "\n";
+        std::cout << "Curr state:  " << current_state->id << "\n";
+    }
     // input bound check
     if (accept_pos == read_pos)
     {
         ++read_pos;
     }
-    std::cout << "RUNNING LEXER:\n";
-    std::cout << "start pos: " << read_start << "\n";
+    if (debug)
+    {
+
+        std::cout << "RUNNING LEXER:\n";
+        std::cout << "start pos: " << read_start << "\n";
+    }
     while (read_pos < input.size())
     {
-        std::cout << "Curr pos: " << read_pos << "\n";
-        char soombol = input[read_pos];
-        for (int s = read_start; s <= read_pos; ++s)
-            std::cout << input[s];
-        // std::cout << soombol << std::endl;
-        std::cout << ": \tCAN TRANSITION FROM " << current_state << "?\n";
-        if (!current_state->can_transition(soombol))
+        if (debug)
         {
-            std::cout << "CAN'T TRANSITION\n";
-            std::cout << "[Failed]\n";
+            std::cout << "Curr pos: " << read_pos << "\n";
+        }
+        char soombol = input[read_pos];
+        if (debug)
+        {
+            for (int s = read_start; s <= read_pos; ++s)
+                std::cout << input[s];
+            std::cout << soombol << std::endl;
+            std::cout << ": \tCAN TRANSITION FROM " << current_state << "?\n";
+        }
+        if (!current_state->can_transition(soombol, (this->input == "return")))
+        {
+            if (debug)
+            {
+                std::cout << "CAN'T TRANSITION\n";
+                std::cout << "[Failed]\n";
+            }
             return false;
         }
-        // std::cout << "NOT FAILED\n";
+        if (debug)
+        {
+            std::cout << "NOT FAILED\n";
+        }
         current_state = current_state->transitions[std::string({soombol})][0];
         if (current_state->is_final)
         {
             accept_pos = read_pos;
-            std::cout << "[Accepted]\n";
+            if (debug)
+            {
+                std::cout << "[Accepted]\n";
+            }
             return true;
         }
-        // std::cout << "[Failed]\n";
+        if (debug)
+        {
+            std::cout << "[Failed]\n";
+        }
         ++read_pos;
     }
 
@@ -952,9 +1011,9 @@ std::string construct_final_name(std::shared_ptr<State> state)
     prod.append(")");
     return prod;
 }
-void Automaton::print_dfa()
+void Automaton::print_dfa(std::string source_file, std::string fname)
 {
-    std::ofstream python_generate_dfa("render-dfa.py");
+    std::ofstream python_generate_dfa(source_file);
     python_generate_dfa << "from automata.fa.nfa import NFA\ndfAutomaton = ";
     python_generate_dfa << "NFA(" << std::endl;
 
@@ -1029,6 +1088,6 @@ void Automaton::print_dfa()
     {
         python_generate_dfa << "\"" << (transition.first[0] == '"' ? "\\\"" : transition.first) << "\", ";
     }
-    python_generate_dfa << "}\n)\ndfAutomaton.show_diagram(path=\"dfa_graph.png\")\n";
+    python_generate_dfa << "}\n)\ndfAutomaton.show_diagram(path=\"" << fname << "\")\n";
     python_generate_dfa.close();
 }

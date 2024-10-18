@@ -5,6 +5,8 @@ add_subdirectory(lexer)
 add_subdirectory(automata)
 add_subdirectory(pugixml)
 add_subdirectory(app)
+add_subdirectory(testing)
+add_subdirectory(ast_node)
 
 install(TARGETS
     fmt
@@ -57,4 +59,18 @@ install(
         ${CMAKE_SOURCE_DIR}/pugixml.hpp
     DESTINATION 
         include/pugixml
+)
+install(
+    FILES
+        ${CMAKE_BINRAY_DIR}/testing_export.hpp
+        ${CMAKE_SOURCE_DIR}/testing.hpp
+    DESTINATION 
+        include/testing
+)
+install(
+    FILES
+        ${CMAKE_BINRAY_DIR}/ast_node_export.hpp
+        ${CMAKE_SOURCE_DIR}/ast_node.hpp
+    DESTINATION 
+        include/ast_node
 )

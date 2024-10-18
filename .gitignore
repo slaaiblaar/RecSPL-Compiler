@@ -9,3 +9,5 @@ compile_commands.json
 CFG_*.xml
 code_file*.txt
 random_tree*.xml
+*.txt
+*.xml

@@ -74,29 +74,45 @@ void State::add_transition(std::shared_ptr<State> to, std::string soombol)
     // std::cout << "Added transition " << this->id << " -\"" << soombol << "\"-> " << to->id << std::endl;
 }
 
-bool State::can_transition(char soombol)
+bool State::can_transition(char soombol, bool debug)
 {
-    std::cout << "STATE " << id << "transitions: \n";
-    for (auto t : transitions)
-    {
-        std::cout << t.first << ": " << t.second[0]->id << "\n";
-    }
+    // std::cout << "STATE " << id << "transitions: \n";
+    // for (auto t : transitions)
+    // {
+    //     std::cout << t.first << ": " << t.second[0]->id << "\n";
+    // }
     auto states = transitions.find(std::string({soombol}));
     if (states == transitions.end())
     {
-        std::cout << "STATE " << id << " has no transition on symbol " << soombol << "\n";
+        if (debug)
+        {
+
+            std::cout << "STATE " << id << " has no transition on symbol " << soombol << "\n";
+        }
         return false;
     }
     if (states->second.size() == 0)
     {
-        std::cout << "STATE " << id << " has no destination for symbol " << soombol << "\n";
+        if (debug)
+        {
+
+            std::cout << "STATE " << id << " has no destination for symbol " << soombol << "\n";
+        }
         return false;
     }
     if (states->second[0] == nullptr || states->second[0] == 0)
     {
-        std::cout << "STATE " << id << " has a null destination on " << soombol << "\n";
+        if (debug)
+        {
+
+            std::cout << "STATE " << id << " has a null destination on " << soombol << "\n";
+        }
         return false;
     }
-    std::cout << "STATE " << id << " has a transition " << soombol << " to " << states->second[0] << "\n";
+    if (debug)
+    {
+
+        std::cout << "STATE " << id << " has a transition " << soombol << " to " << states->second[0] << "\n";
+    }
     return true;
 }

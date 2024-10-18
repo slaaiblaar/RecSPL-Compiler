@@ -7,8 +7,11 @@ public:
     Lexer();
     void set_input(std::string input);
     void read_input(std::string file_path);
-    bool lex();
+    bool lex(bool testing, std::string dest_file = "token_stream.xml");
     Automaton dfa;
+    std::vector<Token> tokens;
+    void print_tokens(std::string fname = "token_stream.xml");
+    std::string message = "";
 
 private:
     std::string input;

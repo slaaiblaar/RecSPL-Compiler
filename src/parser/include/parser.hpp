@@ -4,7 +4,8 @@
 #include "pugixml.hpp"
 #include <unordered_map> // hashmap
 #include <set>
-#include "scope_checker.hpp"
+#include "ast_node.hpp"
+
 enum Operation
 {
     SHIFT = 'S',

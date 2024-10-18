@@ -30,7 +30,9 @@ target_include_directories(${TARGET_NAME}
     ${CMAKE_CURRENT_SOURCE_DIR}/../automata/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../fmt/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../fmt-master/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../ast_node/include
 )
 target_link_libraries(${TARGET_NAME} PUBLIC pugixml)
 target_link_libraries(${TARGET_NAME} PUBLIC automata)
 target_link_libraries(${TARGET_NAME} PUBLIC fmt)
+target_link_libraries(${TARGET_NAME} PUBLIC ast_node)

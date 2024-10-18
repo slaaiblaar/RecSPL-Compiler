@@ -33,16 +33,19 @@ Lexer::Lexer()
     {
         dfa.append_pattern(literal_terminal.child_value(), literal_terminal.attribute("class").value());
     } while ((literal_terminal = literal_terminal.next_sibling()) != pugi::xml_node());
+
+    std::cout << "KEYWORDS:";
     do
     {
-
-        std::cout << "KEYWORD: " << keywords_terminal.child_value() << "\n";
+        std::cout << " \"" << keywords_terminal.child_value() << "\"";
         dfa.append_keyword(keywords_terminal.child_value(), keywords_terminal.attribute("class").value());
     } while ((keywords_terminal = keywords_terminal.next_sibling()) != pugi::xml_node());
+    std::cout << "\n";
     // return;
     // prints NFA state to terminal in a format that's easy to manually insert into render-automata.py
     // dfa.print_nfa();
     dfa.nfa_to_dfa();
+    // std::cout << "LEXER: DFA Constructed\n";
     // return;
     dfa.print_dfa();
     std::string dfa_test_strings[] = {
@@ -54,30 +57,41 @@ Lexer::Lexer()
 
     for (std::string test_string : dfa_test_strings)
     {
+        // std::cout << "LEXER: testing input \"" << test_string << "\"\n";
         dfa.set_input(test_string);
+        bool debug = false;
+        if (test_string == "return")
+        {
+            debug = true;
+        }
         if (!dfa.run())
         {
-            // std::cout << "Test string failed: " << test_string << std::endl;
-            // std::cout << "Final State: " << dfa.current_state->id << std::endl;
+            std::cout << "LEXER: Test string failed: " << test_string << std::endl;
+            std::cout << "LEXER: Final State: " << dfa.current_state->id << std::endl;
             throw;
         }
-        else
-        {
-            // std::cout << "Test string passed: " << test_string << std::endl;
-            // std::cout << "Token class: " << dfa.current_state->token_class << std::endl;
-        }
+        // else if (true)
+        // {
+        //     std::cout << "LEXER: Test string passed: " << test_string << std::endl;
+        //     std::cout << "LEXER: Token class: " << dfa.current_state->token_class << std::endl;
+        // }
+
+        // std::cout << "LEXER: resetting DFA\n";
         dfa.reset_dfa();
     }
+    // std::cout << "LEXER: testing complete\n";
 }
 
 void Lexer::set_input(std::string input)
 {
     std::regex whitespaces("\\s+");
     this->input = std::regex_replace(input, whitespaces, " ");
+    Token::token_counter = 0;
 }
 
 void Lexer::read_input(std::string file_path)
 {
+    Token::token_counter = 0;
     this->file_name = file_path;
     if (file_path.length() == 0)
     {
@@ -101,14 +115,15 @@ void Lexer::read_input(std::string file_path)
     input_file.close();
     str = input_stream.str();
     this->input = str;
-    std::cout << "\"" << this->input << "\"" << std::endl;
+    // std::cout << "\"" << this->input << "\"" << std::endl;
 }
 
-bool Lexer::lex()
+bool Lexer::lex(bool testing, std::string dest_file)
 {
+    std::string invalid_token = "";
+    tokens.clear();
     dfa.print_nfa();
     dfa.print_dfa();
-    std::vector<Token> tokens;
     if (input.length() == 0)
     {
         std::cout << "Input not set";
@@ -124,7 +139,7 @@ bool Lexer::lex()
         do
         {
             success = dfa.run();
-            std::cout << "DFA RAN\n";
+            // std::cout << "DFA RAN\n";
         } while (success && !(dfa.read_pos < input.length() - 1 && isspace(input[dfa.read_pos + 1]) != 0));
         if (dfa.read_pos == input.length())
         {
@@ -132,7 +147,6 @@ bool Lexer::lex()
         }
         if (dfa.accept_pos == -1)
         {
-            std::string invalid_token = "";
             for (int i = dfa.read_start; i < dfa.input.length(); ++i)
             {
                 if (isspace(dfa.input[i]))
@@ -141,12 +155,30 @@ bool Lexer::lex()
                     break;
                 }
             }
-            std::cout << fmt::format("Invalid syntax in file \"{}\":{}:{}: \"{}\"\n", this->file_name, dfa.line_num, dfa.col_num, invalid_token);
+            message = fmt::format("Invalid syntax in file \"{}\":{}:{}: \"{}\"", this->file_name, dfa.line_num, dfa.col_num, invalid_token);
+            std::cout << message << "\n";
             complete_lex = false;
             break;
         }
         tokens.push_back(dfa.get_token());
     }
+    if (!complete_lex)
+    {
+        std::cerr << "Lexing Failed\n";
+        if (!testing)
+        {
+            throw;
+        }
+        // std::cout << input.substr(0, dfa.read_start);
+        // std::cout << "\033[32m" << invalid_token << "\033[0m";
+        // std::cout << input.substr(dfa.read_pos + invalid_token.length(), input.length() - (dfa.read_pos + invalid_token.length()));
+    }
+    print_tokens(dest_file);
+    return complete_lex;
+}
+
+void Lexer::print_tokens(std::string fname)
+{
 
     pugi::xml_document token_doc;
     pugi::xml_node token_stream = token_doc.append_child("TOKENSTREAM");
@@ -177,13 +209,7 @@ bool Lexer::lex()
     pugi::xml_node word = tok.append_child("WORD");
     word.append_child(pugi::node_pcdata)
         .set_value("$");
+    bool is_saved = token_doc.save_file(fname.c_str());
 
-    std::cout << "Saving tokens to \"token_stream.xml\": " << token_doc.save_file("./token_stream.xml") << std::endl;
-    if (!complete_lex)
-    {
-        std::cerr << "Lexing Failed\n";
-        // TODO: throw once testing is complete
-    }
-
-    return complete_lex;
+    // std::cout << fmt::format("Saving tokens to \"{}\": {}", fname, is_saved);
 }
