@@ -33,7 +33,7 @@ public:
     bool isFunctionDeclared(const std::string &funcName);
     void addVariable(const std::string &varName, const std::string &type);
     void addFunction(const std::string &funcName, const std::string &returnType);
-    void testScopeChecker();
+    void testScopeChecker(int);
 
 private:
     struct SymbolTable

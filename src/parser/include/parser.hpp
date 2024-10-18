@@ -4,6 +4,7 @@
 #include "pugixml.hpp"
 #include <unordered_map> // hashmap
 #include <set>
+#include "scope_checker.hpp"
 enum Operation
 {
     SHIFT = 'S',
@@ -18,7 +19,7 @@ public:
     void get_nullable();
     void generate_first_sets();
     void generate_follow_sets();
-    void construct_parse_table();
+    std::shared_ptr<node> parse(std::string dest_name = "ast.xml");
     // void read_token_stream(std::string input);
 
 private:

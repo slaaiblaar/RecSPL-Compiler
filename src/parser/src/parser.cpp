@@ -7,58 +7,6 @@
 #include <iomanip>
 #include <cstdlib>
 #include <regex>
-class DummyNode
-{
-public:
-    std::string NAME;
-    int UID;
-    std::string CLASS;
-    std::string WORD;
-    std::vector<std::shared_ptr<DummyNode>> children;
-    void print_tree(int depth)
-    {
-        for (int i = 0; i < depth; ++i)
-            std::cout << "    ";
-        std::cout << "<" << NAME << ">\n";
-        for (int i = 0; i < depth + 1; ++i)
-            std::cout << "    ";
-        std::cout << "<UID>" << UID << "<UID>\n";
-        for (int i = 0; i < depth + 1; ++i)
-            std::cout << "    ";
-        std::cout << "<CLASS>" << CLASS << "<CLASS>\n";
-        for (int i = 0; i < depth + 1; ++i)
-            std::cout << "    ";
-        std::cout << "<WORD>" << WORD << "<WORD>\n";
-        if (children.size() > 0)
-        {
-            for (int i = 0; i < depth + 1; ++i)
-                std::cout << "    ";
-            std::cout << "<CHILDREN>\n";
-            for (auto c : children)
-            {
-                c->print_tree(depth + 2);
-            }
-            for (int i = 0; i < depth + 1; ++i)
-                std::cout << "    ";
-            std::cout << "</CHILDREN>\n";
-        }
-        for (int i = 0; i < depth; ++i)
-            std::cout << "    ";
-        std::cout << "</" << NAME << ">\n";
-    }
-    void print_code()
-    {
-        if (NAME == "LEAF")
-        {
-            std::cout << WORD << " ";
-            return;
-        }
-        for (auto c : children)
-        {
-            c->print_code();
-        }
-    }
-};
 Parser::Parser()
 {
     std::cout << "PARSER\n\n\n";
@@ -76,8 +24,6 @@ Parser::Parser()
     std::cout << "First\n";
     this->generate_follow_sets();
     std::cout << "Follow\n";
-    this->construct_parse_table();
-    std::cout << "Parse\n";
 }
 
 void Parser::get_nullable()
@@ -428,7 +374,7 @@ void Parser::generate_follow_sets()
     }
 }
 
-void Parser::construct_parse_table()
+std::shared_ptr<node> Parser::parse(std::string dest_name)
 {
     std::unordered_map<int, std::unordered_map<std::string, std::pair<Operation, int>>> parse_table;
     std::unordered_map<std::string, int> nonterms;
@@ -743,8 +689,8 @@ void Parser::construct_parse_table()
     }
     pugi::xml_document ast_doc;
     pugi::xml_node tok_str = tok_doc.child("TOKENSTREAM");
-    std::stack<std::pair<int, std::shared_ptr<DummyNode>>> parse_stack;
-    parse_stack.emplace(std::pair(production_automaton.dfa_start_state->id, std::make_shared<DummyNode>()));
+    std::stack<std::pair<int, std::shared_ptr<node>>> parse_stack;
+    parse_stack.emplace(std::pair(production_automaton.dfa_start_state->id, std::make_shared<node>()));
     bool accept = false;
     pugi::xml_node curr_tok = tok_str.first_child();
     int uid_counter = 0;
@@ -752,7 +698,7 @@ void Parser::construct_parse_table()
     {
         { // debug printing
             std::cout << "Current stack:";
-            std::stack<std::pair<int, std::shared_ptr<DummyNode>>> temp_stack;
+            std::stack<std::pair<int, std::shared_ptr<node>>> temp_stack;
             while (!parse_stack.empty())
             {
                 temp_stack.emplace(parse_stack.top());
@@ -766,14 +712,14 @@ void Parser::construct_parse_table()
                 temp_stack.pop();
             }
             pugi::xml_node print_tok = curr_tok;
-            std::cout << "\nCurrent input:";
-            do
-            {
-                std::cout << " " << print_tok.child("WORD").child_value();
-            } while ((print_tok = print_tok.next_sibling()) != pugi::xml_node());
-            std::cout << "\n";
+            // std::cout << "\nCurrent input:";
+            // do
+            // {
+            //     std::cout << " " << print_tok.child("WORD").child_value();
+            // } while ((print_tok = print_tok.next_sibling()) != pugi::xml_node());
+            // std::cout << "\n";
         }
-        std::pair<int, std::shared_ptr<DummyNode>> curr_state = parse_stack.top();
+        std::pair<int, std::shared_ptr<node>> curr_state = parse_stack.top();
         std::string col_head = curr_tok.child("CLASS").child_value();
         if (col_head == "KEYWORD")
         {
@@ -793,7 +739,7 @@ void Parser::construct_parse_table()
         case Operation::SHIFT:
         {
             std::cout << "Shifting new node: ";
-            std::shared_ptr<DummyNode> new_node = std::make_shared<DummyNode>();
+            std::shared_ptr<node> new_node = std::make_shared<node>();
             new_node->NAME = "LEAF";
             new_node->UID = uid_counter++;
             new_node->CLASS = curr_tok.child("CLASS").child_value();
@@ -803,7 +749,7 @@ void Parser::construct_parse_table()
             std::cout << ", CLASS=" << new_node->CLASS;
             std::cout << ", WORD=" << new_node->WORD << "\n";
 
-            curr_state = std::pair<int, std::shared_ptr<DummyNode>>(curr_op.second, new_node);
+            curr_state = std::pair<int, std::shared_ptr<node>>(curr_op.second, new_node);
             parse_stack.emplace(curr_state);
             std::cout << "New parse stack element: " << parse_stack.top().second->NAME << "("
                       << "UID=" << parse_stack.top().second->UID
@@ -825,8 +771,14 @@ void Parser::construct_parse_table()
         {
             std::string prod_LHS = production_rules[curr_op.second]->lhs_name;
             std::vector<std::string> prod_RHS = production_rules[curr_op.second]->rhs_nodes_list;
-
-            std::shared_ptr<DummyNode> new_node = std::make_shared<DummyNode>();
+            std::cout << "REDUCTING [" << curr_op.second << "]: " << production_rules[curr_op.second]->lhs_name;
+            std::cout << " ==>";
+            for (auto n : production_rules[curr_op.second]->rhs_nodes_list)
+            {
+                std::cout << " " << n;
+            }
+            std::cout << "\n";
+            std::shared_ptr<node> new_node = std::make_shared<node>();
             new_node->NAME = "INTERNAL";
             new_node->UID = uid_counter++;
             new_node->CLASS = "NONTERMINAL";
@@ -915,7 +867,7 @@ void Parser::construct_parse_table()
                         throw "\nInconsistent stack state\n";
                     }
                 }
-                new_node->children.insert(new_node->children.begin(), curr_state.second);
+                new_node->get_children().insert(new_node->get_children().begin(), curr_state.second);
 
                 parse_stack.pop();
             }
@@ -958,12 +910,19 @@ void Parser::construct_parse_table()
         // {
         //     std::cout << "\n\nSOMETHING WENT WRONG WHEN SAVING AST TO AST.xml\n\n";
         // }
-        parse_stack.top().second->print_tree(0);
-        parse_stack.top().second->print_code();
+        std::string tree = parse_stack.top().second->printnode(0, "");
+        std::cout << "Parsed Syntax Tree";
+        // std::cout << tree;
+        std::ofstream ast(dest_name);
+        ast << tree;
+        ast.close();
+        // parse_stack.top().second->print_code();
         std::cout << "\n";
+        return parse_stack.top().second;
     }
     else
     {
         std::cout << "\n\nSomething went wrong\n\n";
     }
+    throw;
 }
