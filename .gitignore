@@ -11,3 +11,4 @@ code_file*.txt
 random_tree*.xml
 *.txt
 *.xml
+!CMakeLists.txt
