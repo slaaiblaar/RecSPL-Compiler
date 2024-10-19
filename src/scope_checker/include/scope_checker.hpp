@@ -35,7 +35,13 @@ public:
     void addVariable(const std::string &varName, const std::string &type);
     void addFunction(const std::string &funcName, const std::string &returnType);
     void testScopeChecker(int);
+    bool check(std::shared_ptr<node> n, int depth = 0);
+    bool run_scope_checker(std::shared_ptr<node> n, int thread_number = -1);
+    std::shared_ptr<ftable_type> preprocess_ftables(std::shared_ptr<node> n, int depth);
+    void construct_ftables(std::shared_ptr<node> n, int depth);
+    void populate_identifiers(std::shared_ptr<node> n, int depth = 0);
     std::string cfg_file = "CFG.xml";
+    std::shared_ptr<node> root;
 
 private:
     struct SymbolTable

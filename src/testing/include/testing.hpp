@@ -24,7 +24,7 @@ public:
     void run_tests(int thread_number);
     void test_lexer(int thread_number);
     void test_parser(int thread_number);
-    void test_scope_checker();
+    void test_scope_checker(int thread_number);
     void test_type_checker();
     int num_terminals = 0;
     void populate_identifiers(std::shared_ptr<node> n, component test);

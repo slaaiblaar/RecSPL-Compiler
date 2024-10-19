@@ -338,51 +338,8 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
 // of type std::shared_ptr<std::unordered_map<std::string, std::string>>
 using ftable_type = std::unordered_map<std::string, std::string[4]>;
 using vtable_type = std::unordered_map<std::string, std::string>;
-// Drill down through successive chains of FUNCTIONS == > FUNCTIONS productions void copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<node> t)
-void copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<node> t)
-{
-    for (auto it = f->begin(); it != f->end(); ++it)
-    {
-        for (int i = 0; i < 4; ++i)
-        {
-            t->f_table[it->first][i] = it->second[i];
-        }
-    }
-}
-void copy_vtable(std::shared_ptr<vtable_type> f, std::shared_ptr<node> t)
-{
-    for (auto it = f->begin(); it != f->end(); ++it)
-    {
-        t->v_table[it->first] = it->second;
-    }
-}
-void copy_ftable(std::shared_ptr<node> f, std::shared_ptr<node> t)
-{
-    for (auto it = f->f_table.begin(); it != f->f_table.end(); ++it)
-    {
-        for (int i = 0; i < 4; ++i)
-        {
-            t->f_table[it->first][i] = it->second[i];
-        }
-    }
-}
-void copy_vtable(std::shared_ptr<node> f, std::shared_ptr<node> t)
-{
-    for (auto it = f->v_table.begin(); it != f->v_table.end(); ++it)
-    {
-        t->v_table[it->first] = it->second;
-    }
-}
-void copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<ftable_type> t)
-{
-    for (auto it = f->begin(); it != f->end(); ++it)
-    {
-        for (int i = 0; i < 4; ++i)
-        {
-            (*t)[it->first][i] = it->second[i];
-        }
-    }
-}
+// Drill down through successive chains of FUNCTIONS == > FUNCTIONS productions void node::copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<node> t)
+
 std::shared_ptr<ftable_type> preprocess_ftables(std::shared_ptr<node> n, int depth)
 {
     ++depth;
@@ -418,12 +375,12 @@ std::shared_ptr<ftable_type> preprocess_ftables(std::shared_ptr<node> n, int dep
     {
         // copy current node's f_table to child
         std::shared_ptr<node> f_child = n->get_child(n->num_children() - 1);
-        // copy_ftable(n, c);
-        copy_ftable(n, f_child);
+        // node::copy_ftable(n, c);
+        node::copy_ftable(n, f_child);
         std::shared_ptr<ftable_type> child_ftable = preprocess_ftables(f_child, depth);
         // Copy child's f_table to current node
-        copy_ftable(child_ftable, n);
-        copy_ftable(child_ftable, synthesized_table);
+        node::copy_ftable(child_ftable, n);
+        node::copy_ftable(child_ftable, synthesized_table);
     }
     n->pre_processed = true;
     return synthesized_table;
@@ -476,17 +433,17 @@ void Tester::construct_ftables(std::shared_ptr<node> n, int depth, component tes
         }
         std::shared_ptr<ftable_type> p = std::make_shared<ftable_type>(n->f_table);
         std::shared_ptr<ftable_type> c = std::make_shared<ftable_type>(f_child->f_table);
-        copy_ftable(p, c);
+        node::copy_ftable(p, c);
 
         std::shared_ptr<ftable_type> child_ftable = preprocess_ftables(f_child, depth);
         // Copy child's f_table
-        copy_ftable(child_ftable, p);
+        node::copy_ftable(f_child, n);
         // copy to SUBFUNCS if applicable
         if (n->get_child(f_index)->UID != f_child->UID)
         {
             f_child = n->get_child(f_index);
             std::shared_ptr<ftable_type> c = std::make_shared<ftable_type>(f_child->f_table);
-            copy_ftable(p, c);
+            node::copy_ftable(n, f_child);
         }
     }
     for (auto c : n->get_children())
@@ -612,26 +569,154 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
     {
         std::shared_ptr<vtable_type> pt = std::make_shared<vtable_type>(n->v_table);
         std::shared_ptr<vtable_type> ct = std::make_shared<vtable_type>(c->v_table);
-        copy_vtable(n, c);
+        node::copy_vtable(n, c);
+        node::copy_ftable(n, c);
         populate_identifiers(c, test);
         if (c->CLASS == "GLOBVARS" || c->CLASS == "LOCVARS")
         {
             std::shared_ptr<vtable_type> pt = std::make_shared<vtable_type>(n->v_table);
             std::shared_ptr<vtable_type> ct = std::make_shared<vtable_type>(c->v_table);
-            copy_vtable(c, n);
+            node::copy_vtable(c, n);
             // std::cout << fmt::format("  {}: Copied vtable from child {}\n", n->CLASS, c->CLASS);
         }
     }
 }
-void Tester::test_scope_checker()
+bool compare_nodes(std::shared_ptr<node> l, std::shared_ptr<node> r)
 {
+    std::cout << fmt::format("(C:W:N): L ({}:{}:{}) , R ({}:{}:{})\n", l->CLASS, l->WORD, l->NAME, r->CLASS, r->WORD, r->NAME);
+
+    if (l->WORD != r->WORD
+        //  || l->CLASS != r->CLASS
+    )
+    {
+        std::cout << "NOT THE SAME\n";
+        return false;
+    }
+    auto l_children = l->get_children();
+    auto r_children = r->get_children();
+    if (l_children.size() > 0 || r_children.size() > 0)
+    {
+        std::cout << "Comparing children\nL: ";
+        for (auto c : l_children)
+        {
+            std::cout << " " << c->WORD;
+        }
+        std::cout << "\nR: ";
+        for (auto c : r_children)
+        {
+            std::cout << " " << c->WORD;
+        }
+        std::cout << "\n";
+        auto l_it = l_children.begin();
+        auto r_it = r_children.begin();
+        // std::cout << fmt::format("Num children: L:{}, R:{}\n", l_children.size(), r_children.size());
+        if (l_children.size() != r_children.size())
+        {
+            std::cout << "NOT THE SAME\n";
+            return false;
+        }
+        for (; r_it != r_children.end() && l_it != l_children.end(); ++r_it, ++l_it)
+        {
+            if (!compare_nodes(*l_it, *r_it))
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+void Tester::test_scope_checker(int thread_number)
+{
+
+    std::cout << "===== Running Random Program Test =====\n";
+    // this->cfg_file = fmt::format("CFG{}.xml", thread_number);
+    pugi::xml_document doc;
+    if (!doc.load_file(cfg_file.c_str()))
+    {
+        std::cerr << fmt::format("run_tests Error loading {}\n", cfg_file);
+        return;
+    }
+
+    pugi::xml_node productions = doc.child("CFG").child("PRODUCTIONRULES");
+
+    // root node for tree
+    std::shared_ptr<node> root = std::make_shared<node>();
+    // std::time_t now = std::time(NULL);
+    // srand(now);
+    std::time_t now = std::time(0);
+    srand(now);
+    int num_nodes = 0;
+    Lexer l(this->cfg_file);
+    bool bad_parse = false;
+    for (int i = 0; !bad_parse && i < 10; ++i)
+    {
+        std::shared_ptr<node> root = std::make_shared<node>();
+        srand(rand());
+        int num_nodes = 0;
+
+        do
+        {
+            this->messed_up_word = std::pair<int, std::string>(-1, "NONE");
+            root->clear_node();
+            root->CLASS = "PROGPRIMEPRIME";
+            num_nodes = this->generate_tree(root, productions, -1, component::PARSER);
+        } while (num_nodes < 300);
+
+        std::ofstream rand_tree;
+        std::ofstream code_file;
+
+        construct_ftables(root, 0, component::PARSER);
+
+        this->num_terminals = 0;
+        populate_identifiers(root, component::PARSER);
+        std::string tree = root->printnode(0, "testScopeChecker()");
+        tree = root->printnode(0, "testScopeChecker()");
+        std::ofstream tree_file(fmt::format("thread_{}_generated_ast.xml", thread_number));
+        tree_file << tree;
+        tree_file.close();
+        code_file.open(fmt::format("thread_{}_code_file.txt", thread_number));
+        std::string plaintext_code = root->print_code(0, code_file);
+        code_file << plaintext_code;
+        code_file.close();
+        // // do something with lexer
+        l.read_input(fmt::format("./thread_{}_code_file.txt", thread_number));
+        bool lex_res = l.lex(true, fmt::format("./thread_{}_token_stream.xml", thread_number));
+        if (!lex_res)
+        {
+            std::cout << "Lexing failed\n";
+            return;
+        }
+        Parser p(this->cfg_file);
+        std::shared_ptr<node> parsed_root = p.parse(fmt::format("./thread_{}_parsed_ast.xml", thread_number), fmt::format("./thread_{}_token_stream.xml", thread_number));
+        // code_file.open(fmt::format("thread_{}_generated_code_file.txt", thread_number));
+        // plaintext_code = parsed_root->print_code(0, code_file);
+        // code_file << plaintext_code;
+        // code_file.close();
+        // root is PROGPRIMEPRIME
+        std::shared_ptr<node> generated_root = root->get_child(0)->get_child(0);
+        if (compare_nodes(generated_root, parsed_root))
+        {
+            std::cout << i << ": Parser succeeded\n";
+        }
+        else
+        {
+            std::cout << i << ": Parser failed\n";
+            bad_parse = true;
+            // catch immediately if it fails
+            throw;
+        }
+        Scope_Checker s;
+        std::cout << "Scope Check Result: " << (s.run_scope_checker(parsed_root, thread_number) == true ? "Success\n" : "Failed\n");
+    }
+    std::cout << fmt::format("\033[3{}mThread {}\033[0m testing completed\n", 2 + thread_number, thread_number);
 }
 
 void Tester::run_tests(int thread_number)
 {
     // test_lexer(thread_number);
-    test_parser(thread_number);
+    // test_parser(thread_number);
     // test_type_checker();
+    test_scope_checker(thread_number);
 }
 
 void Tester::test_lexer(int thread_number)
@@ -748,50 +833,6 @@ void Tester::test_lexer(int thread_number)
         }
     }
     std::cout << fmt::format("\033[3{}mThread {}\033[0m testing completed\n", 2 + thread_number, thread_number);
-}
-bool compare_nodes(std::shared_ptr<node> l, std::shared_ptr<node> r)
-{
-    std::cout << fmt::format("(C:W:N): L ({}:{}:{}) , R ({}:{}:{})\n", l->CLASS, l->WORD, l->NAME, r->CLASS, r->WORD, r->NAME);
-
-    if (l->WORD != r->WORD
-        //  || l->CLASS != r->CLASS
-    )
-    {
-        std::cout << "NOT THE SAME\n";
-        return false;
-    }
-    auto l_children = l->get_children();
-    auto r_children = r->get_children();
-    if (l_children.size() > 0 || r_children.size() > 0)
-    {
-        std::cout << "Comparing children\nL: ";
-        for (auto c : l_children)
-        {
-            std::cout << " " << c->WORD;
-        }
-        std::cout << "\nR: ";
-        for (auto c : r_children)
-        {
-            std::cout << " " << c->WORD;
-        }
-        std::cout << "\n";
-        auto l_it = l_children.begin();
-        auto r_it = r_children.begin();
-        // std::cout << fmt::format("Num children: L:{}, R:{}\n", l_children.size(), r_children.size());
-        if (l_children.size() != r_children.size())
-        {
-            std::cout << "NOT THE SAME\n";
-            return false;
-        }
-        for (; r_it != r_children.end() && l_it != l_children.end(); ++r_it, ++l_it)
-        {
-            if (!compare_nodes(*l_it, *r_it))
-            {
-                return false;
-            }
-        }
-    }
-    return true;
 }
 void Tester::test_parser(int thread_number)
 {

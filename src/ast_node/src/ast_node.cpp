@@ -17,7 +17,7 @@ void node::clear_node()
 }
 node::~node()
 {
-    // std::cout << "DESTROYING NODE " << this->UID << std::endl;
+    std::cout << "DESTROYING NODE " << this->UID << std::endl;
 }
 std::string node::printftable(std::shared_ptr<node> n)
 {
@@ -449,4 +449,71 @@ std::string node::printnode(int depth, std::string called_from)
 node::node() : UID(node_counter++)
 {
     node_id = node_id_counter++;
+}
+
+std::string printftable(std::shared_ptr<node> n)
+{
+    std::string ftable = "";
+    for (auto it = n->f_table.begin(); it != n->f_table.end(); ++it)
+    {
+        ftable = fmt::format("{}{}() ==> {}, ", ftable, it->first, it->second[0]);
+    }
+    return ftable;
+}
+std::string printvtable(std::shared_ptr<node> n)
+{
+    std::string vtable = "";
+    for (auto it = n->v_table.begin(); it != n->v_table.end(); ++it)
+    {
+        vtable = fmt::format("{}{}: {}, ", vtable, it->first, it->second);
+    }
+    return vtable;
+}
+
+// // making a type alias because its super annoying to repeatedly define objects
+// // of type std::shared_ptr<std::unordered_map<std::string, std::string>>
+// Drill down through successive chains of FUNCTIONS == > FUNCTIONS productions void node::copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<node> t)
+void node::copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<node> t)
+{
+    for (auto it = f->begin(); it != f->end(); ++it)
+    {
+        for (int i = 0; i < 4; ++i)
+        {
+            t->f_table[it->first][i] = it->second[i];
+        }
+    }
+}
+void node::copy_vtable(std::shared_ptr<vtable_type> f, std::shared_ptr<node> t)
+{
+    for (auto it = f->begin(); it != f->end(); ++it)
+    {
+        t->v_table[it->first] = it->second;
+    }
+}
+void node::copy_ftable(std::shared_ptr<node> f, std::shared_ptr<node> t)
+{
+    for (auto it = f->f_table.begin(); it != f->f_table.end(); ++it)
+    {
+        for (int i = 0; i < 4; ++i)
+        {
+            t->f_table[it->first][i] = it->second[i];
+        }
+    }
+}
+void node::copy_vtable(std::shared_ptr<node> f, std::shared_ptr<node> t)
+{
+    for (auto it = f->v_table.begin(); it != f->v_table.end(); ++it)
+    {
+        t->v_table[it->first] = it->second;
+    }
+}
+void node::copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<ftable_type> t)
+{
+    for (auto it = f->begin(); it != f->end(); ++it)
+    {
+        for (int i = 0; i < 4; ++i)
+        {
+            (*t)[it->first][i] = it->second[i];
+        }
+    }
 }
