@@ -18,6 +18,7 @@ bool gen_automaton(std::string terminal_class, std::unordered_map<std::string, s
     {
         std::cerr << fmt::format("gen_automaton Error loading {}\n", cfg_file);
         automata[terminal_class] = nullptr;
+        // throw;
         return false;
     }
     pugi::xml_node terminal = doc.child("CFG").child("TERMINALS").child(terminal_class.c_str()).first_child();
@@ -73,19 +74,33 @@ void random_pattern(std::shared_ptr<node> n, std::string cfg_file = "CFG.xml")
     }
     n->WORD = pattern;
 }
-
-int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productions, int depth, component test)
+int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productions, int depth, component test, counters counters)
 {
+    // configure tests, kind of
+    bool stop_functions = counters.num_functions >= 3 && test == component::SCOPE_CHECK;
+    bool force_branch = counters.num_branches < 3 && test == component::SCOPE_CHECK;
+    bool force_var = (counters.num_number_v < 3 || counters.num_text_v < 3);
+    bool force_func = (counters.num_number_f < 2 || counters.num_void_f < 2);
+    // bool force_globvar = (globvar_counter < 2) && test == component::PARSER;
+    // bool force_short_tree = false;
+    // bool force_var = false;
+    // bool force_func = false;
+    bool force_globvar = (counters.num_number_v < 0 && counters.num_text_v < 0);
+    bool force_short_tree = false;
+    if (parent->CLASS == "BRANCH")
+    {
+        ++counters.num_branches;
+    }
+    if (parent->CLASS == "FUNCTIONS")
+    {
+        ++counters.num_functions;
+    }
     if (parent->subtree_generated)
     {
         return node::node_id_counter;
     }
     parent->subtree_generated = true;
     // for use in testing type checker
-    thread_local static int num_number_v = 0;
-    thread_local static int num_text_v = 0;
-    thread_local static int num_number_f = 0;
-    thread_local static int num_void_f = 0;
     thread_local static int node_counter = 0;
     thread_local static int globvar_counter = 0;
     // static int num_terminals = 0;
@@ -95,10 +110,6 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
         depth = 0;
         node::node_id_counter = 1;
         num_terminals = 0;
-        num_number_v = 0;
-        num_text_v = 0;
-        num_number_f = 0;
-        num_void_f = 0;
         globvar_counter = 0;
     }
     // std::cout << std::string(depth, ' ') << parent->CLASS << "\n";
@@ -129,70 +140,67 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
         {
             ++globvar_counter;
         }
-        bool force_var = (num_number_v < 3 || num_number_v < 3);
-        bool force_func = (num_number_f < 3 || num_void_f < 3);
-        // bool force_globvar = (globvar_counter < 2) && test == component::PARSER;
-        // bool force_short_tree = false;
-        // bool force_var = false;
-        // bool force_func = false;
-        bool force_globvar = false;
-        bool force_short_tree = false;
         int prod_num = -1;
-        if (force_short_tree || force_globvar || force_var || force_func || depth > 40 || node_counter > 400)
+        if (parent->WORD == "PROG")
         {
-            if (parent->WORD == "PROG")
+            if (force_var || force_globvar)
             {
-                if (force_var || force_globvar)
+                std::cout << std::string(depth * 2, ' ') << "Adding GLOBVAR via PROG\n";
+                prod_num = 0;
+            }
+            else if (force_short_tree)
+            {
+                prod_num = 1;
+            }
+        }
+        // std::cout << std::string(depth, ' ') << parent->CLASS << fmt::format(" point NT point 3 force_var={} force_func={}\n", force_var, force_func);
+        else if (parent->WORD == "GLOBVARS")
+        {
+            if (force_globvar)
+            {
+                // rhs = rhs_list[1];
+                std::cout << std::string(depth * 2, ' ') << "Adding GLOBVAR recursively\n";
+                prod_num = 1;
+                if (rhs_list[prod_num].child("GLOBVARS") == pugi::xml_node())
                 {
-                    std::cout << std::string(depth * 2, ' ') << "Adding GLOBVAR via PROG\n";
-                    prod_num = 0;
-                }
-                else if (force_short_tree)
-                {
-                    prod_num = 1;
+                    std::cerr << "\nProduction 0 of FUNCTIONS is not FUNCTIONS ==> DECL FUNCTIONS\n";
                 }
             }
-            // std::cout << std::string(depth, ' ') << parent->CLASS << fmt::format(" point NT point 3 force_var={} force_func={}\n", force_var, force_func);
-            else if (parent->WORD == "GLOBVARS")
+            else
             {
-                if (force_var || force_globvar)
+                // rhs = rhs_list[0];
+                prod_num = 0;
+            }
+        }
+        else if (parent->WORD == "FUNCTIONS")
+        {
+            counters.num_number_v += 3; // locvars are always numbers
+            if (force_func && !stop_functions)
+            {
+                // rhs = rhs_list[1];
+                prod_num = 1;
+                if (rhs_list[prod_num].child("FUNCTIONS") == pugi::xml_node())
                 {
-                    // rhs = rhs_list[1];
-                    std::cout << std::string(depth * 2, ' ') << "Adding GLOBVAR recursively\n";
-                    prod_num = 1;
-                    if (rhs_list[prod_num].child("GLOBVARS") == pugi::xml_node())
-                    {
-                        std::cerr << "\nProduction 0 of FUNCTIONS is not FUNCTIONS ==> DECL FUNCTIONS\n";
-                    }
-                }
-                else if (force_short_tree || !force_func)
-                {
-                    // rhs = rhs_list[0];
-                    prod_num = 0;
+                    std::cerr << "\nProduction 0 of FUNCTIONS is not FUNCTIONS ==> DECL FUNCTIONS\n";
                 }
             }
-            else if (parent->WORD == "FUNCTIONS")
+            else if (stop_functions || force_short_tree || !force_var)
             {
-                if (force_func)
+                // rhs = rhs_list[0];
+                prod_num = 0;
+                if (rhs_list[prod_num].child("FUNCTIONS") != pugi::xml_node())
                 {
-                    // rhs = rhs_list[1];
-                    prod_num = 1;
-                    if (rhs_list[prod_num].child("FUNCTIONS") == pugi::xml_node())
-                    {
-                        std::cerr << "\nProduction 0 of FUNCTIONS is not FUNCTIONS ==> DECL FUNCTIONS\n";
-                    }
-                }
-                else if (force_short_tree || !force_var)
-                {
-                    // rhs = rhs_list[0];
-                    prod_num = 0;
-                    if (rhs_list[prod_num].child("FUNCTIONS") != pugi::xml_node())
-                    {
-                        std::cerr << "\nProduction 0 of FUNCTIONS is not FUNCTIONS ==> DECL\n";
-                    }
+                    std::cerr << "\nProduction 0 of FUNCTIONS is not FUNCTIONS ==> DECL\n";
                 }
             }
-            else if (parent->WORD == "INSTRUC")
+        }
+        else if (parent->WORD == "INSTRUC")
+        {
+            // will result in about 4 instructions per function with 4 extra depth per scope block
+            // PROGPRIMEPRIME => PROGPRIME => PROG => FUNCTIONS =>
+            // with FUNCTIONS => DECL => BODY => ALGO => INSTRUC
+            //          1          2       3      4         ^
+            if ((depth - (3 + counters.num_functions * 4)) > 4)
             {
                 // rhs = rhs_list[0];
                 prod_num = 0;
@@ -201,19 +209,34 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
                     std::cerr << "\nProduction 0 of INSTRUC is not INSTRUC ==> COMMAND ;\n";
                 }
             }
-            else if (parent->WORD == "COMMAND")
-            {
-                do
-                {
-                    // rhs = rhs_list[rand() % rhs_list.size()];
-                    prod_num = rand() % rhs_list.size();
-                } while (rhs_list[prod_num].child("BRANCH") != pugi::xml_node());
-            }
             else
+            {
+                prod_num = 1;
+            }
+        }
+        else if (parent->WORD == "COND")
+        {
+            if ((depth - (3 + counters.num_functions * 4)) > 4)
+            {
+                prod_num = 0; // force SIMPLE cond
+                if (rhs_list[prod_num].child("INSTRUC") != pugi::xml_node())
+                {
+                    std::cerr << "\nProduction 0 of INSTRUC is not INSTRUC ==> COMMAND ;\n";
+                }
+            }
+        }
+        else if (parent->WORD == "COMMAND")
+        {
+            do
             {
                 // rhs = rhs_list[rand() % rhs_list.size()];
                 prod_num = rand() % rhs_list.size();
-            }
+            } while (rhs_list[prod_num].child("BRANCH") != pugi::xml_node());
+        }
+        else
+        {
+            // rhs = rhs_list[rand() % rhs_list.size()];
+            prod_num = rand() % rhs_list.size();
         }
         if (prod_num == -1)
         {
@@ -252,7 +275,7 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
 
             std::shared_ptr<node> child = std::make_shared<node>();
             child->CLASS = sym_name;
-            generate_tree(child, productions, depth + 1, test);
+            generate_tree(child, productions, depth + 1, test, counters);
 
             bool is_new = parent->add_child(child, child_index);
             if (!is_new)
@@ -287,22 +310,22 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
                 {
                     if (child->WORD == "num")
                     {
-                        ++num_number_f;
+                        ++counters.num_number_f;
                     }
                     if (child->WORD == "void")
                     {
-                        ++num_void_f;
+                        ++counters.num_void_f;
                     }
                 }
                 else if (parent->CLASS == "VTYP")
                 {
                     if (child->WORD == "num")
                     {
-                        ++num_number_v;
+                        ++counters.num_number_v;
                     }
                     if (child->WORD == "text")
                     {
-                        ++num_text_v;
+                        ++counters.num_text_v;
                     }
                 }
             }
@@ -549,15 +572,39 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
         }
         return;
     }
+    double id_probability;
+    ;
     if (n->CLASS == "GLOBVARS")
     {
         std::shared_ptr<node> vtype = n->get_child(0);
         std::shared_ptr<node> vname = n->get_child(1);
+        bool found = false;
         do
         {
-            random_pattern(vname->get_child(0));
+            id_probability = (double)rand() / (double)RAND_MAX;
+            if (test == component::SCOPE_CHECK && id_probability < 1 && n->v_table.size() > 0)
+            {
+                int rand_id = rand() % n->v_table.size();
+                int index = 0;
+                for (auto vit = n->v_table.begin(); vit != n->v_table.end(); ++vit)
+                {
+                    if (index == rand_id)
+                    {
+                        vname->get_child(0)->WORD = vit->first;
+                        // vtype->get_child(0)->WORD = vit->second;
+                        found = true;
+                        this->scope_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(vname->get_child(0)->WORD, vname->get_child(0)));
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                random_pattern(vname->get_child(0));
+            }
+            // random_pattern(vname->get_child(0));
             // while the name is not unique
-        } while (n->v_table.find(vname->get_child(0)->WORD) != n->v_table.end());
+        } while (n->v_table.find(vname->get_child(0)->WORD) != n->v_table.end() || found);
         n->v_table[vname->get_child(0)->WORD] = vtype->get_child(0)->WORD;
         // std::cout << fmt::format("  {}: New var {} {}\n", n->CLASS, vtype->get_child(0)->WORD, vname->get_child(0)->WORD);
     }
@@ -565,16 +612,80 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
     //              0     1   2   3    4   5  6     7   8
     if (n->CLASS == "LOCVARS")
     {
+        std::set<std::string> locvars;
         for (int i = 0; i < 7; i += 3)
         {
             std::shared_ptr<node> vtype = n->get_child(i);     // 0, 3, 6
             std::shared_ptr<node> vname = n->get_child(i + 1); // 1, 4, 7
+            bool found = false;
             do
             {
+                id_probability = (double)rand() / (double)RAND_MAX;
+                if (test == component::SCOPE_CHECK && id_probability < 1 && locvars.size() > 0)
+                {
+
+                    int rand_id = rand() % locvars.size();
+                    int index = 0;
+                    for (auto vit = locvars.begin(); vit != locvars.end() && index < rand_id; ++index)
+                    {
+                        if (index == rand_id)
+                        {
+                            vname->get_child(0)->WORD = *vit;
+                            found = true;
+                            this->scope_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(vname->get_child(0)->WORD, vname->get_child(0)));
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    random_pattern(vname->get_child(0));
+                }
                 random_pattern(vname->get_child(0));
                 // while the name is not unique
             } while (n->v_table.find(vname->get_child(0)->WORD) != n->v_table.end());
+            locvars.emplace(vname->get_child(0)->WORD);
             n->v_table[vname->get_child(0)->WORD] = vtype->get_child(0)->WORD;
+            // std::cout << fmt::format("  {}: New var {} {}\n", n->CLASS, vtype->get_child(0)->WORD, vname->get_child(0)->WORD);
+        }
+    }
+    // HEADER ==> ftyp FNAME ( VNAME , VNAME , VNAME )
+    //              0     1   2   3   4   5   6   7   8
+    if (n->CLASS == "HEADER")
+    {
+        std::set<std::string> params;
+        for (int i = 3; i < 8; i += 2)
+        {
+            std::shared_ptr<node> vname = n->get_child(i); // 3, 5, 7
+            bool found = false;
+            do
+            {
+                id_probability = (double)rand() / (double)RAND_MAX;
+                if (test == component::SCOPE_CHECK && id_probability < 1 && params.size() > 0)
+                {
+
+                    int rand_id = rand() % params.size();
+                    int index = 0;
+                    for (auto vit = params.begin(); vit != params.end() && index < rand_id; ++index)
+                    {
+                        if (index == rand_id)
+                        {
+                            vname->get_child(0)->WORD = *vit;
+                            found = true;
+                            this->scope_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(vname->get_child(0)->WORD, vname->get_child(0)));
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    random_pattern(vname->get_child(0));
+                }
+                random_pattern(vname->get_child(0));
+                // while the name is not unique
+                // not necessary but makes manual verification easier
+            } while (n->v_table.find(vname->get_child(0)->WORD) != n->v_table.end());
+            n->v_table[vname->get_child(0)->WORD] = "num";
             // std::cout << fmt::format("  {}: New var {} {}\n", n->CLASS, vtype->get_child(0)->WORD, vname->get_child(0)->WORD);
         }
     }
@@ -583,7 +694,7 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
         node::copy_vtable(n, c);
         node::copy_ftable(n, c);
         populate_identifiers(c, test);
-        if (c->CLASS == "GLOBVARS" || c->CLASS == "LOCVARS")
+        if (c->CLASS == "GLOBVARS" || c->CLASS == "LOCVARS" || c->CLASS == "HEADER")
         {
             node::copy_vtable(c, n);
             // std::cout << fmt::format("  {}: Copied vtable from child {}\n", n->CLASS, c->CLASS);
@@ -658,7 +769,7 @@ void Tester::test_scope_checker(int thread_number)
     bool bad_parse = false;
     Lexer l(this->cfg_file);
     std::vector<std::string> results;
-    for (int i = 0; !bad_parse && i < 4; ++i)
+    for (int i = 0; !bad_parse && i < 20; ++i)
     {
         srand(rand());
         int num_nodes = 0;
@@ -758,7 +869,43 @@ void Tester::test_scope_checker(int thread_number)
         {
             results.push_back(fmt::format("{} Result of Scope Check: {}\n", i, scope_res));
             results.push_back(fmt::format("{}\tIntentional Errors: {}\n", i, this->scope_errors.size()));
-            results.push_back(fmt::format("{}\t Discovered Errors: {}\n", i, s.error.size()));
+            int num_intentional_errors = this->scope_errors.size();
+            std::string found_errors = "";
+            std::string non_errors = "";
+            int num_non_errors = 0;
+            int cr_counter = 0;
+            for (auto e : s.error)
+            {
+                bool found = false;
+                for (auto it = this->scope_errors.begin(); it != this->scope_errors.end(); ++it)
+                {
+                    if (it->first == e.first)
+                    {
+                        this->scope_errors.erase(it);
+                        found = true;
+                        break;
+                    }
+                }
+                if (found)
+                    // found_errors.append(e.first).append(", ");
+                    found_errors = fmt::format("{}\033[32m{}\033[0m, ", found_errors, e.first);
+
+                else
+                {
+                    // non_errors.append(e.first).append(", ");
+                    non_errors = fmt::format("{}\033[35m{}\033[0m, ", non_errors, e.first);
+                    ++num_non_errors;
+                }
+            }
+            std::string missed_errors = "";
+            for (auto it = this->scope_errors.begin(); it != this->scope_errors.end(); ++it)
+            {
+                // missed_errors.append(it->first).append(", ");
+                missed_errors = fmt::format("{}\033[33m{}\033[0m, ", missed_errors, it->first);
+            }
+            results.push_back(fmt::format("{}\t{}/{} Discovered Errors: {}\n", i, s.error.size() - num_non_errors, num_intentional_errors, found_errors));
+            results.push_back(fmt::format("{}\t{} Missed Errors: {}\n", i, this->scope_errors.size(), missed_errors));
+            results.push_back(fmt::format("{}\t{} False Positives: {}\n\n", i, num_non_errors, non_errors));
         }
         // else if (!scope_res && s.error.size() > 0 && this->messed_up_word.second == s.error[0].first)
         // {

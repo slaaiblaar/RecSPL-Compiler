@@ -407,22 +407,22 @@ void Automaton::nfa_to_dfa()
     {
         s->id = idcounter++;
     }
-    // std::cout << "Epsilon transitions:\n";
-    // for (auto current_state : nfa_states)
-    // {
-    //     std::cout << "S" << current_state->id << ":\n";
-    //     std::cout << "\tstd::string({'\\0'}: ";
-    //     for (std::shared_ptr<State> next_hop : current_state->transitions[std::string({'\0'})])
-    //     {
-    //         std::cout << next_hop->id << ", ";
-    //     }
-    //     std::cout << "\n\t\"\\0\": ";
-    //     for (std::shared_ptr<State> next_hop : current_state->transitions["\0"])
-    //     {
-    //         std::cout << next_hop->id << ", ";
-    //     }
-    //     std::cout << std::endl;
-    // }
+    std::cout << "Epsilon transitions:\n";
+    for (auto current_state : nfa_states)
+    {
+        std::cout << "S" << current_state->id << ":\n";
+        std::cout << "\tstd::string({'\\0'}: ";
+        for (std::shared_ptr<State> next_hop : current_state->transitions[std::string({'\0'})])
+        {
+            std::cout << next_hop->id << ", ";
+        }
+        std::cout << "\n\t\"\\0\": ";
+        for (std::shared_ptr<State> next_hop : current_state->transitions["\0"])
+        {
+            std::cout << next_hop->id << ", ";
+        }
+        std::cout << std::endl;
+    }
     // calculate epsilon closure of nfa states
     bool e_closure_expanded = true;
     while (e_closure_expanded)
