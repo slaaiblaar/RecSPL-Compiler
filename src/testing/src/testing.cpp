@@ -631,6 +631,7 @@ void Tester::run_tests(int thread_number)
 {
     // test_lexer(thread_number);
     test_parser(thread_number);
+    // test_type_checker();
 }
 
 void Tester::test_lexer(int thread_number)
@@ -821,14 +822,13 @@ void Tester::test_parser(int thread_number)
         srand(rand());
         int num_nodes = 0;
 
-        // do
+        do
         {
             this->messed_up_word = std::pair<int, std::string>(-1, "NONE");
             root->clear_node();
             root->CLASS = "PROGPRIMEPRIME";
             num_nodes = this->generate_tree(root, productions, -1, component::PARSER);
-        }
-        // while (num_nodes > 200);
+        } while (num_nodes < 300);
 
         std::ofstream rand_tree;
         std::ofstream code_file;
@@ -934,4 +934,9 @@ void Tester::test_parser(int thread_number)
         // }
     }
     std::cout << fmt::format("\033[3{}mThread {}\033[0m testing completed\n", 2 + thread_number, thread_number);
+}
+
+void Tester::test_type_checker()
+{
+    Type_Checker t;
 }

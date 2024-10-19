@@ -4,7 +4,10 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/src/fmt-master/include"
+                "${workspaceFolder}/src/fmt-master/include",
+                "${workspaceFolder}/src/type_checker/include",
+                "${workspaceFolder}/src/automata/include",
+                "${workspaceFolder}/src/*/include"
             ],
             "defines": [],
             "compilerPath": "/run/current-system/sw/bin/gcc",

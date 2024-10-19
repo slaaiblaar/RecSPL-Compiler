@@ -7,6 +7,7 @@ add_subdirectory(pugixml)
 add_subdirectory(app)
 add_subdirectory(testing)
 add_subdirectory(ast_node)
+add_subdirectory(type_checker)
 
 install(TARGETS
     fmt
@@ -16,6 +17,7 @@ install(TARGETS
     automata
     pugixml
     app
+    type_checker
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
@@ -73,4 +75,11 @@ install(
         ${CMAKE_SOURCE_DIR}/ast_node.hpp
     DESTINATION 
         include/ast_node
+)
+install(
+    FILES
+        ${CMAKE_BINRAY_DIR}/type_checker_export.hpp
+        ${CMAKE_SOURCE_DIR}/type_checker.hpp
+    DESTINATION 
+        include/type_checker
 )

@@ -1,5 +1,3 @@
-#ifndef testing_h
-#define testing_h
 #include "automata.hpp"
 #include "pugixml.hpp"
 #include <unordered_map> // hashmap
@@ -7,6 +5,10 @@
 #include "scope_checker.hpp"
 #include "parser.hpp"
 #include "lexer.hpp"
+#include "type_checker.hpp"
+
+#ifndef testing_h
+#define testing_h
 enum component
 {
     LEXER,
@@ -23,6 +25,7 @@ public:
     void test_lexer(int thread_number);
     void test_parser(int thread_number);
     void test_scope_checker();
+    void test_type_checker();
     int num_terminals = 0;
     void populate_identifiers(std::shared_ptr<node> n, component test);
     void construct_ftables(std::shared_ptr<node> n, int depth, component test);
