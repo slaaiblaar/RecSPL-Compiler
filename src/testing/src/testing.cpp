@@ -786,7 +786,8 @@ void Tester::run_tests(int thread_number)
     // test_lexer(thread_number);
     // test_parser(thread_number);
     // test_type_checker();
-    test_scope_checker(thread_number);
+    // test_scope_checker(thread_number);
+    test_code_generator();
 }
 
 void Tester::test_lexer(int thread_number)
@@ -1052,4 +1053,9 @@ void Tester::test_parser(int thread_number)
 void Tester::test_type_checker()
 {
     Type_Checker t;
+}
+
+void Tester::test_code_generator()
+{
+    Code_Generator CG;
 }

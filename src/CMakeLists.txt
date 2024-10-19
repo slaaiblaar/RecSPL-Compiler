@@ -8,8 +8,10 @@ add_subdirectory(app)
 add_subdirectory(testing)
 add_subdirectory(ast_node)
 add_subdirectory(type_checker)
+add_subdirectory(code_generator)
 
 install(TARGETS
+    code_generator
     fmt
     scope_checker
     parser
@@ -22,6 +24,14 @@ install(TARGETS
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     PUBLIC_HEADER DESTINATION include
+)
+
+install(
+    FILES
+        ${CMAKE_BINRAY_DIR}/code_generator_export.hpp
+        ${CMAKE_SOURCE_DIR}/code_generator.hpp
+    DESTINATION 
+        include/code_generator
 )
 
 install(

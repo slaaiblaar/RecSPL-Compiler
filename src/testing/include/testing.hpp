@@ -6,7 +6,7 @@
 #include "parser.hpp"
 #include "lexer.hpp"
 #include "type_checker.hpp"
-
+#include "code_generator.hpp"
 #ifndef testing_h
 #define testing_h
 enum component
@@ -26,6 +26,7 @@ public:
     void test_parser(int thread_number);
     void test_scope_checker(int thread_number);
     void test_type_checker();
+    void test_code_generator();
     int num_terminals = 0;
     void populate_identifiers(std::shared_ptr<node> n, component test);
     void construct_ftables(std::shared_ptr<node> n, int depth, component test);
