@@ -26,8 +26,8 @@
 class Scope_Checker
 {
 public:
-    Scope_Checker(std::string cfg_file = "CFG.xml");
-
+    Scope_Checker(std::shared_ptr<node> root, std::string cfg_file = "CFG.xml");
+    ~Scope_Checker() { root->clear_node(); }
     void pushScope();
     void popScope();
     bool isVariableDeclared(const std::string &varName);
@@ -36,12 +36,13 @@ public:
     void addFunction(const std::string &funcName, const std::string &returnType);
     void testScopeChecker(int);
     bool check(std::shared_ptr<node> n, int depth = 0);
-    bool run_scope_checker(std::shared_ptr<node> n, int thread_number = -1);
+    bool run_scope_checker(int thread_number = -1);
     std::shared_ptr<ftable_type> preprocess_ftables(std::shared_ptr<node> n, int depth);
     void construct_ftables(std::shared_ptr<node> n, int depth);
     void populate_identifiers(std::shared_ptr<node> n, int depth = 0);
     std::string cfg_file = "CFG.xml";
     std::shared_ptr<node> root;
+    std::vector<std::pair<std::string, std::pair<int, int>>> error;
 
 private:
     struct SymbolTable

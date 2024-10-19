@@ -86,6 +86,7 @@ public:
         }
         children.push_back(c);
         child_ids.emplace(c->UID);
+        c->parent = shared_from_this();
         return true;
     };
     bool uid_exists(int UID)
@@ -118,11 +119,14 @@ public:
     // // making a type alias because its super annoying to repeatedly define objects
     // // of type std::shared_ptr<std::unordered_map<std::string, std::string>>
     // Drill down through successive chains of FUNCTIONS == > FUNCTIONS productions void copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<node> t)
+    // static void copy_ftable(ftable_type *f, std::shared_ptr<node> t);
     static void copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<node> t);
-    static void copy_vtable(std::shared_ptr<vtable_type> f, std::shared_ptr<node> t);
+    static void copy_vtable(vtable_type *f, std::shared_ptr<node> t);
     static void copy_ftable(std::shared_ptr<node> f, std::shared_ptr<node> t);
     static void copy_vtable(std::shared_ptr<node> f, std::shared_ptr<node> t);
+    // static void copy_ftable(ftable_type *f, ftable_type *t);
     static void copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<ftable_type> t);
+    std::shared_ptr<node> parent;
 
 private:
     std::vector<std::shared_ptr<node>> children; // Child nodes

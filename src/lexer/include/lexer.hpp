@@ -1,10 +1,15 @@
 #ifndef lexer_h
 #define lexer_h
 #include "automata.hpp"
+#include <iostream>
 class Lexer
 {
 public:
     Lexer(std::string cfg_file);
+    ~Lexer()
+    {
+        // std::cout << "Destroying Lexer\n";
+    }
     void set_input(std::string input);
     void read_input(std::string file_path);
     bool lex(bool testing, std::string dest_file = "token_stream.xml");

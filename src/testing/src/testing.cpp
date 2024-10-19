@@ -129,16 +129,16 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
         {
             ++globvar_counter;
         }
-        // bool force_var = (num_number_v < 3 || num_number_v < 3);
-        // bool force_func = (num_number_f < 3 || num_void_f < 3);
+        bool force_var = (num_number_v < 3 || num_number_v < 3);
+        bool force_func = (num_number_f < 3 || num_void_f < 3);
         // bool force_globvar = (globvar_counter < 2) && test == component::PARSER;
         // bool force_short_tree = false;
-        bool force_var = false;
-        bool force_func = false;
+        // bool force_var = false;
+        // bool force_func = false;
         bool force_globvar = false;
         bool force_short_tree = false;
         int prod_num = -1;
-        if (force_short_tree && force_globvar || force_var || force_func || depth > 70 || node_counter > 600)
+        if (force_short_tree || force_globvar || force_var || force_func || depth > 40 || node_counter > 400)
         {
             if (parent->WORD == "PROG")
             {
@@ -311,6 +311,7 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
                 std::cout << std::string(depth * 2, ' ') << "Adding child " << child->WORD << "\n";
             }
             symbol = symbol.next_sibling();
+            std::cout << std::string(depth * 2, ' ') << "Selected next symbol\n";
         }
     }
     else
@@ -331,6 +332,7 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
         }
     }
     // std::cout << std::string(depth, ' ') << parent->CLASS << " end\n";
+    std::cout << std::string(depth * 2, ' ') << "Completed generation for " << parent->WORD << "\n";
     return node::node_id_counter;
 }
 
@@ -431,9 +433,7 @@ void Tester::construct_ftables(std::shared_ptr<node> n, int depth, component tes
         {
             f_child = f_child->get_child(0);
         }
-        std::shared_ptr<ftable_type> p = std::make_shared<ftable_type>(n->f_table);
-        std::shared_ptr<ftable_type> c = std::make_shared<ftable_type>(f_child->f_table);
-        node::copy_ftable(p, c);
+        node::copy_ftable(n, f_child);
 
         std::shared_ptr<ftable_type> child_ftable = preprocess_ftables(f_child, depth);
         // Copy child's f_table
@@ -442,7 +442,6 @@ void Tester::construct_ftables(std::shared_ptr<node> n, int depth, component tes
         if (n->get_child(f_index)->UID != f_child->UID)
         {
             f_child = n->get_child(f_index);
-            std::shared_ptr<ftable_type> c = std::make_shared<ftable_type>(f_child->f_table);
             node::copy_ftable(n, f_child);
         }
     }
@@ -471,6 +470,14 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
     {
         // 95% of selecting a legitimate ID
         double id_probability = (double)rand() / (double)RAND_MAX;
+        if (n->CLASS == "VID" && n->v_table.size() == 0)
+        {
+            id_probability = 0;
+        }
+        if (n->CLASS == "FID" && n->f_table.size() == 0)
+        {
+            id_probability = 0;
+        }
         if (id_probability > 0.05)
         {
             // std::cout << fmt::format("  {} existing id\n", n->CLASS);
@@ -486,7 +493,7 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
             int index = 0;
             auto vit = n->v_table.begin();
             auto fit = n->f_table.begin();
-            for (; index < rand_id; ++index)
+            for (; vit != n->v_table.end() && index < rand_id && fit != n->f_table.end(); ++index)
             {
                 if (index == rand_id)
                 {
@@ -534,6 +541,12 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
         {
             n->is_in_scope = n->f_table.find(n->WORD) != n->f_table.end();
         }
+
+        if (!n->is_in_scope && test == component::SCOPE_CHECK)
+        {
+            // this->messed_up_word = std::pair<int, std::string>(n->UID, n->WORD);
+            scope_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(n->WORD, n));
+        }
         return;
     }
     if (n->CLASS == "GLOBVARS")
@@ -567,15 +580,11 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
     }
     for (auto c : n->get_children())
     {
-        std::shared_ptr<vtable_type> pt = std::make_shared<vtable_type>(n->v_table);
-        std::shared_ptr<vtable_type> ct = std::make_shared<vtable_type>(c->v_table);
         node::copy_vtable(n, c);
         node::copy_ftable(n, c);
         populate_identifiers(c, test);
         if (c->CLASS == "GLOBVARS" || c->CLASS == "LOCVARS")
         {
-            std::shared_ptr<vtable_type> pt = std::make_shared<vtable_type>(n->v_table);
-            std::shared_ptr<vtable_type> ct = std::make_shared<vtable_type>(c->v_table);
             node::copy_vtable(c, n);
             // std::cout << fmt::format("  {}: Copied vtable from child {}\n", n->CLASS, c->CLASS);
         }
@@ -646,49 +655,61 @@ void Tester::test_scope_checker(int thread_number)
     std::time_t now = std::time(0);
     srand(now);
     int num_nodes = 0;
-    Lexer l(this->cfg_file);
     bool bad_parse = false;
-    for (int i = 0; !bad_parse && i < 10; ++i)
+    Lexer l(this->cfg_file);
+    std::vector<std::string> results;
+    for (int i = 0; !bad_parse && i < 4; ++i)
     {
-        std::shared_ptr<node> root = std::make_shared<node>();
         srand(rand());
         int num_nodes = 0;
-
+        std::shared_ptr<node> root = std::make_shared<node>();
         do
         {
             this->messed_up_word = std::pair<int, std::string>(-1, "NONE");
             root->clear_node();
             root->CLASS = "PROGPRIMEPRIME";
-            num_nodes = this->generate_tree(root, productions, -1, component::PARSER);
+            std::cout << i << ": Generating tree\n";
+            num_nodes = this->generate_tree(root, productions, -1, component::SCOPE_CHECK);
+            std::cout << i << ": Generated tree\n";
         } while (num_nodes < 300);
-
+        this->scope_errors.clear();
+        std::cout << i << ": Tree generation completed\n";
         std::ofstream rand_tree;
         std::ofstream code_file;
 
-        construct_ftables(root, 0, component::PARSER);
+        construct_ftables(root, 0, component::SCOPE_CHECK);
 
+        std::cout << i << ": FTables constructed\n";
         this->num_terminals = 0;
-        populate_identifiers(root, component::PARSER);
+        populate_identifiers(root, component::SCOPE_CHECK);
+        std::cout << i << ": Identidiers populated\n";
         std::string tree = root->printnode(0, "testScopeChecker()");
+        std::cout << i << ": Tree printed ()\n";
         tree = root->printnode(0, "testScopeChecker()");
-        std::ofstream tree_file(fmt::format("thread_{}_generated_ast.xml", thread_number));
+        std::ofstream tree_file(fmt::format("thread_{}_generated_ast{}.xml", thread_number, i));
         tree_file << tree;
         tree_file.close();
-        code_file.open(fmt::format("thread_{}_code_file.txt", thread_number));
+        std::cout << i << ": Parsed thread_{}_generated_ast{}.xml\n";
+        code_file.open(fmt::format("thread_{}_code_file{}.txt", thread_number, i));
         std::string plaintext_code = root->print_code(0, code_file);
+        std::cout << i << ": code printed ()\n";
         code_file << plaintext_code;
         code_file.close();
+        std::cout << i << ": Printed thread_{}_code_file{}.txt\n";
         // // do something with lexer
-        l.read_input(fmt::format("./thread_{}_code_file.txt", thread_number));
-        bool lex_res = l.lex(true, fmt::format("./thread_{}_token_stream.xml", thread_number));
+        l.read_input(fmt::format("./thread_{}_code_file{}.txt", thread_number, i));
+        std::cout << i << ": Lexer input read\n";
+        bool lex_res = l.lex(true, fmt::format("./thread_{}_token_stream{}.xml", thread_number, i));
+        std::cout << i << ": Lexed\n";
         if (!lex_res)
         {
             std::cout << "Lexing failed\n";
             return;
         }
         Parser p(this->cfg_file);
-        std::shared_ptr<node> parsed_root = p.parse(fmt::format("./thread_{}_parsed_ast.xml", thread_number), fmt::format("./thread_{}_token_stream.xml", thread_number));
+        std::shared_ptr<node> parsed_root = p.parse(fmt::format("./thread_{}_parsed_ast{}.xml", thread_number, i), fmt::format("./thread_{}_token_stream{}.xml", thread_number, i));
         // code_file.open(fmt::format("thread_{}_generated_code_file.txt", thread_number));
+        std::cout << i << ": Parsed\n";
         // plaintext_code = parsed_root->print_code(0, code_file);
         // code_file << plaintext_code;
         // code_file.close();
@@ -705,8 +726,57 @@ void Tester::test_scope_checker(int thread_number)
             // catch immediately if it fails
             throw;
         }
-        Scope_Checker s;
-        std::cout << "Scope Check Result: " << (s.run_scope_checker(parsed_root, thread_number) == true ? "Success\n" : "Failed\n");
+        Scope_Checker s(parsed_root);
+        std::cout << i << ": Running Scope checker ran\n";
+        bool scope_res = s.run_scope_checker(thread_number);
+        std::string filename = fmt::format("thread_{}_scoped_tree{}.xml", thread_number, i);
+        tree_file.open(filename);
+        tree_file << s.root->printnode(0, "Scope_Checker");
+        tree_file.close();
+        std::cout << i << ": Scope checker ran\n";
+        root->clear_node();
+        if (scope_res && this->scope_errors.size() == 0 && s.error.size() == 0)
+        {
+            results.push_back(fmt::format("{}   Successful pass of Scope Check\n", i));
+        }
+        else if (!scope_res && this->scope_errors.size() > 0 && this->scope_errors.size() == s.error.size())
+        {
+            bool identical = true;
+            for (int i = 0; i < s.error.size(); ++i)
+            {
+                if (this->scope_errors[i].first != s.error[i].first)
+                {
+                    results.push_back(fmt::format("{} Unsuccessful fail of Scope Check, scope_check error: , Missed Intentional Error: {}\n", i, s.error[i].first, this->messed_up_word.second));
+                    identical = false;
+                    break;
+                }
+            }
+            if (identical)
+                results.push_back(fmt::format("{}   Successful pass of Scope Check\n", i));
+        }
+        else
+        {
+            results.push_back(fmt::format("{} Result of Scope Check: {}\n", i, scope_res));
+            results.push_back(fmt::format("{}\tIntentional Errors: {}\n", i, this->scope_errors.size()));
+            results.push_back(fmt::format("{}\t Discovered Errors: {}\n", i, s.error.size()));
+        }
+        // else if (!scope_res && s.error.size() > 0 && this->messed_up_word.second == s.error[0].first)
+        // {
+        //     results.push_back(fmt::format("{}   Successful fail of Scope Check\n", i));
+        // }
+        // if (!scope_res && s.error.size() > 0 && this->messed_up_word.second != s.error[0].first)
+        // {
+        //     results.push_back(fmt::format("{} Unsuccessful fail of Scope Check, Scope Error: {}, Intentional Error: {}\n", i, s.error[0].first, this->messed_up_word.second));
+        // }
+        // if (!scope_res && s.error.size() > 0 && this->messed_up_word.second != s.error[0].first)
+        // {
+        //     results.push_back(fmt::format("{} Unsuccessful pass of Scope Check, Intentional Error: {}\n", i, this->messed_up_word.second));
+        // }
+        // results.push_back(fmt::format("{} Scope Check Result: {}", i, (scope_res == true ? "Success\n" : "Failed\n")));
+    }
+    for (auto s : results)
+    {
+        std::cout << s;
     }
     std::cout << fmt::format("\033[3{}mThread {}\033[0m testing completed\n", 2 + thread_number, thread_number);
 }
@@ -832,6 +902,7 @@ void Tester::test_lexer(int thread_number)
             std::cout << lr;
         }
     }
+    root->clear_node();
     std::cout << fmt::format("\033[3{}mThread {}\033[0m testing completed\n", 2 + thread_number, thread_number);
 }
 void Tester::test_parser(int thread_number)
@@ -974,6 +1045,7 @@ void Tester::test_parser(int thread_number)
         //     std::cout << lr;
         // }
     }
+    root->clear_node();
     std::cout << fmt::format("\033[3{}mThread {}\033[0m testing completed\n", 2 + thread_number, thread_number);
 }
 

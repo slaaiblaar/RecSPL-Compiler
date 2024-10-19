@@ -14,10 +14,11 @@ void node::clear_node()
     this->attempted_duplicates.clear();
     this->child_ids.clear();
     subtree_generated = false;
+    parent = nullptr;
 }
 node::~node()
 {
-    std::cout << "DESTROYING NODE " << this->UID << std::endl;
+    // std::cout << "DESTROYING NODE " << this->UID << std::endl;
 }
 std::string node::printftable(std::shared_ptr<node> n)
 {
@@ -473,6 +474,16 @@ std::string printvtable(std::shared_ptr<node> n)
 // // making a type alias because its super annoying to repeatedly define objects
 // // of type std::shared_ptr<std::unordered_map<std::string, std::string>>
 // Drill down through successive chains of FUNCTIONS == > FUNCTIONS productions void node::copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<node> t)
+// void node::copy_ftable(ftable_type *f, std::shared_ptr<node> t)
+// {
+//     for (auto it = f->begin(); it != f->end(); ++it)
+//     {
+//         for (int i = 0; i < 4; ++i)
+//         {
+//             t->f_table[it->first][i] = it->second[i];
+//         }
+//     }
+// } // std::shared_ptr<ftable_type>
 void node::copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<node> t)
 {
     for (auto it = f->begin(); it != f->end(); ++it)
@@ -483,7 +494,7 @@ void node::copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<node> t)
         }
     }
 }
-void node::copy_vtable(std::shared_ptr<vtable_type> f, std::shared_ptr<node> t)
+void node::copy_vtable(vtable_type *f, std::shared_ptr<node> t)
 {
     for (auto it = f->begin(); it != f->end(); ++it)
     {
@@ -506,7 +517,17 @@ void node::copy_vtable(std::shared_ptr<node> f, std::shared_ptr<node> t)
     {
         t->v_table[it->first] = it->second;
     }
-}
+} // std::shared_ptr<ftable_type>
+// void node::copy_ftable(ftable_type *f, ftable_type *t)
+// {
+//     for (auto it = f->begin(); it != f->end(); ++it)
+//     {
+//         for (int i = 0; i < 4; ++i)
+//         {
+//             (*t)[it->first][i] = it->second[i];
+//         }
+//     }
+// }
 void node::copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<ftable_type> t)
 {
     for (auto it = f->begin(); it != f->end(); ++it)

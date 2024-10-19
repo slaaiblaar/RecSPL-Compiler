@@ -83,6 +83,7 @@ public:
     std::vector<std::string> rhs_nodes_list = {};
     std::string lhs_name = "";
     int prod_num = -1;
+    bool dummy_bool = false;
 
 private:
     thread_local static int id_counter;

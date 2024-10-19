@@ -25,6 +25,8 @@ Automaton::~Automaton()
     nfa_final_states.clear();
     dfa_states.clear();
     dfa_final_states.clear();
+    // std::cout << "Destroying Automaton with dfa start state:\n ";
+    // std::cout << dfa_start_state->id << "\n";
 }
 
 // simply strings a bunch of states together
@@ -261,20 +263,20 @@ void Automaton::construct_subsets()
     {
         current_state = subset_construction_queue.front();
         std::cout << current_state->id << " ";
-        // std::cout << "  Curr state: \n      " << current_state->id;
+        std::cout << "  Curr state: \n      " << current_state->id;
         subset_construction_queue.pop();
         transitions.clear();
         // for each nfa state in current state's epsilon closure set
-        // std::cout << "  NFA Equiv transitions: \n";
+        std::cout << "  NFA Equiv transitions: \n";
         for (auto nfa_equiv_state : current_state->nfa_equiv_states)
         {
-            // if (nfa_equiv_state.second->is_final)
-            // {
-            //     std::cout << "    \033[33m" << nfa_equiv_state.second->id << "\033[0m";
-            // }
-            // else
-            //     std::cout << "    " << nfa_equiv_state.second->id;
-            // std::cout << "    " << nfa_equiv_state.second->id;
+            if (nfa_equiv_state.second->is_final)
+            {
+                std::cout << "    \033[33m" << nfa_equiv_state.second->id << "\033[0m";
+            }
+            else
+                std::cout << "    " << nfa_equiv_state.second->id;
+            std::cout << "    " << nfa_equiv_state.second->id;
             // for each transition from the nfa state
             for (auto e_state_transition : nfa_equiv_state.second->transitions)
             {
@@ -284,38 +286,38 @@ void Automaton::construct_subsets()
                     continue;
                 }
                 std::vector<std::shared_ptr<State>> destination_states = e_state_transition.second;
-                // std::cout << " '\033[33m" << symbol << "\033[0m':";
+                std::cout << " '\033[33m" << symbol << "\033[0m':";
                 // for each destination on the symbol
                 for (auto destination : destination_states)
                 {
-                    // std::cout << " " << destination->id;
-                    // if (destination->is_final)
-                    // {
-                    //     std::cout << "  \033[33m" << destination->id << "\033[0m";
-                    // }
-                    // else
-                    //     std::cout << "  " << destination->id;
+                    std::cout << " " << destination->id;
+                    if (destination->is_final)
+                    {
+                        std::cout << "  \033[33m" << destination->id << "\033[0m";
+                    }
+                    else
+                        std::cout << "  " << destination->id;
                     // for each state in the epsilon closure of the destination
                     for (auto dest_e_state : destination->e_closure)
                     {
                         transitions[symbol][dest_e_state.first] = dest_e_state.second;
                     }
                 }
-                // std::cout << "\n";
+                std::cout << "\n";
             }
-            // std::cout << "\n";
+            std::cout << "\n";
         }
-        // if (transitions.size() > 0)
-        // {
-        //     std::cout << "\n    Combining transitions:\n      ";
-        // }
+        if (transitions.size() > 0)
+        {
+            std::cout << "\n    Combining transitions:\n      ";
+        }
         // for each transition instantiated above
         for (auto transition : transitions)
         {
             // check if the set of nfa states already exists as a dfa state
             std::shared_ptr<State> destination = find_dfa_state(transition.second);
             // if not create one
-            // std::cout << " " << transition.first << " ";
+            std::cout << " " << transition.first << " ";
             if (destination == nullptr)
             {
                 destination = std::make_shared<State>(AutomatonClass::DFA);
@@ -345,19 +347,19 @@ void Automaton::construct_subsets()
                 {
                     dfa_final_states.push_back(destination);
                 }
-                // if (destination->is_final)
-                // {
-                //     std::cout << "(new \033[33m" << destination->id << "\033[0m)";
-                // }
-                // else
-                //     std::cout << "(new " << destination->id << ")";
+                if (destination->is_final)
+                {
+                    std::cout << "(new \033[33m" << destination->id << "\033[0m)";
+                }
+                else
+                    std::cout << "(new " << destination->id << ")";
             }
             // add transition to current state
             current_state->transitions[transition.first].push_back(destination);
         }
-        // std::cout << "\n";
+        std::cout << "\n";
         // std::cout << "FOLLOW Sets:\n";
-        // for (const auto &pair : this->follow)
+        // // for (const auto &pair : this->follow)
         // {
         //     std::cout << pair.first << ": { ";
         //     for (const std::string &s : pair.second)
