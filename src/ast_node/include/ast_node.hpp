@@ -37,6 +37,7 @@ public:
     int prod = -1;
     int row = -1;
     int col = -1;
+    std::string file;
     thread_local static long node_id_counter;
     // essentially stores a list of "siblibgs" for the given types of id
     // is used to detect re-declarations within same scope

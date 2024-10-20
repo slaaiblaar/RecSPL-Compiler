@@ -603,7 +603,7 @@ void Tester::construct_ftables(std::shared_ptr<node> n, int depth, component tes
 }
 void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
 {
-    double collision_prob = 0.05;
+    double collision_prob = 0.1;
     double invalid_pattern_prob = 0.05;
     thread_local static int depth = -1;
     ++depth;
@@ -1092,7 +1092,7 @@ void Tester::test_scope_checker(int thread_number)
             // catch immediately if it fails
             throw;
         }
-        // std::vector<std::string> results;
+        std::vector<std::string> results;
         Scope_Checker s(parsed_root);
         std::cout << i << ": Running Scope checker ran\n";
         bool scope_res = s.run_scope_checker(thread_number);
@@ -1101,25 +1101,25 @@ void Tester::test_scope_checker(int thread_number)
         tree_file << s.root->printnode(0, "Scope_Checker");
         tree_file.close();
         std::cout << i << ": Scope checker ran\n";
-        if (scope_res && this->scope_errors.size() == 0 && s.error.size() == 0)
-        {
-            results.push_back(fmt::format("{}   Successful pass of Scope Check\n", i));
-        }
-        else if (!scope_res && this->scope_errors.size() > 0 && this->scope_errors.size() == s.error.size())
-        {
-            bool identical = true;
-            for (int i = 0; i < s.error.size(); ++i)
-            {
-                if (this->scope_errors[i].first != s.error[i].first)
-                {
-                    results.push_back(fmt::format("{} Unsuccessful fail of Scope Check, scope_check error: , Missed Intentional Error: {}\n", i, s.error[i].first, this->messed_up_word.second));
-                    identical = false;
-                    break;
-                }
-            }
-            if (identical)
-                results.push_back(fmt::format("{}   Successful pass of Scope Check\n", i));
-        }
+        // if (scope_res && this->scope_errors.size() == 0 && s.error.size() == 0)
+        // {
+        //     results.push_back(fmt::format("{}   Successful pass of Scope Check\n", i));
+        // }
+        // else if (!scope_res && this->scope_errors.size() > 0 && this->scope_errors.size() == s.error.size())
+        // {
+        //     bool identical = true;
+        //     for (int i = 0; i < s.error.size(); ++i)
+        //     {
+        //         if (this->scope_errors[i].first != s.error[i].first)
+        //         {
+        //             results.push_back(fmt::format("{} Unsuccessful fail of Scope Check, scope_check error: , Missed Intentional Error: {}\n", i, s.error[i].first, this->messed_up_word.second));
+        //             identical = false;
+        //             // break;
+        //         }
+        //     }
+        //     if (identical)
+        //         results.push_back(fmt::format("{}   Successful pass of Scope Check\n", i));
+        // }
         // else
         {
             results.push_back(fmt::format("{} Result of Scope Check: {}\n", i, scope_res));
@@ -1162,7 +1162,29 @@ void Tester::test_scope_checker(int thread_number)
             }
             results.push_back(fmt::format("{}\t{}/{} Discovered Errors: {}\n", i, s.error.size() - num_non_errors, num_intentional_errors, found_errors));
             results.push_back(fmt::format("{}\t{} Missed Errors: {}\n", i, this->scope_errors.size(), missed_errors));
-            results.push_back(fmt::format("{}\t{} False Positives: {}\n\n", i, num_non_errors, non_errors));
+            results.push_back(fmt::format("{}\t{} False Positives: {}\n", i, num_non_errors, non_errors));
+            if (scope_res)
+            {
+                if (s.error.size() == 0 && this->scope_errors.size() == 0)
+                {
+                    results.push_back(fmt::format("{}\t\033[32mPassed\033[0m\n\n", i));
+                }
+                else if (this->scope_errors.size() > 0)
+                {
+                    results.push_back(fmt::format("{}\t\033[31mFailed\033[0m\n\n", i));
+                }
+            }
+            if (!scope_res)
+            {
+                if (s.error.size() > 0 && this->scope_errors.size() == 0 && non_errors.length() == 0)
+                {
+                    results.push_back(fmt::format("{}\t\033[32mPassed\033[0m\n\n", i));
+                }
+                else if (this->scope_errors.size() > 0 || non_errors.length() == 0)
+                {
+                    results.push_back(fmt::format("{}\t\033[31mFailed\033[0m\n\n", i));
+                }
+            }
         }
         // if (this->scope_errors.size() > 0)
         // {

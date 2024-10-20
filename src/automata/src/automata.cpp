@@ -634,7 +634,7 @@ void Automaton::set_final_state(int id)
 void Automaton::set_input(std::string input)
 {
     line_num = 1;
-    col_num = 0;
+    col_num = 1;
     this->input = input;
     current_state = dfa_start_state;
     read_start = 0;

@@ -774,6 +774,7 @@ std::shared_ptr<node> Parser::parse(std::string dest_name, std::string token_fil
             new_node->WORD = curr_tok.child("WORD").child_value();
             new_node->row = std::atoi(curr_tok.child("ROW").child_value());
             new_node->col = std::atoi(curr_tok.child("COL").child_value());
+            new_node->file = curr_tok.child("FILE").child_value();
             // new_node->CLASS = new_node->WORD;
 
             // std::cout << "UID=" << new_node->UID;

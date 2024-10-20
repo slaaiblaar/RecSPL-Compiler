@@ -111,7 +111,6 @@ std::string node::print_code(int depth, std::ofstream &code_file, bool colour)
         }
         else
         {
-
             product = fmt::format("{}{}{}\n{}", indentation, command, semicolon, instruc);
         }
     }

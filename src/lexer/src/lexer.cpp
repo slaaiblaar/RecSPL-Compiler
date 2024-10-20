@@ -160,7 +160,8 @@ bool Lexer::lex(bool testing, std::string dest_file)
             complete_lex = false;
             break;
         }
-        tokens.push_back(dfa.get_token());
+        Token lex_token = dfa.get_token();
+        tokens.push_back(lex_token);
     }
     if (!complete_lex)
     {
@@ -201,7 +202,10 @@ void Lexer::print_tokens(std::string fname)
             .set_value(std::to_string(t.row).c_str());
         pugi::xml_node col = tok.append_child("COL");
         col.append_child(pugi::node_pcdata)
-            .set_value(std::to_string(t.row).c_str());
+            .set_value(std::to_string(t.col).c_str());
+        pugi::xml_node file = tok.append_child("FILE");
+        file.append_child(pugi::node_pcdata)
+            .set_value(this->file_name.c_str());
     }
     pugi::xml_node tok = token_stream.append_child("TOK");
     pugi::xml_node id = tok.append_child("ID");
