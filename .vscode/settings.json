@@ -94,6 +94,9 @@
     "thread": "cpp",
     "typeindex": "cpp",
     "variant": "cpp",
-    "scope": "cpp"
+    "scope": "cpp",
+    "coroutine": "cpp",
+    "filesystem": "cpp",
+    "forward_list": "cpp"
   }
 }
