@@ -148,8 +148,8 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
         parent->scope_f_table = std::make_shared<ftable_type>();
     }
     // configure tests, kind of
-    bool stop_functions = counters.num_functions >= 3 && test == component::SCOPE_CHECK;
-    bool force_branch = counters.num_branches < 3 && test == component::SCOPE_CHECK;
+    bool stop_functions = counters.num_functions >= 3;
+    bool force_branch = counters.num_branches < 3;
     bool force_var = (counters.num_number_v < 3 || counters.num_text_v < 3);
     bool force_func = (counters.num_number_f < 2 || counters.num_void_f < 2);
     // bool force_globvar = (globvar_counter < 2) && test == component::PARSER;
@@ -1000,7 +1000,224 @@ bool compare_nodes(std::shared_ptr<node> l, std::shared_ptr<node> r, bool debug 
     }
     return true;
 }
-void Tester::test_scope_checker(int thread_number)
+
+void Tester::run_tests(int thread_number)
+{
+    std::vector<std::string> results;
+    test_lexer(thread_number, results);
+    test_parser(thread_number, results);
+    test_scope_checker(thread_number, results);
+    // test_type_checker();
+    // test_code_generator();
+    for (auto r : results)
+    {
+        std::cout << r;
+    }
+    std::cout << fmt::format("\033[3{}mThread {}\033[0m testing completed\n", 2 + thread_number, thread_number);
+}
+
+void Tester::test_lexer(int thread_number, std::vector<std::string> &results)
+{
+    std::cout << "===== Running Random Program Test =====\n";
+    // this->cfg_file = fmt::format("CFG{}.xml", thread_number);
+    pugi::xml_document doc;
+    if (!doc.load_file(cfg_file.c_str()))
+    {
+        std::cerr << fmt::format("run_tests Error loading {}\n", cfg_file);
+        return;
+    }
+
+    pugi::xml_node productions = doc.child("CFG").child("PRODUCTIONRULES");
+
+    // root node for tree
+    std::shared_ptr<node> root = std::make_shared<node>();
+    // std::time_t now = std::time(NULL);
+    // srand(now);
+    std::time_t now = std::time(0);
+    srand(now);
+    int num_nodes = 0;
+    Lexer l(this->cfg_file);
+    bool bad_lex = false;
+    for (int i = 0; !bad_lex && i < 40; ++i)
+    {
+        std::shared_ptr<node> root = std::make_shared<node>();
+        srand(rand());
+        int num_nodes = 0;
+
+        { // do
+            this->messed_up_word = std::pair<int, std::string>(-1, "NONE");
+            root->clear_node();
+            root->CLASS = "PROGPRIMEPRIME";
+            num_nodes = this->generate_tree(root, productions, -1, component::LEXER);
+        } // while (num_nodes < 300);
+
+        std::ofstream rand_tree;
+        std::ofstream code_file;
+
+        construct_ftables(root, 0, component::LEXER);
+
+        this->num_terminals = 0;
+        populate_identifiers(root, component::LEXER);
+        std::string tree = root->printnode(0, "testScopeChecker()");
+        tree = root->printnode(0, "testScopeChecker()");
+        code_file.open(fmt::format("thread_{}_code_file.txt", thread_number));
+        std::string plaintext_code = root->print_code(0, code_file);
+        code_file << plaintext_code;
+        code_file.close();
+        // // do something with lexer
+        l.read_input(fmt::format("./thread_{}_code_file.txt", thread_number));
+        bool lex_res = l.lex(true, fmt::format("./thread_{}_token_stream.xml", thread_number));
+        pugi::xml_document tok_doc;
+        pugi::xml_parse_result result = tok_doc.load_file(fmt::format("./thread_{}_token_stream.xml", thread_number).c_str());
+        pugi::xml_node tok_str = tok_doc.child("TOKENSTREAM");
+        pugi::xml_node curr_tok = tok_str.first_child();
+        int tok_counter = 0;
+        while (curr_tok != pugi::xml_node())
+        {
+            ++tok_counter;
+            curr_tok = curr_tok.next_sibling();
+        }
+        bool incorrect_pass = this->messed_up_word.first > 0 && lex_res && l.dfa.input.find(this->messed_up_word.second) != std::string::npos;
+        // std::vector<std::string> lex_results;
+        if (this->messed_up_word.first > 0 && !lex_res)
+        {
+            results.push_back(fmt::format("\033[3{}m{}\033[0m:   \033[32mSuccessfully\033[0m failed lexing\n\tNumber of tokens lexed:{}, Incorrect token: {}: \"{}\"\n", 2 + thread_number, thread_number, tok_counter, this->messed_up_word.first, this->messed_up_word.second));
+            results.push_back(fmt::format("\033[3{}m{}\033[0m\tLexer error message: \"{}\"\n\n", 2 + thread_number, thread_number, l.message));
+        }
+        else if (this->messed_up_word.first <= 0 && !lex_res)
+        {
+            std::cout << "REALLY SHOULDN'T BE HERE\n";
+            results.push_back(fmt::format("\033[3{}m{}\033[0m: \033[31mUnsuccessfully\033[0m failed when it should have passed\n\tNumber of tokens lexed:{}\n", 2 + thread_number, thread_number, tok_counter));
+            results.push_back(fmt::format("\033[3{}m{}\033[0m\tLexer error message: \"{}\"\n\n", 2 + thread_number, thread_number, l.message));
+            l.dfa.print_dfa(fmt::format("failed_test_artefacts/thread_{}_render-dfa.txt", thread_number), fmt::format("failed_test_artefacts/thread_{}_dfa_graph_incorrectly_failed.txt", thread_number));
+            l.print_tokens(fmt::format("failed_test_artefacts/thread_{}_token_stream_incorrectly_failed.xml", thread_number));
+
+            code_file.open(fmt::format("failed_test_artefacts/thread_{}_code_file_incorrectly_failed.txt", thread_number));
+            std::string plaintext_code = root->print_code(0, code_file);
+            code_file << plaintext_code;
+
+            code_file.close();
+            rand_tree.open(fmt::format("failed_test_artefacts/thread_{}_rand_tree_incorrectly_failed.xml", thread_number));
+            rand_tree << root->printnode(0, "TESTING");
+            rand_tree.close();
+            bad_lex = true;
+        }
+        else if (incorrect_pass)
+        { // fmt::format("{}: Parser \033[32mPassed\033[0m\n", i)
+            results.push_back(fmt::format("\033[3{}m{}\033[0m: \033[31Unsuccessfully\033[0m passed when it should have failed\n", 2 + thread_number, thread_number));
+            results.push_back(fmt::format("\033[3{}m{}\033[0m\tNumber of tokens lexed:{}, Incorrect token: {}: \"{}\"\n\n", 2 + thread_number, thread_number, tok_counter, this->messed_up_word.first, this->messed_up_word.second));
+            l.dfa.print_dfa(fmt::format("failed_test_artefacts/thread_{}_render-dfa.txt", thread_number), fmt::format("failed_test_artefacts/thread_{}_dfa_graph_incorrectly_passed.txt", thread_number));
+            l.print_tokens(fmt::format("failed_test_artefacts/thread_{}_token_stream_incorrectly_passed.xml", thread_number));
+
+            std::string plaintext_code = root->print_code(0, code_file);
+            code_file.open(fmt::format("failed_test_artefacts/thread_{}_code_file_incorrectly_passed.txt", thread_number));
+            code_file << plaintext_code;
+
+            code_file.close();
+            code_file.close();
+            rand_tree.open(fmt::format("failed_test_artefacts/thread_{}_rand_tree_incorrectly_passed.xml", thread_number));
+            rand_tree << root->printnode(0, "TESTING");
+            rand_tree.close();
+            bad_lex = true;
+        }
+        else if (this->messed_up_word.first <= 0 && lex_res)
+        {
+            results.push_back(fmt::format("\033[3{}m{}\033[0m:   \033[32mSuccessfully\033[0m passed lexing\n\tNumber of tokens lexed:{}, number of generated terminals: {}\n\n", 2 + thread_number, thread_number, tok_counter, this->num_terminals));
+        }
+        // for (auto lr : results)
+        // {
+        //     std::cout << lr;
+        // }
+        root->clear_node();
+    }
+    std::cout << fmt::format("\033[3{}mThread {}\033[0m testing completed\n", 2 + thread_number, thread_number);
+}
+void Tester::test_parser(int thread_number, std::vector<std::string> &results)
+{
+
+    std::cout << "===== Running Random Program Test =====\n";
+    // this->cfg_file = fmt::format("CFG{}.xml", thread_number);
+    pugi::xml_document doc;
+    if (!doc.load_file(cfg_file.c_str()))
+    {
+        std::cerr << fmt::format("run_tests Error loading {}\n", cfg_file);
+        return;
+    }
+
+    pugi::xml_node productions = doc.child("CFG").child("PRODUCTIONRULES");
+
+    // root node for tree
+    std::shared_ptr<node> root = std::make_shared<node>();
+    // std::time_t now = std::time(NULL);
+    // srand(now);
+    std::time_t now = std::time(0);
+    srand(now);
+    int num_nodes = 0;
+    Lexer l(this->cfg_file);
+    bool bad_parse = false;
+    for (int i = 0; !bad_parse && i < 40; ++i)
+    {
+        std::shared_ptr<node> root = std::make_shared<node>();
+        srand(rand());
+        int num_nodes = 0;
+
+        do
+        {
+            this->messed_up_word = std::pair<int, std::string>(-1, "NONE");
+            root->clear_node();
+            root->CLASS = "PROGPRIMEPRIME";
+            num_nodes = this->generate_tree(root, productions, -1, component::PARSER);
+        } while (num_nodes < 300);
+
+        std::ofstream rand_tree;
+        std::ofstream code_file;
+
+        construct_ftables(root, 0, component::PARSER);
+
+        this->num_terminals = 0;
+        populate_identifiers(root, component::PARSER);
+        std::string tree = root->printnode(0, "testScopeChecker()");
+        tree = root->printnode(0, "testScopeChecker()");
+        std::ofstream tree_file(fmt::format("thread_{}_generated_ast.xml", thread_number));
+        tree_file << tree;
+        tree_file.close();
+        code_file.open(fmt::format("thread_{}_code_file.txt", thread_number));
+        std::string plaintext_code = root->print_code(0, code_file);
+        code_file << plaintext_code;
+        code_file.close();
+        // // do something with lexer
+        l.read_input(fmt::format("./thread_{}_code_file.txt", thread_number));
+        bool lex_res = l.lex(true, fmt::format("./thread_{}_token_stream.xml", thread_number));
+        if (!lex_res)
+        {
+            std::cout << "Lexing failed\n";
+            return;
+        }
+        Parser p(this->cfg_file);
+        std::shared_ptr<node> parsed_root = p.parse(fmt::format("./thread_{}_parsed_ast.xml", thread_number), fmt::format("./thread_{}_token_stream.xml", thread_number));
+        // code_file.open(fmt::format("thread_{}_generated_code_file.txt", thread_number));
+        // plaintext_code = parsed_root->print_code(0, code_file);
+        // code_file << plaintext_code;
+        // code_file.close();
+        // root is PROGPRIMEPRIME
+        std::shared_ptr<node> generated_root = root->get_child(0)->get_child(0);
+        if (compare_nodes(generated_root, parsed_root))
+        {
+            // std::cout << i << ": Parser succeeded\n";
+            results.push_back(fmt::format("{}: Parser \033[32mPassed\033[0m\n", i));
+        }
+        else
+        {
+            results.push_back(fmt::format("{}: Parser \033[32mFailed\033[0m\n", i));
+            // std::cout << i << ": Parser failed\n";
+            bad_parse = true;
+        }
+        root->clear_node();
+    }
+    std::cout << fmt::format("\033[3{}mThread {}\033[0m testing completed\n", 2 + thread_number, thread_number);
+}
+
+void Tester::test_scope_checker(int thread_number, std::vector<std::string> &results)
 {
 
     std::cout << "===== Running Random Program Test =====\n";
@@ -1023,8 +1240,8 @@ void Tester::test_scope_checker(int thread_number)
     int num_nodes = 0;
     bool bad_parse = false;
     Lexer l(this->cfg_file);
-    std::vector<std::string> results;
-    for (int i = 0; !bad_parse && i < 1; ++i)
+    // std::vector<std::string> results;
+    for (int i = 0; !bad_parse && i < 40; ++i)
     {
         srand(rand());
         int num_nodes = 0;
@@ -1083,7 +1300,7 @@ void Tester::test_scope_checker(int thread_number)
         std::shared_ptr<node> generated_root = root->get_child(0)->get_child(0);
         if (compare_nodes(generated_root, parsed_root))
         {
-            std::cout << i << ": Parser succeeded\n";
+            // std::cout << i << ": Parser succeeded\n";
         }
         else
         {
@@ -1092,7 +1309,6 @@ void Tester::test_scope_checker(int thread_number)
             // catch immediately if it fails
             throw;
         }
-        std::vector<std::string> results;
         Scope_Checker s(parsed_root);
         std::cout << i << ": Running Scope checker ran\n";
         bool scope_res = s.run_scope_checker(thread_number);
@@ -1101,26 +1317,6 @@ void Tester::test_scope_checker(int thread_number)
         tree_file << s.root->printnode(0, "Scope_Checker");
         tree_file.close();
         std::cout << i << ": Scope checker ran\n";
-        // if (scope_res && this->scope_errors.size() == 0 && s.error.size() == 0)
-        // {
-        //     results.push_back(fmt::format("{}   Successful pass of Scope Check\n", i));
-        // }
-        // else if (!scope_res && this->scope_errors.size() > 0 && this->scope_errors.size() == s.error.size())
-        // {
-        //     bool identical = true;
-        //     for (int i = 0; i < s.error.size(); ++i)
-        //     {
-        //         if (this->scope_errors[i].first != s.error[i].first)
-        //         {
-        //             results.push_back(fmt::format("{} Unsuccessful fail of Scope Check, scope_check error: , Missed Intentional Error: {}\n", i, s.error[i].first, this->messed_up_word.second));
-        //             identical = false;
-        //             // break;
-        //         }
-        //     }
-        //     if (identical)
-        //         results.push_back(fmt::format("{}   Successful pass of Scope Check\n", i));
-        // }
-        // else
         {
             results.push_back(fmt::format("{} Result of Scope Check: {}\n", i, scope_res));
             results.push_back(fmt::format("{}\tIntentional Errors: {}\n", i, this->scope_errors.size()));
@@ -1174,7 +1370,7 @@ void Tester::test_scope_checker(int thread_number)
                     results.push_back(fmt::format("{}\t\033[31mFailed\033[0m\n\n", i));
                 }
             }
-            if (!scope_res)
+            else
             {
                 if (s.error.size() > 0 && this->scope_errors.size() == 0 && non_errors.length() == 0)
                 {
@@ -1186,308 +1382,13 @@ void Tester::test_scope_checker(int thread_number)
                 }
             }
         }
-        // if (this->scope_errors.size() > 0)
-        // {
-        //     for (auto s : results)
-        //     {
-        //         std::cout << s;
-        //     }
-        //     std::cout << this->print_code(root);
-        // }
         root->clear_node();
-        // for (int x = 31; x <= 36; ++x)
-        // {
-        //     std::cout << fmt::format("\033[{}m{}\033[0m, ", x, x);
-        // }
-        // std::cout << "\n";
-        // else if (!scope_res && s.error.size() > 0 && this->messed_up_word.second == s.error[0].first)
-        // {
-        //     results.push_back(fmt::format("{}   Successful fail of Scope Check\n", i));
-        // }
-        // if (!scope_res && s.error.size() > 0 && this->messed_up_word.second != s.error[0].first)
-        // {
-        //     results.push_back(fmt::format("{} Unsuccessful fail of Scope Check, Scope Error: {}, Intentional Error: {}\n", i, s.error[0].first, this->messed_up_word.second));
-        // }
-        // if (!scope_res && s.error.size() > 0 && this->messed_up_word.second != s.error[0].first)
-        // {
-        //     results.push_back(fmt::format("{} Unsuccessful pass of Scope Check, Intentional Error: {}\n", i, this->messed_up_word.second));
-        // }
-        // results.push_back(fmt::format("{} Scope Check Result: {}", i, (scope_res == true ? "Success\n" : "Failed\n")));
     }
-    for (auto s : results)
-    {
-        std::cout << s;
-    }
-    std::cout << fmt::format("\033[3{}mThread {}\033[0m testing completed\n", 2 + thread_number, thread_number);
-}
-
-void Tester::run_tests(int thread_number)
-{
-    // test_lexer(thread_number);
-    // test_parser(thread_number);
-    // test_type_checker();
-    // test_scope_checker(thread_number);
-    test_code_generator();
-}
-
-void Tester::test_lexer(int thread_number)
-{
-    std::cout << "===== Running Random Program Test =====\n";
-    // this->cfg_file = fmt::format("CFG{}.xml", thread_number);
-    pugi::xml_document doc;
-    if (!doc.load_file(cfg_file.c_str()))
-    {
-        std::cerr << fmt::format("run_tests Error loading {}\n", cfg_file);
-        return;
-    }
-
-    pugi::xml_node productions = doc.child("CFG").child("PRODUCTIONRULES");
-
-    // root node for tree
-    std::shared_ptr<node> root = std::make_shared<node>();
-    // std::time_t now = std::time(NULL);
-    // srand(now);
-    std::time_t now = std::time(0);
-    srand(now);
-    int num_nodes = 0;
-    Lexer l(this->cfg_file);
-    bool bad_lex = false;
-    for (int i = 0; !bad_lex && i < 100; ++i)
-    {
-        std::shared_ptr<node> root = std::make_shared<node>();
-        srand(rand());
-        int num_nodes = 0;
-
-        { // do
-            this->messed_up_word = std::pair<int, std::string>(-1, "NONE");
-            root->clear_node();
-            root->CLASS = "PROGPRIMEPRIME";
-            num_nodes = this->generate_tree(root, productions, -1, component::LEXER);
-        } // while (num_nodes < 300);
-
-        std::ofstream rand_tree;
-        std::ofstream code_file;
-
-        construct_ftables(root, 0, component::LEXER);
-
-        this->num_terminals = 0;
-        populate_identifiers(root, component::LEXER);
-        std::string tree = root->printnode(0, "testScopeChecker()");
-        tree = root->printnode(0, "testScopeChecker()");
-        code_file.open(fmt::format("thread_{}_code_file.txt", thread_number));
-        std::string plaintext_code = root->print_code(0, code_file);
-        code_file << plaintext_code;
-        code_file.close();
-        // // do something with lexer
-        l.read_input(fmt::format("./thread_{}_code_file.txt", thread_number));
-        bool lex_res = l.lex(true, fmt::format("./thread_{}_token_stream.xml", thread_number));
-        pugi::xml_document tok_doc;
-        pugi::xml_parse_result result = tok_doc.load_file(fmt::format("./thread_{}_token_stream.xml", thread_number).c_str());
-        pugi::xml_node tok_str = tok_doc.child("TOKENSTREAM");
-        pugi::xml_node curr_tok = tok_str.first_child();
-        int tok_counter = 0;
-        while (curr_tok != pugi::xml_node())
-        {
-            ++tok_counter;
-            curr_tok = curr_tok.next_sibling();
-        }
-        bool incorrect_pass = this->messed_up_word.first > 0 && lex_res && l.dfa.input.find(this->messed_up_word.second) != std::string::npos;
-        std::vector<std::string> lex_results;
-        if (this->messed_up_word.first > 0 && !lex_res)
-        {
-            lex_results.push_back(fmt::format("\033[3{}m{}\033[0m:   Successfully failed lexing\n\tNumber of tokens lexed:{}, Incorrect token: {}: \"{}\"\n", 2 + thread_number, thread_number, tok_counter, this->messed_up_word.first, this->messed_up_word.second));
-            lex_results.push_back(fmt::format("\033[3{}m{}\033[0m\tLexer error message: \"{}\"\n\n", 2 + thread_number, thread_number, l.message));
-        }
-        else if (this->messed_up_word.first <= 0 && !lex_res)
-        {
-            std::cout << "REALLY SHOULDN'T BE HERE\n";
-            lex_results.push_back(fmt::format("\033[3{}m{}\033[0m: Unsuccessfully failed when it should have passed\n\tNumber of tokens lexed:{}\n", 2 + thread_number, thread_number, tok_counter));
-            lex_results.push_back(fmt::format("\033[3{}m{}\033[0m\tLexer error message: \"{}\"\n\n", 2 + thread_number, thread_number, l.message));
-            l.dfa.print_dfa(fmt::format("failed_test_artefacts/thread_{}_render-dfa.txt", thread_number), fmt::format("failed_test_artefacts/thread_{}_dfa_graph_incorrectly_failed.txt", thread_number));
-            l.print_tokens(fmt::format("failed_test_artefacts/thread_{}_token_stream_incorrectly_failed.xml", thread_number));
-
-            code_file.open(fmt::format("failed_test_artefacts/thread_{}_code_file_incorrectly_failed.txt", thread_number));
-            std::string plaintext_code = root->print_code(0, code_file);
-            code_file << plaintext_code;
-
-            code_file.close();
-            rand_tree.open(fmt::format("failed_test_artefacts/thread_{}_rand_tree_incorrectly_failed.xml", thread_number));
-            rand_tree << root->printnode(0, "TESTING");
-            rand_tree.close();
-            bad_lex = true;
-        }
-        else if (incorrect_pass)
-        {
-            lex_results.push_back(fmt::format("\033[3{}m{}\033[0m: Unsuccessfully passed when it should have failed\n", 2 + thread_number, thread_number));
-            lex_results.push_back(fmt::format("\033[3{}m{}\033[0m\tNumber of tokens lexed:{}, Incorrect token: {}: \"{}\"\n\n", 2 + thread_number, thread_number, tok_counter, this->messed_up_word.first, this->messed_up_word.second));
-            l.dfa.print_dfa(fmt::format("failed_test_artefacts/thread_{}_render-dfa.txt", thread_number), fmt::format("failed_test_artefacts/thread_{}_dfa_graph_incorrectly_passed.txt", thread_number));
-            l.print_tokens(fmt::format("failed_test_artefacts/thread_{}_token_stream_incorrectly_passed.xml", thread_number));
-
-            std::string plaintext_code = root->print_code(0, code_file);
-            code_file.open(fmt::format("failed_test_artefacts/thread_{}_code_file_incorrectly_passed.txt", thread_number));
-            code_file << plaintext_code;
-
-            code_file.close();
-            code_file.close();
-            rand_tree.open(fmt::format("failed_test_artefacts/thread_{}_rand_tree_incorrectly_passed.xml", thread_number));
-            rand_tree << root->printnode(0, "TESTING");
-            rand_tree.close();
-            bad_lex = true;
-        }
-        else if (this->messed_up_word.first <= 0 && lex_res)
-        {
-            lex_results.push_back(fmt::format("\033[3{}m{}\033[0m:   Successfully passed lexing\n\tNumber of tokens lexed:{}, number of generated terminals: {}\n\n", 2 + thread_number, thread_number, tok_counter, this->num_terminals));
-        }
-        for (auto lr : lex_results)
-        {
-            std::cout << lr;
-        }
-    }
-    root->clear_node();
-    std::cout << fmt::format("\033[3{}mThread {}\033[0m testing completed\n", 2 + thread_number, thread_number);
-}
-void Tester::test_parser(int thread_number)
-{
-
-    std::cout << "===== Running Random Program Test =====\n";
-    // this->cfg_file = fmt::format("CFG{}.xml", thread_number);
-    pugi::xml_document doc;
-    if (!doc.load_file(cfg_file.c_str()))
-    {
-        std::cerr << fmt::format("run_tests Error loading {}\n", cfg_file);
-        return;
-    }
-
-    pugi::xml_node productions = doc.child("CFG").child("PRODUCTIONRULES");
-
-    // root node for tree
-    std::shared_ptr<node> root = std::make_shared<node>();
-    // std::time_t now = std::time(NULL);
-    // srand(now);
-    std::time_t now = std::time(0);
-    srand(now);
-    int num_nodes = 0;
-    Lexer l(this->cfg_file);
-    bool bad_parse = false;
-    for (int i = 0; !bad_parse && i < 100; ++i)
-    {
-        std::shared_ptr<node> root = std::make_shared<node>();
-        srand(rand());
-        int num_nodes = 0;
-
-        do
-        {
-            this->messed_up_word = std::pair<int, std::string>(-1, "NONE");
-            root->clear_node();
-            root->CLASS = "PROGPRIMEPRIME";
-            num_nodes = this->generate_tree(root, productions, -1, component::PARSER);
-        } while (num_nodes < 300);
-
-        std::ofstream rand_tree;
-        std::ofstream code_file;
-
-        construct_ftables(root, 0, component::PARSER);
-
-        this->num_terminals = 0;
-        populate_identifiers(root, component::PARSER);
-        std::string tree = root->printnode(0, "testScopeChecker()");
-        tree = root->printnode(0, "testScopeChecker()");
-        std::ofstream tree_file(fmt::format("thread_{}_generated_ast.xml", thread_number));
-        tree_file << tree;
-        tree_file.close();
-        code_file.open(fmt::format("thread_{}_code_file.txt", thread_number));
-        std::string plaintext_code = root->print_code(0, code_file);
-        code_file << plaintext_code;
-        code_file.close();
-        // // do something with lexer
-        l.read_input(fmt::format("./thread_{}_code_file.txt", thread_number));
-        bool lex_res = l.lex(true, fmt::format("./thread_{}_token_stream.xml", thread_number));
-        if (!lex_res)
-        {
-            std::cout << "Lexing failed\n";
-            return;
-        }
-        Parser p(this->cfg_file);
-        std::shared_ptr<node> parsed_root = p.parse(fmt::format("./thread_{}_parsed_ast.xml", thread_number), fmt::format("./thread_{}_token_stream.xml", thread_number));
-        // code_file.open(fmt::format("thread_{}_generated_code_file.txt", thread_number));
-        // plaintext_code = parsed_root->print_code(0, code_file);
-        // code_file << plaintext_code;
-        // code_file.close();
-        // root is PROGPRIMEPRIME
-        std::shared_ptr<node> generated_root = root->get_child(0)->get_child(0);
-        if (compare_nodes(generated_root, parsed_root))
-        {
-            std::cout << i << ": Parser succeeded\n";
-        }
-        else
-        {
-            std::cout << i << ": Parser failed\n";
-            bad_parse = true;
-        }
-        // pugi::xml_document tok_doc;
-        // pugi::xml_parse_result result = tok_doc.load_file(fmt::format("./thread_{}_token_stream.xml", thread_number).c_str());
-        // pugi::xml_node tok_str = tok_doc.child("TOKENSTREAM");
-        // pugi::xml_node curr_tok = tok_str.first_child();
-        // int tok_counter = 0;
-        // while (curr_tok != pugi::xml_node())
-        // {
-        //     ++tok_counter;
-        //     curr_tok = curr_tok.next_sibling();
-        // }
-        // bool incorrect_pass = this->messed_up_word.first > 0 && lex_res && l.dfa.input.find(this->messed_up_word.second) != std::string::npos;
-        // std::vector<std::string> lex_results;
-        // if (this->messed_up_word.first > 0 && !lex_res)
-        // {
-        //     lex_results.push_back(fmt::format("\033[3{}m{}\033[0m:   Successfully failed lexing\n\tNumber of tokens lexed:{}, Incorrect token: {}: \"{}\"\n", 2 + thread_number, thread_number, tok_counter, this->messed_up_word.first, this->messed_up_word.second));
-        //     lex_results.push_back(fmt::format("\033[3{}m{}\033[0m\tLexer error message: \"{}\"\n\n", 2 + thread_number, thread_number, l.message));
-        // }
-        // else if (this->messed_up_word.first <= 0 && !lex_res)
-        // {
-        //     std::cout << "REALLY SHOULDN'T BE HERE\n";
-        //     lex_results.push_back(fmt::format("\033[3{}m{}\033[0m: Unsuccessfully failed when it should have passed\n\tNumber of tokens lexed:{}\n", 2 + thread_number, thread_number, tok_counter));
-        //     lex_results.push_back(fmt::format("\033[3{}m{}\033[0m\tLexer error message: \"{}\"\n\n", 2 + thread_number, thread_number, l.message));
-        //     l.dfa.print_dfa(fmt::format("failed_test_artefacts/thread_{}_render-dfa.txt", thread_number), fmt::format("failed_test_artefacts/thread_{}_dfa_graph_incorrectly_failed.txt", thread_number));
-        //     l.print_tokens(fmt::format("failed_test_artefacts/thread_{}_token_stream_incorrectly_failed.xml", thread_number));
-
-        //     code_file.open(fmt::format("failed_test_artefacts/thread_{}_code_file_incorrectly_failed.txt", thread_number));
-        //     std::string plaintext_code = root->print_code(0, code_file);
-        //     code_file << plaintext_code;
-
-        //     code_file.close();
-        //     rand_tree.open(fmt::format("failed_test_artefacts/thread_{}_rand_tree_incorrectly_failed.xml", thread_number));
-        //     rand_tree << root->printnode(0, "TESTING");
-        //     rand_tree.close();
-        //     bad_lex = true;
-        // }
-        // else if (incorrect_pass)
-        // {
-        //     lex_results.push_back(fmt::format("\033[3{}m{}\033[0m: Unsuccessfully passed when it should have failed\n", 2 + thread_number, thread_number));
-        //     lex_results.push_back(fmt::format("\033[3{}m{}\033[0m\tNumber of tokens lexed:{}, Incorrect token: {}: \"{}\"\n\n", 2 + thread_number, thread_number, tok_counter, this->messed_up_word.first, this->messed_up_word.second));
-        //     l.dfa.print_dfa(fmt::format("failed_test_artefacts/thread_{}_render-dfa.txt", thread_number), fmt::format("failed_test_artefacts/thread_{}_dfa_graph_incorrectly_passed.txt", thread_number));
-        //     l.print_tokens(fmt::format("failed_test_artefacts/thread_{}_token_stream_incorrectly_passed.xml", thread_number));
-
-        //     std::string plaintext_code = root->print_code(0, code_file);
-        //     code_file.open(fmt::format("failed_test_artefacts/thread_{}_code_file_incorrectly_passed.txt", thread_number));
-        //     code_file << plaintext_code;
-
-        //     code_file.close();
-        //     code_file.close();
-        //     rand_tree.open(fmt::format("failed_test_artefacts/thread_{}_rand_tree_incorrectly_passed.xml", thread_number));
-        //     rand_tree << root->printnode(0, "TESTING");
-        //     rand_tree.close();
-        //     bad_lex = true;
-        // }
-        // else if (this->messed_up_word.first <= 0 && lex_res)
-        // {
-        //     lex_results.push_back(fmt::format("\033[3{}m{}\033[0m:   Successfully passed lexing\n\tNumber of tokens lexed:{}, number of generated terminals: {}\n\n", 2 + thread_number, thread_number, tok_counter, this->num_terminals));
-        // }
-        // for (auto lr : lex_results)
-        // {
-        //     std::cout << lr;
-        // }
-    }
-    root->clear_node();
-    std::cout << fmt::format("\033[3{}mThread {}\033[0m testing completed\n", 2 + thread_number, thread_number);
+    // for (auto s : results)
+    // {
+    //     std::cout << s;
+    // }
+    // std::cout << fmt::format("\033[3{}mThread {}\033[0m testing completed\n", 2 + thread_number, thread_number);
 }
 
 void Tester::test_type_checker()

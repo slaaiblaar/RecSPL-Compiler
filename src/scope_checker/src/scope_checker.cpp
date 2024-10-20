@@ -131,7 +131,7 @@
 
 Scope_Checker::Scope_Checker(std::shared_ptr<node> root, std::string cfg_file) : root(root), cfg_file(cfg_file)
 {
-    std::cout << "Scope Checker initialized\n";
+    // std::cout << "Scope Checker initialized\n";
 }
 
 void Scope_Checker::pushScope()
@@ -271,7 +271,7 @@ std::shared_ptr<ftable_type> Scope_Checker::preprocess_ftables(std::shared_ptr<n
     {
         error.push_back(std::pair<std::string, std::pair<int, int>>(fid->WORD, std::pair<int, int>(-1, -1)));
         error_messages.push_back(std::pair<std::string, std::shared_ptr<node>>(
-            fmt::format("Re-declaration of function {} \n", fid->WORD, fid->row, fid->col), fid));
+            fmt::format("\033[34m{}\033[0m:{}:{}: Re-declaration of function {} \n", fid->file, fid->row, fid->col, fid->WORD), fid));
     }
     else // else bind
     {
@@ -384,8 +384,6 @@ void Scope_Checker::populate_identifiers(std::shared_ptr<node> curr_node, int de
             curr_node->v_table[vname->get_child(0)->WORD] = vtype->get_child(0)->WORD;
             (*curr_node->scope_v_table)[vname->get_child(0)->WORD] = vtype->get_child(0)->WORD;
         }
-        // std::cout << fmt::format("\033[34m{}\033[0mBound child child {}: {}\n", std::string(depth * 2, ' '), vname->get_child(0)->WORD, curr_node->v_table[vname->get_child(0)->WORD]);
-        // std::cout << fmt::format("  {}: New var {} {}\n", n->CLASS, vtype->get_child(0)->WORD, vname->get_child(0)->WORD);
     }
     // LOCVARS ==> VTYP VNAME , VTYP VNAME , VTYP VNAME ,
     //              0     1   2   3    4   5  6     7   8
@@ -408,8 +406,6 @@ void Scope_Checker::populate_identifiers(std::shared_ptr<node> curr_node, int de
                 curr_node->v_table[vname->get_child(0)->WORD] = vtype->get_child(0)->WORD;
                 (*curr_node->scope_v_table)[vname->get_child(0)->WORD] = vtype->get_child(0)->WORD;
             }
-            // std::cout << fmt::format("\033[34m{}\033[0mBound child child {}: {}\n", std::string(depth * 2, ' '), vname->get_child(0)->WORD, curr_node->v_table[vname->get_child(0)->WORD]);
-            // std::cout << fmt::format("  {}: New var {} {}\n", n->CLASS, vtype->get_child(0)->WORD, vname->get_child(0)->WORD);
         }
     }
     // HEADER ==> FTYP FNAME ( VNAME , VNAME , VNAME ),
@@ -511,81 +507,15 @@ void propagate_scope_tables(std::shared_ptr<node> n)
 
 bool Scope_Checker::run_scope_checker(int thread_number)
 {
-    std::cout << "Runing scope checker\n";
     propagate_scope_tables(root);
     this->construct_ftables(root, 0);
-    std::cout << "Tables constructed\n";
-    // std::cout << "Tables constructed\n";
-    // std::cout << "Tables constructed\n";
     this->populate_identifiers(root, 0);
-    std::cout << "Identifiers populated\n";
     bool check_res = check(root);
-    // bool check_res = false;
-    std::cout << "Scopes Checked. Result: " << (check_res ? "Success\n" : "Failure\n");
     for (auto em : this->error_messages)
     {
         std::cout << em.first;
     }
     return this->error.size() == 0;
-}
-
-void Scope_Checker::testScopeChecker(int i)
-{
-    // std::cout << "===== Running Random Program Test =====\n";
-
-    // pugi::xml_document doc;
-    // if (!doc.load_file(cfg_file.c_str()))
-    // {
-    //     std::cerr << "Error loading CFG.xml\n";
-    //     return;
-    // }
-
-    // pugi::xml_node productions = doc.child("CFG").child("PRODUCTIONRULES");
-
-    // // root node for tree
-    // std::shared_ptr<node> root = std::make_shared<node>();
-    // // std::time_t now = std::time(NULL);
-    // // srand(now);
-    // std::time_t now = std::time(0);
-    // srand(now);
-    // int num_nodes = 0;
-    // for (int num_tree = 0; num_tree < 10; ++num_tree)
-    // {
-    //     std::shared_ptr<node> root = std::make_shared<node>();
-    //     srand(rand());
-    //     int num_nodes = 0;
-    //     do
-    //     {
-    //         // root->NAME = "INTERNAL";
-    //         root->clear_node();
-    //         root->CLASS = "PROGPRIMEPRIME";
-    //         // root->WORD = "PROGPRIMEPRIME";
-    //         // root->UID = node_counter++;
-    //         // std::cout << "Generating tree: " << now << "\n";
-    //         num_nodes = generate_tree(root, productions, -1);
-    //         node::node_id_counter = 0;
-    //     } while (num_nodes < 300);
-    //     std::cout << "Populating ftables\n";
-    //     construct_ftables(root, 0);
-    //     populate_identifiers(root);
-    //     // std::cout << "PROGPRIMEPRIME num children: " << root->children_size() << std::endl;
-    //     std::ofstream rand_tree(fmt::format("random_tree{}.xml", num_tree));
-    //     std::string tree = root->printnode(0, "testScopeChecker()");
-    //     rand_tree << tree;
-    //     rand_tree.close();
-    //     std::ofstream code_file(fmt::format("code_file{}.txt", num_tree));
-    //     std::string plaintext_code = root->print_code(0, code_file);
-    //     std::cout << "\nPLAINTEXT:\n";
-    //     std::cout << plaintext_code << "\n^^^^^^^^^^^^^^^^^^^^^\n";
-    //     std::cout << num_nodes << std::endl;
-    //     code_file << plaintext_code;
-    //     code_file.close();
-    //     std::cout << "random number: " << rand() << "\n";
-    //     std::cout << "num nodes: " << num_nodes << std::endl;
-    // }
-
-    // std::cout
-    //     << "===== Test Complete =====\n\n";
 }
 
 /*Ignore this*/

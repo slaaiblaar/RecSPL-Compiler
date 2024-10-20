@@ -32,9 +32,9 @@ class Tester
 public:
     int generate_tree(std::shared_ptr<node> parent, pugi::xml_node productions, int depth, component test, counters counters = {0, 0, 0, 0, 0, 0});
     void run_tests(int thread_number);
-    void test_lexer(int thread_number);
-    void test_parser(int thread_number);
-    void test_scope_checker(int thread_number);
+    void test_lexer(int thread_number, std::vector<std::string> &results);
+    void test_parser(int thread_number, std::vector<std::string> &results);
+    void test_scope_checker(int thread_number, std::vector<std::string> &results);
     void test_type_checker();
     void test_code_generator();
     int num_terminals = 0;
