@@ -34,13 +34,13 @@ Lexer::Lexer(std::string cfg_file) : cfg_file(cfg_file)
         dfa.append_pattern(literal_terminal.child_value(), literal_terminal.attribute("class").value());
     } while ((literal_terminal = literal_terminal.next_sibling()) != pugi::xml_node());
 
-    std::cout << "KEYWORDS:";
+    // std::cout << "KEYWORDS:";
     do
     {
-        std::cout << " \"" << keywords_terminal.child_value() << "\"";
+        // std::cout << " \"" << keywords_terminal.child_value() << "\"";
         dfa.append_keyword(keywords_terminal.child_value(), keywords_terminal.attribute("class").value());
     } while ((keywords_terminal = keywords_terminal.next_sibling()) != pugi::xml_node());
-    std::cout << "\n";
+    // std::cout << "\n";
     // return;
     // prints NFA state to terminal in a format that's easy to manually insert into render-automata.py
     // dfa.print_nfa();

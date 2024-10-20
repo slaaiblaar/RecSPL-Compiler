@@ -263,20 +263,20 @@ void Automaton::construct_subsets()
     {
         current_state = subset_construction_queue.front();
         std::cout << current_state->id << " ";
-        std::cout << "  Curr state: \n      " << current_state->id;
+        // std::cout << "  Curr state: \n      " << current_state->id;
         subset_construction_queue.pop();
         transitions.clear();
         // for each nfa state in current state's epsilon closure set
-        std::cout << "  NFA Equiv transitions: \n";
+        // std::cout << "  NFA Equiv transitions: \n";
         for (auto nfa_equiv_state : current_state->nfa_equiv_states)
         {
             if (nfa_equiv_state.second->is_final)
             {
-                std::cout << "    \033[33m" << nfa_equiv_state.second->id << "\033[0m";
+                // std::cout << "    \033[33m" << nfa_equiv_state.second->id << "\033[0m";
             }
-            else
-                std::cout << "    " << nfa_equiv_state.second->id;
-            std::cout << "    " << nfa_equiv_state.second->id;
+            // else
+            //     std::cout << "    " << nfa_equiv_state.second->id;
+            // std::cout << "    " << nfa_equiv_state.second->id;
             // for each transition from the nfa state
             for (auto e_state_transition : nfa_equiv_state.second->transitions)
             {
@@ -286,30 +286,30 @@ void Automaton::construct_subsets()
                     continue;
                 }
                 std::vector<std::shared_ptr<State>> destination_states = e_state_transition.second;
-                std::cout << " '\033[33m" << symbol << "\033[0m':";
+                // std::cout << " '\033[33m" << symbol << "\033[0m':";
                 // for each destination on the symbol
                 for (auto destination : destination_states)
                 {
-                    std::cout << " " << destination->id;
+                    // std::cout << " " << destination->id;
                     if (destination->is_final)
                     {
-                        std::cout << "  \033[33m" << destination->id << "\033[0m";
+                        // std::cout << "  \033[33m" << destination->id << "\033[0m";
                     }
-                    else
-                        std::cout << "  " << destination->id;
+                    // else
+                    //     std::cout << "  " << destination->id;
                     // for each state in the epsilon closure of the destination
                     for (auto dest_e_state : destination->e_closure)
                     {
                         transitions[symbol][dest_e_state.first] = dest_e_state.second;
                     }
                 }
-                std::cout << "\n";
+                // std::cout << "\n";
             }
-            std::cout << "\n";
+            // std::cout << "\n";
         }
         if (transitions.size() > 0)
         {
-            std::cout << "\n    Combining transitions:\n      ";
+            // std::cout << "\n    Combining transitions:\n      ";
         }
         // for each transition instantiated above
         for (auto transition : transitions)
@@ -317,7 +317,7 @@ void Automaton::construct_subsets()
             // check if the set of nfa states already exists as a dfa state
             std::shared_ptr<State> destination = find_dfa_state(transition.second);
             // if not create one
-            std::cout << " " << transition.first << " ";
+            // std::cout << " " << transition.first << " ";
             if (destination == nullptr)
             {
                 destination = std::make_shared<State>(AutomatonClass::DFA);
@@ -349,15 +349,15 @@ void Automaton::construct_subsets()
                 }
                 if (destination->is_final)
                 {
-                    std::cout << "(new \033[33m" << destination->id << "\033[0m)";
+                    // std::cout << "(new \033[33m" << destination->id << "\033[0m)";
                 }
-                else
-                    std::cout << "(new " << destination->id << ")";
+                // else
+                //     std::cout << "(new " << destination->id << ")";
             }
             // add transition to current state
             current_state->transitions[transition.first].push_back(destination);
         }
-        std::cout << "\n";
+        // std::cout << "\n";
         // std::cout << "FOLLOW Sets:\n";
         // // for (const auto &pair : this->follow)
         // {
@@ -407,21 +407,21 @@ void Automaton::nfa_to_dfa()
     {
         s->id = idcounter++;
     }
-    std::cout << "Epsilon transitions:\n";
+    // std::cout << "Epsilon transitions:\n";
     for (auto current_state : nfa_states)
     {
-        std::cout << "S" << current_state->id << ":\n";
-        std::cout << "\tstd::string({'\\0'}: ";
+        // std::cout << "S" << current_state->id << ":\n";
+        // std::cout << "\tstd::string({'\\0'}: ";
         for (std::shared_ptr<State> next_hop : current_state->transitions[std::string({'\0'})])
         {
-            std::cout << next_hop->id << ", ";
+            // std::cout << next_hop->id << ", ";
         }
-        std::cout << "\n\t\"\\0\": ";
+        // std::cout << "\n\t\"\\0\": ";
         for (std::shared_ptr<State> next_hop : current_state->transitions["\0"])
         {
-            std::cout << next_hop->id << ", ";
+            // std::cout << next_hop->id << ", ";
         }
-        std::cout << std::endl;
+        // std::cout << std::endl;
     }
     // calculate epsilon closure of nfa states
     bool e_closure_expanded = true;
@@ -513,9 +513,9 @@ void Automaton::nfa_to_dfa()
         {
             if (dfa_start_state->is_final)
             {
-                std::cout << "Collision on final state: \n";
-                std::cout << "(old_prod|new_prod) : (" << dfa_start_state->prod_num;
-                std::cout << "|" << e_state.second->prod_num << ")\n";
+                // std::cout << "Collision on final state: \n";
+                // std::cout << "(old_prod|new_prod) : (" << dfa_start_state->prod_num;
+                // std::cout << "|" << e_state.second->prod_num << ")\n";
             }
             dfa_start_state->is_final = true;
             dfa_start_state->prod_num = e_state.second->prod_num;
@@ -695,6 +695,7 @@ bool Automaton::run(bool debug)
 {
     if (debug)
     {
+        std::cout << "Automaton debugging printing\n";
         std::cout << "Start state: " << dfa_start_state->id << "\n";
         std::cout << "Curr state:  " << current_state->id << "\n";
     }
