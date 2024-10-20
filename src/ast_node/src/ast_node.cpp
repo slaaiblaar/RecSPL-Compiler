@@ -90,7 +90,7 @@ std::string node::print_code(int depth, std::ofstream &code_file, bool colour)
         }
 
         std::string indentation = std::string(4, ' ');
-        product = fmt::format("{}\n{}\n{}\n{}", main_str, globvars, (algo.length() > 0 ? indentation + algo : ""), functions);
+        product = fmt::format("{}\n{}\n{}\n{}", main_str, globvars, algo, functions);
     }
     else if (this->CLASS == "INSTRUC")
     {
@@ -268,7 +268,7 @@ std::string node::print_code(int depth, std::ofstream &code_file, bool colour)
         {
             globvars = this->get_child(3)->print_code(depth, code_file, colour);
         }
-        product = fmt::format("{}{}{}{}\n", vtyp, vname, comma, globvars);
+        product = fmt::format("{}{}{}{}", vtyp, vname, comma, globvars);
     }
     else if (this->CLASS == "OP")
     {
