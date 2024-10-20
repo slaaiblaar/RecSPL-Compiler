@@ -9,7 +9,35 @@
 #include <istream>
 #include "ast_node.hpp"
 #include <regex>
-
+std::string Tester::print_code(std::shared_ptr<node> n)
+{
+    // prep for colour formatting
+    for (auto e : this->scope_errors)
+    {
+        e.second->WORD = fmt::format("\033[31;1;4m{}\033[0m", e.first);
+        e.second->print_colour = false;
+    }
+    for (auto e : this->discovered_scope_errors)
+    {
+        e.second->WORD = fmt::format("\033[37;9m{}\033[0m", e.first);
+        e.second->print_colour = false;
+    }
+    std::ofstream dummy;
+    std::string code = n->print_code(0, dummy, true);
+    // dummy.close();
+    // reset
+    for (auto e : this->scope_errors)
+    {
+        e.second->WORD = e.first;
+        e.second->print_colour = true;
+    }
+    for (auto e : this->discovered_scope_errors)
+    {
+        e.second->WORD = e.first;
+        e.second->print_colour = true;
+    }
+    return code;
+}
 bool gen_automaton(std::string terminal_class, std::unordered_map<std::string, std::shared_ptr<Automaton>> &automata, std::string cfg_file = "CFG.xml")
 {
     std::shared_ptr<Automaton> term_automaton = std::make_shared<Automaton>();
@@ -18,6 +46,7 @@ bool gen_automaton(std::string terminal_class, std::unordered_map<std::string, s
     {
         std::cerr << fmt::format("gen_automaton Error loading {}\n", cfg_file);
         automata[terminal_class] = nullptr;
+        // throw;
         return false;
     }
     pugi::xml_node terminal = doc.child("CFG").child("TERMINALS").child(terminal_class.c_str()).first_child();
@@ -73,19 +102,83 @@ void random_pattern(std::shared_ptr<node> n, std::string cfg_file = "CFG.xml")
     }
     n->WORD = pattern;
 }
-
-int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productions, int depth, component test)
+/*
+typedef struct
 {
+    int num_functions;
+    int num_branches;
+    int num_number_v;
+    int num_text_v;
+    int num_number_f;
+    int num_void_f;
+} counters;
+*/
+std::string counters_str(counters c, int depth)
+{
+    return fmt::format("[func: {}, branch: {}, v_num: {}, v_text: {}, f_num: {}, f_void: {}]",
+                       c.num_functions,
+                       c.num_branches,
+                       c.num_number_v,
+                       c.num_text_v,
+                       c.num_number_f,
+                       c.num_void_f);
+}
+int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productions, int depth, component test, counters counters)
+{
+
+    if (parent->CLASS == "GLOBVARS" && depth > 10)
+    {
+        // emergency brake
+        throw;
+    }
+    // reset lists
+    if (parent->CLASS == "PROGPRIMEPRIME")
+    {
+        parent->scope_f_table = std::make_shared<ftable_type>();
+        parent->scope_v_table = std::make_shared<vtable_type>();
+    }
+    // reset list of "sibling" var declarations
+    if (parent->CLASS == "DECL")
+    {
+        parent->scope_v_table = std::make_shared<vtable_type>();
+    }
+    // reset list of "sibling" func declarations
+    if (parent->CLASS == "SUBFUNCS")
+    {
+        parent->scope_f_table = std::make_shared<ftable_type>();
+    }
+    // configure tests, kind of
+    bool stop_functions = counters.num_functions >= 3 && test == component::SCOPE_CHECK;
+    bool force_branch = counters.num_branches < 3 && test == component::SCOPE_CHECK;
+    bool force_var = (counters.num_number_v < 3 || counters.num_text_v < 3);
+    bool force_func = (counters.num_number_f < 2 || counters.num_void_f < 2);
+    // bool force_globvar = (globvar_counter < 2) && test == component::PARSER;
+    // bool force_short_tree = false;
+    // bool force_var = false;
+    // bool force_func = false;
+    // bool force_globvar = (counters.num_number_v < 0 && counters.num_text_v < 0);
+    bool force_globvar = (counters.num_number_v + counters.num_text_v) < 3;
+    bool force_short_tree = false;
+    if (parent->CLASS == "BRANCH")
+    {
+        ++counters.num_branches;
+    }
+    if (parent->CLASS == "FUNCTIONS")
+    {
+        ++counters.num_functions;
+    }
+    if (parent->CLASS == "HEADER")
+    {
+        // function parameters are numbers
+        counters.num_number_v += 3;
+    }
+
     if (parent->subtree_generated)
     {
         return node::node_id_counter;
     }
     parent->subtree_generated = true;
     // for use in testing type checker
-    thread_local static int num_number_v = 0;
-    thread_local static int num_text_v = 0;
-    thread_local static int num_number_f = 0;
-    thread_local static int num_void_f = 0;
     thread_local static int node_counter = 0;
     thread_local static int globvar_counter = 0;
     // static int num_terminals = 0;
@@ -95,12 +188,9 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
         depth = 0;
         node::node_id_counter = 1;
         num_terminals = 0;
-        num_number_v = 0;
-        num_text_v = 0;
-        num_number_f = 0;
-        num_void_f = 0;
         globvar_counter = 0;
     }
+    std::cout << fmt::format("{}generating subtree of {}, counters: {}\n", std::string(depth * 2, ' '), parent->CLASS, counters_str(counters, depth));
     // std::cout << std::string(depth, ' ') << parent->CLASS << "\n";
     // Find the production rule for the current node's WORD
     pugi::xpath_node lhs_xpath_node = productions.select_node(parent->CLASS.c_str());
@@ -129,70 +219,67 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
         {
             ++globvar_counter;
         }
-        bool force_var = (num_number_v < 3 || num_number_v < 3);
-        bool force_func = (num_number_f < 3 || num_void_f < 3);
-        // bool force_globvar = (globvar_counter < 2) && test == component::PARSER;
-        // bool force_short_tree = false;
-        // bool force_var = false;
-        // bool force_func = false;
-        bool force_globvar = false;
-        bool force_short_tree = false;
         int prod_num = -1;
-        if (force_short_tree || force_globvar || force_var || force_func || depth > 40 || node_counter > 400)
+        if (parent->WORD == "PROG")
         {
-            if (parent->WORD == "PROG")
+            if (force_var || force_globvar)
             {
-                if (force_var || force_globvar)
+                // std::cout << std::string(depth * 2, ' ') << "Adding GLOBVAR via PROG\n";
+                prod_num = 0;
+            }
+            else if (force_short_tree)
+            {
+                prod_num = 1;
+            }
+        }
+        // std::cout << std::string(depth, ' ') << parent->CLASS << fmt::format(" point NT point 3 force_var={} force_func={}\n", force_var, force_func);
+        else if (parent->WORD == "GLOBVARS")
+        {
+            if (force_globvar)
+            {
+                // rhs = rhs_list[1];
+                // std::cout << std::string(depth * 2, ' ') << "Adding GLOBVAR recursively\n";
+                prod_num = 1;
+                if (rhs_list[prod_num].child("GLOBVARS") == pugi::xml_node())
                 {
-                    std::cout << std::string(depth * 2, ' ') << "Adding GLOBVAR via PROG\n";
-                    prod_num = 0;
-                }
-                else if (force_short_tree)
-                {
-                    prod_num = 1;
+                    std::cerr << "\nProduction 0 of FUNCTIONS is not FUNCTIONS ==> DECL FUNCTIONS\n";
                 }
             }
-            // std::cout << std::string(depth, ' ') << parent->CLASS << fmt::format(" point NT point 3 force_var={} force_func={}\n", force_var, force_func);
-            else if (parent->WORD == "GLOBVARS")
+            else
             {
-                if (force_var || force_globvar)
+                // rhs = rhs_list[0];
+                prod_num = 0;
+            }
+        }
+        else if (parent->WORD == "FUNCTIONS")
+        {
+            counters.num_number_v += 3; // locvars are always numbers
+            if (force_func && !stop_functions)
+            {
+                // rhs = rhs_list[1];
+                prod_num = 1;
+                if (rhs_list[prod_num].child("FUNCTIONS") == pugi::xml_node())
                 {
-                    // rhs = rhs_list[1];
-                    std::cout << std::string(depth * 2, ' ') << "Adding GLOBVAR recursively\n";
-                    prod_num = 1;
-                    if (rhs_list[prod_num].child("GLOBVARS") == pugi::xml_node())
-                    {
-                        std::cerr << "\nProduction 0 of FUNCTIONS is not FUNCTIONS ==> DECL FUNCTIONS\n";
-                    }
-                }
-                else if (force_short_tree || !force_func)
-                {
-                    // rhs = rhs_list[0];
-                    prod_num = 0;
+                    std::cerr << "\nProduction 0 of FUNCTIONS is not FUNCTIONS ==> DECL FUNCTIONS\n";
                 }
             }
-            else if (parent->WORD == "FUNCTIONS")
+            else if (stop_functions || force_short_tree || !force_var)
             {
-                if (force_func)
+                // rhs = rhs_list[0];
+                prod_num = 0;
+                if (rhs_list[prod_num].child("FUNCTIONS") != pugi::xml_node())
                 {
-                    // rhs = rhs_list[1];
-                    prod_num = 1;
-                    if (rhs_list[prod_num].child("FUNCTIONS") == pugi::xml_node())
-                    {
-                        std::cerr << "\nProduction 0 of FUNCTIONS is not FUNCTIONS ==> DECL FUNCTIONS\n";
-                    }
-                }
-                else if (force_short_tree || !force_var)
-                {
-                    // rhs = rhs_list[0];
-                    prod_num = 0;
-                    if (rhs_list[prod_num].child("FUNCTIONS") != pugi::xml_node())
-                    {
-                        std::cerr << "\nProduction 0 of FUNCTIONS is not FUNCTIONS ==> DECL\n";
-                    }
+                    std::cerr << "\nProduction 0 of FUNCTIONS is not FUNCTIONS ==> DECL\n";
                 }
             }
-            else if (parent->WORD == "INSTRUC")
+        }
+        else if (parent->WORD == "INSTRUC")
+        {
+            // will result in about 4 instructions per function with 4 extra depth per scope block
+            // PROGPRIMEPRIME => PROGPRIME => PROG => FUNCTIONS =>
+            // with FUNCTIONS => DECL => BODY => ALGO => INSTRUC
+            //          1          2       3      4         ^
+            if ((depth - (3 + counters.num_functions * 4)) > 4)
             {
                 // rhs = rhs_list[0];
                 prod_num = 0;
@@ -201,19 +288,34 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
                     std::cerr << "\nProduction 0 of INSTRUC is not INSTRUC ==> COMMAND ;\n";
                 }
             }
-            else if (parent->WORD == "COMMAND")
-            {
-                do
-                {
-                    // rhs = rhs_list[rand() % rhs_list.size()];
-                    prod_num = rand() % rhs_list.size();
-                } while (rhs_list[prod_num].child("BRANCH") != pugi::xml_node());
-            }
             else
+            {
+                prod_num = 1;
+            }
+        }
+        else if (parent->WORD == "COND")
+        {
+            if ((depth - (3 + counters.num_functions * 4)) > 4)
+            {
+                prod_num = 0; // force SIMPLE cond
+                if (rhs_list[prod_num].child("INSTRUC") != pugi::xml_node())
+                {
+                    std::cerr << "\nProduction 0 of INSTRUC is not INSTRUC ==> COMMAND ;\n";
+                }
+            }
+        }
+        else if (parent->WORD == "COMMAND")
+        {
+            do
             {
                 // rhs = rhs_list[rand() % rhs_list.size()];
                 prod_num = rand() % rhs_list.size();
-            }
+            } while (rhs_list[prod_num].child("BRANCH") != pugi::xml_node());
+        }
+        else
+        {
+            // rhs = rhs_list[rand() % rhs_list.size()];
+            prod_num = rand() % rhs_list.size();
         }
         if (prod_num == -1)
         {
@@ -224,12 +326,12 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
         rhs = rhs_list[prod_num];
         if (parent->WORD == "GLOBVARS")
         {
-            std::cout << std::string(depth * 2, ' ') << parent->WORD << " ==>";
-            for (auto c : rhs)
-            {
-                std::cout << " " << c.name();
-            }
-            std::cout << "\n";
+            // std::cout << std::string(depth * 2, ' ') << parent->WORD << " ==>";
+            // for (auto c : rhs)
+            // {
+            //     std::cout << " " << c.name();
+            // }
+            // std::cout << "\n";
         }
         parent->prod = prod_num;
         // std::cout << std::string(depth, ' ') << parent->CLASS << " point NT point 5\n";
@@ -252,8 +354,11 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
 
             std::shared_ptr<node> child = std::make_shared<node>();
             child->CLASS = sym_name;
-            generate_tree(child, productions, depth + 1, test);
+            child->scope_f_table = parent->scope_f_table;
+            child->scope_v_table = parent->scope_v_table;
+            generate_tree(child, productions, depth + 1, test, counters);
 
+            std::cout << fmt::format("{}generated subtree of {}\n", std::string(depth * 2, ' '), child->WORD);
             bool is_new = parent->add_child(child, child_index);
             if (!is_new)
             {
@@ -265,6 +370,8 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
                 ++child_index;
                 // ++num_terminals;
             }
+            // pass down sibling list
+            // child will create own if necessary
             // pugi::xpath_node term_xpath_node = productions.select_node(child->CLASS.c_str());
             if (symbol.attribute("terminal").as_bool()) // if terminal
             {
@@ -272,50 +379,55 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
                 if (child->CLASS == "KEYWORD")
                 {
                     child->WORD = symbol.child("value").child_value();
+                    std::cout << fmt::format("{}  KEYWORD {}", std::string(depth * 2, ' '), child->WORD);
                     // 0.1 % chance of incorrect keyword
                     bool mess_up = (((double)rand() / (double)RAND_MAX) < 0.001);
                     if (test == component::LEXER && mess_up && this->messed_up_word.first < 0)
                     {
                         child->WORD = fmt::format("random_{}({})", std::to_string(rand() % 5), child->WORD);
                         this->messed_up_word = std::pair<int, std::string>(num_terminals, child->WORD);
+                        std::cout << fmt::format("{}  Overwrite keyword to: {}", std::string(depth * 2, ' '), child->WORD);
                         // std::cout << fmt::format("{}Incorrect token generated: {}: \"{}\"\n", std::string(depth * 2, ' '), num_terminals, child->WORD);
                         // std::cout << child->printnode(depth, "generate_tree()");
                         child->was_printed = false;
                     }
                 }
-                if (parent->CLASS == "HEADER")
-                {
-                    if (child->WORD == "num")
-                    {
-                        ++num_number_f;
-                    }
-                    if (child->WORD == "void")
-                    {
-                        ++num_void_f;
-                    }
-                }
-                else if (parent->CLASS == "VTYP")
-                {
-                    if (child->WORD == "num")
-                    {
-                        ++num_number_v;
-                    }
-                    if (child->WORD == "text")
-                    {
-                        ++num_text_v;
-                    }
-                }
             }
-            if (parent->WORD == "GLOBVARS")
+            // rewrote CFG to have FTYP keywords be child of header directly
+            if (parent->CLASS == "HEADER")
             {
-                std::cout << std::string(depth * 2, ' ') << "Adding child " << child->WORD << "\n";
+                if (child->WORD == "num")
+                {
+                    ++counters.num_number_f;
+                }
+                if (child->WORD == "void")
+                {
+                    ++counters.num_void_f;
+                }
             }
+            if (child->CLASS == "VTYP")
+            {
+                std::cout << fmt::format("{}    VTYP->Child word: {}", std::string(depth * 2, ' '), child->get_child(0)->WORD);
+                if (child->get_child(0)->WORD == "num")
+                {
+                    ++counters.num_number_v;
+                }
+                if (child->get_child(0)->WORD == "text")
+                {
+                    ++counters.num_text_v;
+                }
+            }
+            // if (parent->WORD == "GLOBVARS")
+            // {
+            //     std::cout << std::string(depth * 2, ' ') << "Adding child " << child->WORD << "\n";
+            // }
             symbol = symbol.next_sibling();
-            std::cout << std::string(depth * 2, ' ') << "Selected next symbol\n";
+            // std::cout << std::string(depth * 2, ' ') << "Selected next symbol\n";
         }
     }
     else
     {
+        parent->print_colour = true;
         ++num_terminals;
         // std::cout << std::string(depth, ' ') << parent->CLASS << " point T point 1\n";
         // Terminal node (VID, FID, KEYWORD, or LITERAL)
@@ -332,7 +444,7 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
         }
     }
     // std::cout << std::string(depth, ' ') << parent->CLASS << " end\n";
-    std::cout << std::string(depth * 2, ' ') << "Completed generation for " << parent->WORD << "\n";
+    // std::cout << std::string(depth * 2, ' ') << "Completed generation for " << parent->WORD << "\n";
     return node::node_id_counter;
 }
 
@@ -342,8 +454,9 @@ using ftable_type = std::unordered_map<std::string, std::string[4]>;
 using vtable_type = std::unordered_map<std::string, std::string>;
 // Drill down through successive chains of FUNCTIONS == > FUNCTIONS productions void node::copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<node> t)
 
-std::shared_ptr<ftable_type> preprocess_ftables(std::shared_ptr<node> n, int depth)
+std::shared_ptr<ftable_type> Tester::preprocess_ftables(std::shared_ptr<node> n, int depth)
 {
+    double collision_prob = 0.1;
     ++depth;
     std::shared_ptr<node> header = n->get_child(0)->get_child(0);
     if (header->WORD != "HEADER")
@@ -360,13 +473,43 @@ std::shared_ptr<ftable_type> preprocess_ftables(std::shared_ptr<node> n, int dep
     {
         std::cerr << "\nFNAME->children[1] is supposed to be a FID node\n";
     }
+    double rand_collision = (double)rand() / (double)RAND_MAX;
+    // if ()
     // generate name
-    do
+    if (rand_collision > collision_prob || n->scope_f_table->size() == 0)
     {
-        random_pattern(fid);
-    } while (n->f_table.find(fid->WORD) != n->f_table.end());
-    // bind type to name
-    n->f_table[fid->WORD][0] = header->get_child(0)->WORD;
+        do
+        {
+            random_pattern(fid);
+        } while (n->scope_f_table->find(fid->WORD) != n->scope_f_table->end());
+        // bind type to name
+        n->f_table[fid->WORD][0] = header->get_child(0)->WORD;
+        (*n->scope_f_table)[fid->WORD][0] = header->get_child(0)->WORD;
+        std::cout << fmt::format("{}Creating new function id {}\n", std::string(depth * 2, ' '), fid->WORD);
+        std::cout << fmt::format("{}collision_prob: {}, rand_collision: {}, n->scope_f_table->size(): {} \n", std::string(depth * 2, ' '), collision_prob, rand_collision, n->scope_f_table->size());
+        std::cout << fmt::format("{}(rand_collision > collision_prob || n->scope_f_table->size() == 0) : {} \n", std::string(depth * 2, ' '), (rand_collision > collision_prob || n->scope_f_table->size() == 0));
+    }
+    else
+    {
+        std::cout << fmt::format("{}Creating function scope collision error \n", std::string(depth * 2, ' '));
+        std::cout << fmt::format("{}collision_prob: {}, rand_collision: {}, n->scope_f_table->size(): {} \n", std::string(depth * 2, ' '), collision_prob, rand_collision, n->scope_f_table->size());
+        std::cout << fmt::format("{}(rand_collision > collision_prob || n->scope_f_table->size() == 0) : {} \n", std::string(depth * 2, ' '), (rand_collision > collision_prob || n->scope_f_table->size() == 0));
+        int rand_id = rand() % n->scope_f_table->size();
+        int index = 0;
+        auto vit = n->scope_f_table->begin();
+        while (vit != n->scope_f_table->end() && index < rand_id)
+        {
+            ++vit;
+            ++index;
+        }
+        if (index == rand_id && vit != n->scope_f_table->end())
+        {
+            fid->WORD = vit->first;
+            std::cout << fmt::format("{}Randomly selected duplicate fname: {} {}\n", std::string(depth * 2, ' '), fid->WORD, fid->UID);
+            this->scope_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(fid->WORD, fid));
+        }
+    }
+
     std::shared_ptr<ftable_type> synthesized_table = std::make_shared<ftable_type>();
     (*synthesized_table)[fid->WORD][0] = header->get_child(0)->WORD;
 
@@ -460,6 +603,14 @@ void Tester::construct_ftables(std::shared_ptr<node> n, int depth, component tes
 }
 void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
 {
+    double collision_prob = 0.1;
+    double invalid_pattern_prob = 0.05;
+    thread_local static int depth = -1;
+    ++depth;
+    if (n->CLASS == "GLOBVARS" || n->CLASS == "LOCVARS" || n->CLASS == "HEADER" || n->CLASS == "COMMAND")
+    {
+        // std::cout << fmt::format("{}Populating ids of: {}\n", std::string(depth * 2, ' '), n->CLASS);
+    }
     // std::string indentation = std::string(depth * 2, ' ');
     // std::cout << fmt::format("CLASS: {}\n", n->CLASS);
     if (n->children_size() == 0)
@@ -478,47 +629,49 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
         {
             id_probability = 0;
         }
-        if (id_probability > 0.05)
+        if (id_probability > invalid_pattern_prob)
         {
+            // std::cout << fmt::format("{}  Legitimate id\n", std::string(depth * 2, ' '));
             // std::cout << fmt::format("  {} existing id\n", n->CLASS);
             int rand_id = 0;
+            int index = 0;
             if (n->CLASS == "VID")
             {
                 rand_id = rand() % n->v_table.size();
+                // std::cout << fmt::format("{}  Random Variable ID: {}\n", std::string(depth * 2, ' '), rand_id);
+                auto vit = n->v_table.begin();
+                while (index < rand_id && vit != n->v_table.end())
+                {
+                    ++index;
+                    ++vit;
+                }
+                if (index == rand_id && vit != n->v_table.end())
+                {
+                    n->WORD = vit->first;
+                }
             }
-            else
+            else if (n->CLASS == "FID")
             {
                 rand_id = rand() % n->f_table.size();
-            }
-            int index = 0;
-            auto vit = n->v_table.begin();
-            auto fit = n->f_table.begin();
-            for (; vit != n->v_table.end() && index < rand_id && fit != n->f_table.end(); ++index)
-            {
-                if (index == rand_id)
+                // std::cout << fmt::format("{}  Random Function ID: {}\n", std::string(depth * 2, ' '), rand_id);
+                auto fit = n->f_table.begin();
+                while (index < rand_id && fit != n->f_table.end())
                 {
-                    if (n->CLASS == "VID")
-                    {
-                        n->WORD = vit->first;
-                    }
-                    else
-                    {
-                        n->WORD = fit->first;
-                    }
-                    return;
+                    ++index;
+                    ++fit;
                 }
-                ++vit;
-                ++fit;
+                if (index == rand_id && fit != n->f_table.end())
+                {
+                    n->WORD = fit->first;
+                }
             }
         }
-        // std::cout << fmt::format("  {} random id\n", n->CLASS);
         // will skip loop and choose random id if none are in scope
         // 5% chance of identifier being random string if none exists
-        id_probability = (double)rand() / (double)RAND_MAX;
-
-        if (test == component::LEXER && this->messed_up_word.first < 0 && id_probability < 0.05)
+        if (test == component::LEXER && this->messed_up_word.first < 0 && id_probability <= invalid_pattern_prob)
         {
-
+            std::cout << fmt::format("{}  Invalid id\n", std::string(depth * 2, ' '), n->WORD);
+            // random invalid identifier
             if (n->CLASS == "VID")
             {
                 n->WORD = fmt::format("rand_VID_{}", rand() % 99);
@@ -529,10 +682,11 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
             }
             this->messed_up_word = std::pair<int, std::string>(this->num_terminals, n->WORD);
         }
-        else
+        else if (n->WORD == "PLACEHOLDER")
         {
             random_pattern(n);
         }
+
         if (n->CLASS == "VID")
         {
             n->is_in_scope = n->v_table.find(n->WORD) != n->v_table.end();
@@ -541,6 +695,10 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
         {
             n->is_in_scope = n->f_table.find(n->WORD) != n->f_table.end();
         }
+        // if (!n->is_in_scope)
+        // {
+        //     std::cout << fmt::format("{}  {} Not in scope\n", std::string(depth * 2, ' '), n->WORD);
+        // }
 
         if (!n->is_in_scope && test == component::SCOPE_CHECK)
         {
@@ -548,34 +706,238 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
             scope_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(n->WORD, n));
         }
         return;
-    }
+    } // end if ((n->CLASS == "VID" || n->CLASS == "FID") && n->WORD == "PLACEHOLDER")
+    double id_probability;
     if (n->CLASS == "GLOBVARS")
     {
         std::shared_ptr<node> vtype = n->get_child(0);
         std::shared_ptr<node> vname = n->get_child(1);
-        do
+        id_probability = (double)rand() / (double)RAND_MAX;
+
+        // make name identical to a randomly selected name in the current v_table
+        // the selected name is guaranteed to be another globvar, because
+        // globvars appear first in a program
+        if (test == component::SCOPE_CHECK && id_probability < collision_prob && n->scope_v_table->size() > 0)
         {
-            random_pattern(vname->get_child(0));
-            // while the name is not unique
-        } while (n->v_table.find(vname->get_child(0)->WORD) != n->v_table.end());
-        n->v_table[vname->get_child(0)->WORD] = vtype->get_child(0)->WORD;
+            std::cout << fmt::format("{}  Creating globvar scope collision error \n", std::string(depth * 2, ' '));
+            int rand_id = rand() % n->scope_v_table->size();
+            int index = 0;
+            auto vit = n->scope_v_table->begin();
+            while (vit != n->scope_v_table->end() && index < rand_id)
+            {
+                ++vit;
+                ++index;
+            }
+            if (index == rand_id && vit != n->scope_v_table->end())
+            {
+                vname->get_child(0)->WORD = vit->first;
+                // std::cout << fmt::format("{}Randomly selected duplicate vname: {} {}\n", std::string(depth * 2, ' '), vname->get_child(0)->WORD, vname->get_child(0)->UID);
+                this->scope_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(vname->get_child(0)->WORD, vname->get_child(0)));
+            }
+        }
+        else
+        {
+            // std::cout << fmt::format("{}  Creating ordinary globvar \n", std::string(depth * 2, ' '));
+            do
+            {
+                random_pattern(vname->get_child(0));
+                // std::cout << fmt::format("{}  Random vname: {}\n", std::string(depth * 2, ' '), vname->get_child(0)->WORD);
+
+                // random_pattern(vname->get_child(0));
+                // while the name is not unique
+            } while (n->scope_v_table->find(vname->get_child(0)->WORD) != n->scope_v_table->end());
+            n->v_table[vname->get_child(0)->WORD] = vtype->get_child(0)->WORD;
+            (*n->scope_v_table)[vname->get_child(0)->WORD] = vtype->get_child(0)->WORD;
+        }
+        // std::cout << fmt::format("{}GLOBVAR created \n", std::string(depth * 2, ' '));
         // std::cout << fmt::format("  {}: New var {} {}\n", n->CLASS, vtype->get_child(0)->WORD, vname->get_child(0)->WORD);
     }
     // LOCVARS ==> VTYP VNAME , VTYP VNAME , VTYP VNAME ,
     //              0     1   2   3    4   5  6     7   8
     if (n->CLASS == "LOCVARS")
     {
+        // std::set<std::string> locvars;
+        // auto n1 = n->get_child(4)->get_child(0);
+        // std::vector<std::pair<std::shared_ptr<node>, std::shared_ptr<node>>> vars;
+        // for (int i = 0; i < 7; i += 3)
+        // {
+        //     std::shared_ptr<node> vtype = n->get_child(i);     // 0, 3, 6
+        //     std::shared_ptr<node> vname = n->get_child(i + 1); // 1, 4, 7
+        //     bool found = false;
+        //     do
+        //     {
+        //         random_pattern(vname->get_child(0));
+        //         // while the name is not unique
+        //     } while (n->scope_v_table->find(vname->get_child(0)->WORD) != n->scope_v_table->end());
+        //     vars.push_back(std::pair<std::shared_ptr<node>, std::shared_ptr<node>>(vtype->get_child(0), vname->get_child(0)));
+        //     // locvars.emplace(vname->get_child(0)->WORD);
+        //     // std::cout << fmt::format("  {}: New var {} {}\n", n->CLASS, vtype->get_child(0)->WORD, vname->get_child(0)->WORD);
+        // }
+        // id_probability = (double)rand() / (double)RAND_MAX;
+        // for (auto v : vars)
+        // {
+        //     if (test == component::SCOPE_CHECK && id_probability < 1 && n->scope_v_table->size() > 0)
+        //     {
+        //         int rand_id = rand() % n->scope_v_table->size();
+        //         auto vit = n->scope_v_table->begin();
+        //         int index = 0;
+        //         while (vit != n->v_table.end() && index < rand_id)
+        //         {
+        //             ++vit;
+        //             ++index;
+        //         }
+        //         if (index == rand_id && vit != n->scope_v_table->end())
+        //         {
+        //             v.second->WORD = vit->first;
+        //             std::cout << fmt::format("{}Randomly selected duplicate LOCVAR: {} {}\n", std::string(depth * 2, ' '), v.second->WORD, v.second->UID);
+        //             this->scope_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(v.second->WORD, v.second));
+        //             // don't need to touch scope tables
+        //             // because it is a duplicate and technically in scope
+        //             continue;
+        //         }
+        //         n->v_table[v.first->WORD] = v.second->WORD;
+        //         n->v_id_map[v.first->WORD] = v.second->WORD;
+        //     }
+        // }
+        std::set<std::string> locvars;
+        auto n1 = n->get_child(4)->get_child(0);
+        std::vector<std::pair<std::shared_ptr<node>, std::shared_ptr<node>>> vars;
         for (int i = 0; i < 7; i += 3)
         {
             std::shared_ptr<node> vtype = n->get_child(i);     // 0, 3, 6
             std::shared_ptr<node> vname = n->get_child(i + 1); // 1, 4, 7
-            do
+            id_probability = (double)rand() / (double)RAND_MAX;
+            int dup_index = -1;
+            if (id_probability < collision_prob)
             {
-                random_pattern(vname->get_child(0));
-                // while the name is not unique
-            } while (n->v_table.find(vname->get_child(0)->WORD) != n->v_table.end());
-            n->v_table[vname->get_child(0)->WORD] = vtype->get_child(0)->WORD;
-            // std::cout << fmt::format("  {}: New var {} {}\n", n->CLASS, vtype->get_child(0)->WORD, vname->get_child(0)->WORD);
+                dup_index = rand() % 3;
+            }
+            int curr_locvar = 0;
+            // make name identical to a randomly selected name in the current v_table
+            // the selected name is guaranteed to be another globvar, because
+            // globvars appear first in a program
+            if (test == component::SCOPE_CHECK && dup_index == curr_locvar && n->v_table.size() > 0)
+            {
+                // std::cout << fmt::format("{}  Creating locvar scope collision error \n", std::string(depth * 2, ' '));
+                int rand_id = rand() % n->scope_v_table->size();
+                int index = 0;
+                auto vit = n->scope_v_table->begin();
+                while (vit != n->scope_v_table->end() && index < rand_id)
+                {
+                    ++vit;
+                    ++index;
+                }
+                if (index == rand_id && vit != n->scope_v_table->end())
+                {
+                    vname->get_child(0)->WORD = vit->first;
+                    // std::cout << fmt::format("{}Randomly selected duplicate vname: {} {}\n", std::string(depth * 2, ' '), vname->get_child(0)->WORD, vname->get_child(0)->UID);
+                    this->scope_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(vname->get_child(0)->WORD, vname->get_child(0)));
+                }
+            }
+            else
+            {
+                // std::cout << fmt::format("{}  Creating ordinary locvar \n", std::string(depth * 2, ' '));
+                do
+                {
+                    random_pattern(vname->get_child(0));
+                    // std::cout << fmt::format("{}  Random vname: {}\n", std::string(depth * 2, ' '), vname->get_child(0)->WORD);
+
+                    // random_pattern(vname->get_child(0));
+                    // while the name is not unique
+                } while (n->scope_v_table->find(vname->get_child(0)->WORD) != n->scope_v_table->end());
+                n->v_table[vname->get_child(0)->WORD] = vtype->get_child(0)->WORD;
+                (*n->scope_v_table)[vname->get_child(0)->WORD] = vtype->get_child(0)->WORD;
+            }
+            // std::cout << fmt::format("{}LOCVAR created \n", std::string(depth * 2, ' '));
+        }
+    }
+    // n->v_table[vname->get_child(0)->WORD] = vtype->get_child(0)->WORD;
+
+    // HEADER ==> ftyp FNAME ( VNAME , VNAME , VNAME )
+    //              0     1   2   3   4   5   6   7   8
+    if (n->CLASS == "HEADER")
+    {
+        // std::set<std::string> params;
+        // for (int i = 3; i < 8; i += 2)
+        // {
+        //     std::shared_ptr<node> vname = n->get_child(i); // 3, 5, 7
+        //     bool found = false;
+        //     do
+        //     {
+        //         id_probability = (double)rand() / (double)RAND_MAX;
+        //         if (test == component::SCOPE_CHECK && id_probability < 1 && params.size() > 0)
+        //         {
+
+        //             int rand_id = rand() % params.size();
+        //             int index = 0;
+        //             for (auto vit = params.begin(); vit != params.end() && index < rand_id; ++index)
+        //             {
+        //                 if (index == rand_id)
+        //                 {
+        //                     vname->get_child(0)->WORD = *vit;
+        //                     found = true;
+        //                     this->scope_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(vname->get_child(0)->WORD, vname->get_child(0)));
+        //                     break;
+        //                 }
+        //             }
+        //         }
+        //         else
+        //         {
+        //             random_pattern(vname->get_child(0));
+        //         }
+        //         random_pattern(vname->get_child(0));
+        //         // while the name is not unique
+        //         // not necessary but makes manual verification easier
+        //     } while (n->v_table.find(vname->get_child(0)->WORD) != n->v_table.end());
+        //     n->v_table[vname->get_child(0)->WORD] = "num";
+        //     // std::cout << fmt::format("  {}: New var {} {}\n", n->CLASS, vtype->get_child(0)->WORD, vname->get_child(0)->WORD);
+        // }
+        std::set<std::string> params;
+        for (int i = 3; i < 8; i += 2)
+        {
+            std::shared_ptr<node> vname = n->get_child(i); // 3, 5, 7
+            id_probability = (double)rand() / (double)RAND_MAX;
+            int dup_index = -1;
+            if (id_probability < collision_prob)
+            {
+                dup_index = rand() % 3;
+            }
+            int curr_locvar = 0;
+            // make name identical to a randomly selected name in the current v_table
+            // the selected name is guaranteed to be another globvar, because
+            // globvars appear first in a program
+            if (test == component::SCOPE_CHECK && dup_index == curr_locvar && n->scope_v_table->size() > 0)
+            {
+                // std::cout << fmt::format("{}  Creating parameter scope collision error \n", std::string(depth * 2, ' '));
+                int rand_id = rand() % n->scope_v_table->size();
+                int index = 0;
+                auto vit = n->scope_v_table->begin();
+                while (vit != n->scope_v_table->end() && index < rand_id)
+                {
+                    ++vit;
+                    ++index;
+                }
+                if (index == rand_id && vit != n->scope_v_table->end())
+                {
+                    vname->get_child(0)->WORD = vit->first;
+                    // std::cout << fmt::format("{}Randomly selected duplicate vname: {} {}\n", std::string(depth * 2, ' '), vname->get_child(0)->WORD, vname->get_child(0)->UID);
+                    this->scope_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(vname->get_child(0)->WORD, vname->get_child(0)));
+                }
+            }
+            else
+            {
+                // std::cout << fmt::format("{}  Creating ordinary parameter \n", std::string(depth * 2, ' '));
+                do
+                {
+                    random_pattern(vname->get_child(0));
+                    // std::cout << fmt::format("{}  Random vname: {}\n", std::string(depth * 2, ' '), vname->get_child(0)->WORD);
+                    // random_pattern(vname->get_child(0));
+                    // while the name is not unique
+                } while (n->scope_v_table->find(vname->get_child(0)->WORD) != n->scope_v_table->end());
+                n->v_table[vname->get_child(0)->WORD] = "num";
+                (*n->scope_v_table)[vname->get_child(0)->WORD] = "num";
+            }
+            // std::cout << fmt::format("{}Parameter created \n", std::string(depth * 2, ' '));
         }
     }
     for (auto c : n->get_children())
@@ -583,20 +945,20 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
         node::copy_vtable(n, c);
         node::copy_ftable(n, c);
         populate_identifiers(c, test);
-        if (c->CLASS == "GLOBVARS" || c->CLASS == "LOCVARS")
+        if (c->CLASS == "GLOBVARS" || c->CLASS == "LOCVARS" || c->CLASS == "HEADER")
         {
             node::copy_vtable(c, n);
             // std::cout << fmt::format("  {}: Copied vtable from child {}\n", n->CLASS, c->CLASS);
         }
     }
+    --depth;
 }
-bool compare_nodes(std::shared_ptr<node> l, std::shared_ptr<node> r)
+bool compare_nodes(std::shared_ptr<node> l, std::shared_ptr<node> r, bool debug = false)
 {
-    std::cout << fmt::format("(C:W:N): L ({}:{}:{}) , R ({}:{}:{})\n", l->CLASS, l->WORD, l->NAME, r->CLASS, r->WORD, r->NAME);
+    if (debug)
+        std::cout << fmt::format("(C:W:N): L ({}:{}:{}) , R ({}:{}:{})\n", l->CLASS, l->WORD, l->NAME, r->CLASS, r->WORD, r->NAME);
 
-    if (l->WORD != r->WORD
-        //  || l->CLASS != r->CLASS
-    )
+    if (debug && (l->WORD != r->WORD /*|| l->CLASS != r->CLASS */))
     {
         std::cout << "NOT THE SAME\n";
         return false;
@@ -605,23 +967,27 @@ bool compare_nodes(std::shared_ptr<node> l, std::shared_ptr<node> r)
     auto r_children = r->get_children();
     if (l_children.size() > 0 || r_children.size() > 0)
     {
-        std::cout << "Comparing children\nL: ";
-        for (auto c : l_children)
+        if (debug)
         {
-            std::cout << " " << c->WORD;
+            std::cout << "Comparing children\nL: ";
+            for (auto c : l_children)
+            {
+                std::cout << " " << c->WORD;
+            }
+            std::cout << "\nR: ";
+            for (auto c : r_children)
+            {
+                std::cout << " " << c->WORD;
+            }
+            std::cout << "\n";
         }
-        std::cout << "\nR: ";
-        for (auto c : r_children)
-        {
-            std::cout << " " << c->WORD;
-        }
-        std::cout << "\n";
         auto l_it = l_children.begin();
         auto r_it = r_children.begin();
         // std::cout << fmt::format("Num children: L:{}, R:{}\n", l_children.size(), r_children.size());
         if (l_children.size() != r_children.size())
         {
-            std::cout << "NOT THE SAME\n";
+            if (debug)
+                std::cout << "NOT THE SAME\n";
             return false;
         }
         for (; r_it != r_children.end() && l_it != l_children.end(); ++r_it, ++l_it)
@@ -658,7 +1024,7 @@ void Tester::test_scope_checker(int thread_number)
     bool bad_parse = false;
     Lexer l(this->cfg_file);
     std::vector<std::string> results;
-    for (int i = 0; !bad_parse && i < 4; ++i)
+    for (int i = 0; !bad_parse && i < 1; ++i)
     {
         srand(rand());
         int num_nodes = 0;
@@ -726,6 +1092,7 @@ void Tester::test_scope_checker(int thread_number)
             // catch immediately if it fails
             throw;
         }
+        std::vector<std::string> results;
         Scope_Checker s(parsed_root);
         std::cout << i << ": Running Scope checker ran\n";
         bool scope_res = s.run_scope_checker(thread_number);
@@ -734,32 +1101,105 @@ void Tester::test_scope_checker(int thread_number)
         tree_file << s.root->printnode(0, "Scope_Checker");
         tree_file.close();
         std::cout << i << ": Scope checker ran\n";
-        root->clear_node();
-        if (scope_res && this->scope_errors.size() == 0 && s.error.size() == 0)
-        {
-            results.push_back(fmt::format("{}   Successful pass of Scope Check\n", i));
-        }
-        else if (!scope_res && this->scope_errors.size() > 0 && this->scope_errors.size() == s.error.size())
-        {
-            bool identical = true;
-            for (int i = 0; i < s.error.size(); ++i)
-            {
-                if (this->scope_errors[i].first != s.error[i].first)
-                {
-                    results.push_back(fmt::format("{} Unsuccessful fail of Scope Check, scope_check error: , Missed Intentional Error: {}\n", i, s.error[i].first, this->messed_up_word.second));
-                    identical = false;
-                    break;
-                }
-            }
-            if (identical)
-                results.push_back(fmt::format("{}   Successful pass of Scope Check\n", i));
-        }
-        else
+        // if (scope_res && this->scope_errors.size() == 0 && s.error.size() == 0)
+        // {
+        //     results.push_back(fmt::format("{}   Successful pass of Scope Check\n", i));
+        // }
+        // else if (!scope_res && this->scope_errors.size() > 0 && this->scope_errors.size() == s.error.size())
+        // {
+        //     bool identical = true;
+        //     for (int i = 0; i < s.error.size(); ++i)
+        //     {
+        //         if (this->scope_errors[i].first != s.error[i].first)
+        //         {
+        //             results.push_back(fmt::format("{} Unsuccessful fail of Scope Check, scope_check error: , Missed Intentional Error: {}\n", i, s.error[i].first, this->messed_up_word.second));
+        //             identical = false;
+        //             // break;
+        //         }
+        //     }
+        //     if (identical)
+        //         results.push_back(fmt::format("{}   Successful pass of Scope Check\n", i));
+        // }
+        // else
         {
             results.push_back(fmt::format("{} Result of Scope Check: {}\n", i, scope_res));
             results.push_back(fmt::format("{}\tIntentional Errors: {}\n", i, this->scope_errors.size()));
-            results.push_back(fmt::format("{}\t Discovered Errors: {}\n", i, s.error.size()));
+            int num_intentional_errors = this->scope_errors.size();
+            std::string found_errors = "";
+            std::string non_errors = "";
+            int num_non_errors = 0;
+            int cr_counter = 0;
+            for (auto e : s.error)
+            {
+                bool found = false;
+                for (auto it = this->scope_errors.begin(); it != this->scope_errors.end(); ++it)
+                {
+                    if (it->first == e.first)
+                    {
+                        this->discovered_scope_errors.push_back(*it);
+                        this->scope_errors.erase(it);
+                        found = true;
+                        break;
+                    }
+                }
+                if (found)
+                {
+                    // found_errors.append(e.first).append(", ");
+                    found_errors = fmt::format("{}\033[32m{}\033[0m, ", found_errors, e.first);
+                }
+                else
+                {
+                    // non_errors.append(e.first).append(", ");
+                    non_errors = fmt::format("{}\033[35m{}\033[0m, ", non_errors, e.first);
+                    ++num_non_errors;
+                }
+            }
+            std::string missed_errors = "";
+            for (auto it = this->scope_errors.begin(); it != this->scope_errors.end(); ++it)
+            {
+                // missed_errors.append(it->first).append(", ");
+                missed_errors = fmt::format("{}\033[33m{}\033[0m, ", missed_errors, it->first);
+            }
+            results.push_back(fmt::format("{}\t{}/{} Discovered Errors: {}\n", i, s.error.size() - num_non_errors, num_intentional_errors, found_errors));
+            results.push_back(fmt::format("{}\t{} Missed Errors: {}\n", i, this->scope_errors.size(), missed_errors));
+            results.push_back(fmt::format("{}\t{} False Positives: {}\n", i, num_non_errors, non_errors));
+            if (scope_res)
+            {
+                if (s.error.size() == 0 && this->scope_errors.size() == 0)
+                {
+                    results.push_back(fmt::format("{}\t\033[32mPassed\033[0m\n\n", i));
+                }
+                else if (this->scope_errors.size() > 0)
+                {
+                    results.push_back(fmt::format("{}\t\033[31mFailed\033[0m\n\n", i));
+                }
+            }
+            if (!scope_res)
+            {
+                if (s.error.size() > 0 && this->scope_errors.size() == 0 && non_errors.length() == 0)
+                {
+                    results.push_back(fmt::format("{}\t\033[32mPassed\033[0m\n\n", i));
+                }
+                else if (this->scope_errors.size() > 0 || non_errors.length() == 0)
+                {
+                    results.push_back(fmt::format("{}\t\033[31mFailed\033[0m\n\n", i));
+                }
+            }
         }
+        // if (this->scope_errors.size() > 0)
+        // {
+        //     for (auto s : results)
+        //     {
+        //         std::cout << s;
+        //     }
+        //     std::cout << this->print_code(root);
+        // }
+        root->clear_node();
+        // for (int x = 31; x <= 36; ++x)
+        // {
+        //     std::cout << fmt::format("\033[{}m{}\033[0m, ", x, x);
+        // }
+        // std::cout << "\n";
         // else if (!scope_res && s.error.size() > 0 && this->messed_up_word.second == s.error[0].first)
         // {
         //     results.push_back(fmt::format("{}   Successful fail of Scope Check\n", i));

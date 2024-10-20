@@ -249,7 +249,7 @@ void Scope_Checker::generateRandomProgram()
 }
 std::shared_ptr<ftable_type> Scope_Checker::preprocess_ftables(std::shared_ptr<node> n, int depth)
 {
-    std::cout << fmt::format("{}Preprocessing {} {}\n", std::string(depth * 2, ' '), n->WORD, n->UID);
+    // std::cout << fmt::format("\033[34m{}\033[0mPreprocessing {} {}\n", std::string(depth * 2, ' '), n->WORD, n->UID);
     ++depth;
     std::shared_ptr<node> header = n->get_child(0)->get_child(0);
     if (header->WORD != "HEADER")
@@ -266,9 +266,20 @@ std::shared_ptr<ftable_type> Scope_Checker::preprocess_ftables(std::shared_ptr<n
     {
         std::cerr << "\nFNAME->children[1] is supposed to be a FID node\n";
     }
+    // if scope collision
+    if (n->scope_f_table->find(fid->WORD) != n->scope_f_table->end())
+    {
+        error.push_back(std::pair<std::string, std::pair<int, int>>(fid->WORD, std::pair<int, int>(-1, -1)));
+        error_messages.push_back(std::pair<std::string, std::shared_ptr<node>>(
+            fmt::format("Re-declaration of function {} \n", fid->WORD, fid->row, fid->col), fid));
+    }
+    else // else bind
+    {
+        // Bind name
+        n->f_table[fid->WORD][0] = header->get_child(0)->WORD;
+        (*n->scope_f_table)[fid->WORD][0] = header->get_child(0)->WORD;
+    }
 
-    // Bind name
-    n->f_table[fid->WORD][0] = header->get_child(0)->WORD;
     // n->f_id_map[fid->WORD] = header->get_child(0)->WORD;
     // syntesizhed table to return
     std::shared_ptr<ftable_type> synthesized_table = std::make_shared<ftable_type>();
@@ -294,7 +305,7 @@ std::shared_ptr<ftable_type> Scope_Checker::preprocess_ftables(std::shared_ptr<n
 void Scope_Checker::construct_ftables(std::shared_ptr<node> n, int depth)
 {
     ++depth;
-    std::cout << fmt::format("{}constructing ftables for {} {}\n", std::string(depth * 2, ' '), n->WORD, n->UID);
+    // std::cout << fmt::format("\033[34m{}\033[0mconstructing ftables for {} {}\n", std::string(depth * 2, ' '), n->WORD, n->UID);
     bool prog_or_funcs = (n->CLASS == "PROG" || n->CLASS == "FUNCTIONS");
     bool has_functions_child = (n->children_size() > 1 && n->get_child(n->children_size() - 1)->CLASS == "FUNCTIONS");
     // if no functions that affect other nodes in scope
@@ -316,7 +327,7 @@ void Scope_Checker::construct_ftables(std::shared_ptr<node> n, int depth)
     // preprocess function descendents
     if (preprocessing_required && !n->pre_processed)
     {
-        std::cout << fmt::format("{}Preprocessing children of {} {}\n\n", std::string(depth * 2, ' '), n->WORD, n->UID);
+        // std::cout << fmt::format("\033[34m{}\033[0mPreprocessing children of {} {}\n\n", std::string(depth * 2, ' '), n->WORD, n->UID);
         n->pre_processed = true;
         std::shared_ptr<node> f_child = n->get_child(f_index);
         // get FUNCTIONS child of SUBFUNCS if necessary
@@ -347,37 +358,57 @@ void Scope_Checker::construct_ftables(std::shared_ptr<node> n, int depth)
         }
         this->construct_ftables(c, depth + 1);
     }
-    std::cout << fmt::format("{}constructed ftables for {} {}\n", std::string(depth * 2, ' '), n->WORD, n->UID);
-    if (n->WORD == "PROG")
-        std::cout << fmt::format("{}constructed ftables for {} {}\n", std::string(depth * 2, ' '), n->WORD, n->UID);
+    // std::cout << fmt::format("\033[34m{}\033[0mconstructed ftables for {} {}\n", std::string(depth * 2, ' '), n->WORD, n->UID);
+    // if (n->WORD == "PROG")
+    //     std::cout << fmt::format("\033[34m{}\033[0mconstructed ftables for {} {}\n", std::string(depth * 2, ' '), n->WORD, n->UID);
     // return;
 }
 void Scope_Checker::populate_identifiers(std::shared_ptr<node> curr_node, int depth)
 {
-    // std::cout << fmt::format("{}Populating identidiers for {} {}\n", std::string(depth * 2, ' '), n->WORD, n->UID);
-    std::cout << fmt::format("{}Populating identidiers\n", std::string(depth * 2, ' '));
+    // std::cout << fmt::format("\033[34m{}\033[0mPopulating identidiers for {} {}\n", std::string(depth * 2, ' '), n->WORD, n->UID);
+    // std::cout << fmt::format("\033[34m{}\033[0mPopulating identidiers\n", std::string(depth * 2, ' '));
     if (curr_node->CLASS == "GLOBVARS")
     {
-        std::cout << fmt::format("{}Binding child\n", std::string(depth * 2, ' '), curr_node->WORD, curr_node->UID);
+        // std::cout << fmt::format("\033[34m{}\033[0mBinding child\n", std::string(depth * 2, ' '), curr_node->WORD, curr_node->UID);
         std::shared_ptr<node> vtype = curr_node->get_child(0);
         std::shared_ptr<node> vname = curr_node->get_child(1);
 
-        curr_node->v_table[vname->get_child(0)->WORD] = vtype->get_child(0)->WORD;
-        std::cout << fmt::format("{}Bound child child {}: {}\n", std::string(depth * 2, ' '), vname->get_child(0)->WORD, curr_node->v_table[vname->get_child(0)->WORD]);
+        if (curr_node->scope_v_table->find(vname->get_child(0)->WORD) != curr_node->scope_v_table->end())
+        {
+            error.push_back(std::pair<std::string, std::pair<int, int>>(vname->get_child(0)->WORD, std::pair<int, int>(-1, -1)));
+            error_messages.push_back(std::pair<std::string, std::shared_ptr<node>>(
+                fmt::format("\033[34m{}\033[0m:{}:{}: Re-declaration of global-scoped variable {}\n", vname->get_child(0)->file, vname->get_child(0)->row, vname->get_child(0)->col, vname->get_child(0)->WORD), vname->get_child(0)));
+        }
+        else
+        {
+            curr_node->v_table[vname->get_child(0)->WORD] = vtype->get_child(0)->WORD;
+            (*curr_node->scope_v_table)[vname->get_child(0)->WORD] = vtype->get_child(0)->WORD;
+        }
+        // std::cout << fmt::format("\033[34m{}\033[0mBound child child {}: {}\n", std::string(depth * 2, ' '), vname->get_child(0)->WORD, curr_node->v_table[vname->get_child(0)->WORD]);
         // std::cout << fmt::format("  {}: New var {} {}\n", n->CLASS, vtype->get_child(0)->WORD, vname->get_child(0)->WORD);
     }
     // LOCVARS ==> VTYP VNAME , VTYP VNAME , VTYP VNAME ,
     //              0     1   2   3    4   5  6     7   8
     if (curr_node->CLASS == "LOCVARS")
     {
-        std::cout << fmt::format("{}Binding children\n", std::string(depth * 2, ' '));
+        // std::cout << fmt::format("\033[34m{}\033[0mBinding children\n", std::string(depth * 2, ' '));
 
         for (int i = 0; i < 7; i += 3)
         {
             std::shared_ptr<node> vtype = curr_node->get_child(i);     // 0, 3, 6
             std::shared_ptr<node> vname = curr_node->get_child(i + 1); // 1, 4, 7
-            curr_node->v_table[vname->get_child(0)->WORD] = vtype->get_child(0)->WORD;
-            std::cout << fmt::format("{}Bound child child {}: {}\n", std::string(depth * 2, ' '), vname->get_child(0)->WORD, curr_node->v_table[vname->get_child(0)->WORD]);
+            if (curr_node->scope_v_table->find(vname->get_child(0)->WORD) != curr_node->scope_v_table->end())
+            {
+                error.push_back(std::pair<std::string, std::pair<int, int>>(vname->get_child(0)->WORD, std::pair<int, int>(-1, -1)));
+                error_messages.push_back(std::pair<std::string, std::shared_ptr<node>>(
+                    fmt::format("\033[34m{}\033[0m:{}:{}: Re-declaration of local-scoped variable {}\n", vname->get_child(0)->file, vname->get_child(0)->row, vname->get_child(0)->col, vname->get_child(0)->WORD), vname->get_child(0)));
+            }
+            else
+            {
+                curr_node->v_table[vname->get_child(0)->WORD] = vtype->get_child(0)->WORD;
+                (*curr_node->scope_v_table)[vname->get_child(0)->WORD] = vtype->get_child(0)->WORD;
+            }
+            // std::cout << fmt::format("\033[34m{}\033[0mBound child child {}: {}\n", std::string(depth * 2, ' '), vname->get_child(0)->WORD, curr_node->v_table[vname->get_child(0)->WORD]);
             // std::cout << fmt::format("  {}: New var {} {}\n", n->CLASS, vtype->get_child(0)->WORD, vname->get_child(0)->WORD);
         }
     }
@@ -385,17 +416,27 @@ void Scope_Checker::populate_identifiers(std::shared_ptr<node> curr_node, int de
     //              0    1   2   3   4   5   6   7   8
     if (curr_node->CLASS == "HEADER")
     {
-        std::cout << fmt::format("{}Binding children\n", std::string(depth * 2, ' '));
+        // std::cout << fmt::format("\033[34m{}\033[0mBinding children\n", std::string(depth * 2, ' '));
 
         for (int i = 3; i < 8; i += 2)
         {
             std::shared_ptr<node> vname = curr_node->get_child(i); // 3, 5, 7
-            curr_node->v_table[vname->get_child(0)->WORD] = "num"; // all parameters are numbers in BASIC
-            std::cout << fmt::format("{}Bound child child {}: {}\n", std::string(depth * 2, ' '), vname->get_child(0)->WORD, curr_node->v_table[vname->get_child(0)->WORD]);
+            if (curr_node->scope_v_table->find(vname->get_child(0)->WORD) != curr_node->scope_v_table->end())
+            {
+                error.push_back(std::pair<std::string, std::pair<int, int>>(vname->get_child(0)->WORD, std::pair<int, int>(-1, -1)));
+                error_messages.push_back(std::pair<std::string, std::shared_ptr<node>>(
+                    fmt::format("\033[34m{}\033[0m:{}:{}: Re-declaration of parameter variable {}\n", vname->get_child(0)->file, vname->get_child(0)->row, vname->get_child(0)->col, vname->get_child(0)->WORD), vname->get_child(0)));
+            }
+            else
+            {
+                curr_node->v_table[vname->get_child(0)->WORD] = "num"; // all parameters are numbers in BASIC
+                (*curr_node->scope_v_table)[vname->get_child(0)->WORD] = "num";
+            }
+            // std::cout << fmt::format("\033[34m{}\033[0mBound child child {}: {}\n", std::string(depth * 2, ' '), vname->get_child(0)->WORD, curr_node->v_table[vname->get_child(0)->WORD]);
             // std::cout << fmt::format("  {}: New var {} {}\n", n->CLASS, vtype->get_child(0)->WORD, vname->get_child(0)->WORD);
         }
     }
-    std::cout << fmt::format("{}Populating identidiers of children\n", std::string(depth * 2, ' '));
+    // std::cout << fmt::format("\033[34m{}\033[0mPopulating identidiers of children\n", std::string(depth * 2, ' '));
     for (auto c : curr_node->get_children())
     {
         node::copy_vtable(curr_node, c);
@@ -407,49 +448,85 @@ void Scope_Checker::populate_identifiers(std::shared_ptr<node> curr_node, int de
             // std::cout << fmt::format("  {}: Copied vtable from child {}\n", n->CLASS, c->CLASS);
         }
     }
-    std::cout << fmt::format("{}Populated identidiers for {} {}\n", std::string(depth * 2, ' '), curr_node->WORD, curr_node->UID);
+    // std::cout << fmt::format("\033[34m{}\033[0mPopulated identidiers for {} {}\n", std::string(depth * 2, ' '), curr_node->WORD, curr_node->UID);
 }
 bool Scope_Checker::check(std::shared_ptr<node> n, int depth)
 {
     bool ret_val = true;
-    std::cout << fmt::format("{}Checking {} {}\n", std::string(depth * 2, ' '), n->WORD, n->UID);
+    // std::cout << fmt::format("\033[34m{}\033[0mChecking {} {}\n", std::string(depth * 2, ' '), n->WORD, n->UID);
     if (n->CLASS == "VID" && n->v_table.find(n->WORD) == n->v_table.end())
     {
-        std::cout << fmt::format("{}Undefined Variable\n", std::string(depth * 2, ' '));
+        // std::cout << fmt::format("\033[34m{}\033[0mUndefined Variable\n", std::string(depth * 2, ' '));
         error.push_back(std::pair<std::string, std::pair<int, int>>(n->WORD, std::pair<int, int>(-1, -1)));
+        error_messages.push_back(std::pair<std::string, std::shared_ptr<node>>(
+            fmt::format("\033[34m{}\033[0m:{}:{}: Unknown variable {}\n", n->file, n->row, n->col, n->WORD), n));
         ret_val = false;
     }
     if (n->CLASS == "FID" && n->f_table.find(n->WORD) == n->f_table.end())
     {
-        std::cout << fmt::format("{}Undefined Function\n", std::string(depth * 2, ' '));
+        // std::cout << fmt::format("\033[34m{}\033[0mUndefined Function\n", std::string(depth * 2, ' '));
         error.push_back(std::pair<std::string, std::pair<int, int>>(n->WORD, std::pair<int, int>(-1, -1)));
+        error_messages.push_back(std::pair<std::string, std::shared_ptr<node>>(
+            fmt::format("\033[34m{}\033[0m:{}:{}: Unknown function {}\n", n->file, n->row, n->col, n->WORD), n));
         ret_val = false;
     }
 
     for (auto c : n->get_children())
     {
-        std::cout << "Checking child: " << c->WORD << " " << c->UID << "\n";
+        // std::cout << "Checking child: " << c->WORD << " " << c->UID << "\n";
         if (!check(c, depth + 1))
         {
             ret_val = false;
         }
     }
-    std::cout << fmt::format("{}Checked ftables for {} {}\n", std::string(depth * 2, ' '), n->WORD, n->UID);
+    // std::cout << fmt::format("\033[34m{}\033[0mChecked ftables for {} {}\n", std::string(depth * 2, ' '), n->WORD, n->UID);
     return ret_val;
 }
+
+void propagate_scope_tables(std::shared_ptr<node> n)
+{
+    // reset lists
+    if (n->CLASS == "PROG")
+    {
+        n->scope_f_table = std::make_shared<ftable_type>();
+        n->scope_v_table = std::make_shared<vtable_type>();
+    }
+    // reset list of "sibling" var declarations
+    if (n->CLASS == "DECL")
+    {
+        n->scope_v_table = std::make_shared<vtable_type>();
+    }
+    // reset list of "sibling" func declarations
+    if (n->CLASS == "SUBFUNCS")
+    {
+        n->scope_f_table = std::make_shared<ftable_type>();
+    }
+    for (auto c : n->get_children())
+    {
+        c->scope_f_table = n->scope_f_table;
+        c->scope_v_table = n->scope_v_table;
+        propagate_scope_tables(c);
+    }
+}
+
 bool Scope_Checker::run_scope_checker(int thread_number)
 {
     std::cout << "Runing scope checker\n";
+    propagate_scope_tables(root);
     this->construct_ftables(root, 0);
     std::cout << "Tables constructed\n";
-    std::cout << "Tables constructed\n";
-    std::cout << "Tables constructed\n";
+    // std::cout << "Tables constructed\n";
+    // std::cout << "Tables constructed\n";
     this->populate_identifiers(root, 0);
     std::cout << "Identifiers populated\n";
     bool check_res = check(root);
     // bool check_res = false;
     std::cout << "Scopes Checked. Result: " << (check_res ? "Success\n" : "Failure\n");
-    return check_res;
+    for (auto em : this->error_messages)
+    {
+        std::cout << em.first;
+    }
+    return this->error.size() == 0;
 }
 
 void Scope_Checker::testScopeChecker(int i)
