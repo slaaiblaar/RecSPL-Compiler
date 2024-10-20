@@ -35,13 +35,13 @@ std::string Code_Generator::TransExp(std::shared_ptr<node> Exp, vtable_type& vta
         std::string op = Exp->WORD; // Binary operation type in WORD
         return code1 + code2 + fmt::format("{} := {} {} {}\n", place, place1, op, place2);
     }
+
     // // Handle function calls
     // if (Exp->CLASS == "call") {
     //     std::vector<std::string> args;
     //     std::string code1 = TransExps(Exp->get_children(), vtable, ftable, args);
     //     std::string fname = ftable[Exp->WORD][0];
     //     return code1 + fmt::format("{} := CALL {}({})\n", place, fname, fmt::join(args, ", "));
-        
     // }
 
     // Handle function calls
