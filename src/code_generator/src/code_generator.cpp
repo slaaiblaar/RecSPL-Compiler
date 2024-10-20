@@ -5,6 +5,7 @@ Code_Generator::Code_Generator() {
     std::cout << "Code Generator\n";
 }
 
+
 // Generates intermediate code for the AST starting from the root node
 std::string Code_Generator::generate(std::shared_ptr<node> root) {
     // Start generating code from the root node, assuming it's a program or function

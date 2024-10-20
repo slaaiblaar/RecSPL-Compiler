@@ -40,6 +40,8 @@ public:
 
     // Main function to generate code from the AST root
     std::string generate(std::shared_ptr<node> root);
+    vtable_type vtable;
+    ftable_type ftable;
 
 private:
     // Helper functions for translating different types of AST nodes
@@ -48,13 +50,11 @@ private:
     std::string TransCond(std::shared_ptr<node> Cond, const std::string& labelTrue, const std::string& labelFalse, vtable_type& vtable, ftable_type& ftable);
     std::string TransExps(std::vector<std::shared_ptr<node>> Exps, vtable_type& vtable, ftable_type& ftable, std::vector<std::string>& args);
 
-    // Utilities for generating new temporary variables and labels
     std::string newVar();
     std::string newLabel();
     
-    // Vtables and Ftables
-    vtable_type vtable;
-    ftable_type ftable;
+    // vtable_type vtable;
+    // ftable_type ftable;
 };
 
 #endif
