@@ -1,17 +1,8 @@
-// #include "code_generator.hpp"
-// #include <fmt/core.h>
-
-// Code_Generator::Code_Generator()
-// {
-//     std::cout << "Code Generator\n";
-// }
-
-
 #include "code_generator.hpp"
 #include <fmt/core.h>
 
 Code_Generator::Code_Generator() {
-    std::cout << "Code Generator Initialized\n";
+    std::cout << "Code Generator\n";
 }
 
 // Generates intermediate code for the AST starting from the root node
