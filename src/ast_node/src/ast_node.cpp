@@ -41,7 +41,7 @@ std::string node::printvtable(std::shared_ptr<node> n)
     return vtable;
 }
 
-std::string node::print_code(int depth, std::ofstream &code_file, bool colour)
+std::string node::print_code(int depth, bool colour)
 {
     auto c = this->get_children();
     std::string product;
@@ -49,15 +49,15 @@ std::string node::print_code(int depth, std::ofstream &code_file, bool colour)
     // std::cout << std::string(depth * 2, ' ') << this->CLASS << ": " << this->WORD << "\n";
     if (this->CLASS == "PROGPRIMEPRIME")
     {
-        product = this->get_child(0)->print_code(depth, code_file, colour);
+        product = this->get_child(0)->print_code(depth, colour);
     }
     else if (this->CLASS == "PROGPRIME")
     {
-        product = this->get_child(0)->print_code(depth, code_file, colour);
+        product = this->get_child(0)->print_code(depth, colour);
     }
     else if (this->CLASS == "PROG")
     {
-        std::string main_str = this->get_child(0)->print_code(depth, code_file, colour);
+        std::string main_str = this->get_child(0)->print_code(depth, colour);
         std::string globvars = "";
         std::string algo = "";
         std::string functions = "";
@@ -65,18 +65,18 @@ std::string node::print_code(int depth, std::ofstream &code_file, bool colour)
 
         if (this->get_child(1)->CLASS == "GLOBVARS")
         {
-            globvars = this->get_child(1)->print_code(depth, code_file, colour);
-            algo = this->get_child(2)->print_code(depth, code_file, colour);
+            globvars = this->get_child(1)->print_code(depth, colour);
+            algo = this->get_child(2)->print_code(depth, colour);
             index = 2;
         }
         else
         {
-            algo = this->get_child(1)->print_code(depth, code_file, colour);
+            algo = this->get_child(1)->print_code(depth, colour);
         }
 
         if (c.size() == index + 2)
         {
-            functions = c[index + 1]->print_code(depth, code_file, colour);
+            functions = c[index + 1]->print_code(depth, colour);
         }
         int num_insertions = 1; // main
         if (globvars.length() > 0)
@@ -96,14 +96,14 @@ std::string node::print_code(int depth, std::ofstream &code_file, bool colour)
     {
         product = "{}{}{}\n";
         std::string indentation = std::string(depth * 4, ' ');
-        std::string command = this->get_child(0)->print_code(depth, code_file, colour);
-        std::string semicolon = this->get_child(1)->print_code(depth, code_file, colour);
+        std::string command = this->get_child(0)->print_code(depth, colour);
+        std::string semicolon = this->get_child(1)->print_code(depth, colour);
         std::string instruc;
         int num_insertions = 3;
         if (c.size() > 2)
         {
             ++num_insertions;
-            instruc = this->get_child(2)->print_code(depth, code_file, colour);
+            instruc = this->get_child(2)->print_code(depth, colour);
         }
         if (num_insertions == 3)
         {
@@ -118,36 +118,36 @@ std::string node::print_code(int depth, std::ofstream &code_file, bool colour)
     {
         if (this->get_child(0)->CLASS == "FNAME")
         {
-            std::string fname = this->get_child(0)->print_code(depth, code_file, colour);
-            std::string open = this->get_child(1)->print_code(depth, code_file, colour);
-            std::string atomic1 = this->get_child(2)->print_code(depth, code_file, colour);
-            std::string comma1 = this->get_child(3)->print_code(depth, code_file, colour);
-            std::string atomic2 = this->get_child(4)->print_code(depth, code_file, colour);
-            std::string comma2 = this->get_child(5)->print_code(depth, code_file, colour);
-            std::string atomic3 = this->get_child(6)->print_code(depth, code_file, colour);
-            std::string close = this->get_child(7)->print_code(depth, code_file, colour);
+            std::string fname = this->get_child(0)->print_code(depth, colour);
+            std::string open = this->get_child(1)->print_code(depth, colour);
+            std::string atomic1 = this->get_child(2)->print_code(depth, colour);
+            std::string comma1 = this->get_child(3)->print_code(depth, colour);
+            std::string atomic2 = this->get_child(4)->print_code(depth, colour);
+            std::string comma2 = this->get_child(5)->print_code(depth, colour);
+            std::string atomic3 = this->get_child(6)->print_code(depth, colour);
+            std::string close = this->get_child(7)->print_code(depth, colour);
             product = "{}{}{}{}{}{}{}{}";
             product = fmt::format("{}{}{}{}{}{}{}{}", fname, open, atomic1, comma1, atomic2, comma2, atomic3, close);
         }
         else if (this->get_child(0)->WORD == "return" || this->get_child(0)->WORD == "print")
         {
-            std::string keyword = this->get_child(0)->print_code(depth, code_file, colour);
-            std::string atomic = this->get_child(1)->print_code(depth, code_file, colour);
+            std::string keyword = this->get_child(0)->print_code(depth, colour);
+            std::string atomic = this->get_child(1)->print_code(depth, colour);
             product = "{}{}";
             product = fmt::format("{}{}", keyword, atomic);
         }
         else
         {
-            std::string symbol = this->get_child(0)->print_code(depth, code_file, colour);
+            std::string symbol = this->get_child(0)->print_code(depth, colour);
             product = fmt::format("{}", symbol);
         }
     }
     else if (this->CLASS == "FUNCTIONS")
     {
-        std::string decl = this->get_child(0)->print_code(depth, code_file, colour);
+        std::string decl = this->get_child(0)->print_code(depth, colour);
         if (c.size() > 1)
         {
-            std::string functions = this->get_child(1)->print_code(depth, code_file, colour);
+            std::string functions = this->get_child(1)->print_code(depth, colour);
             product = fmt::format("{}\n{}", decl, functions);
         }
         else
@@ -157,29 +157,29 @@ std::string node::print_code(int depth, std::ofstream &code_file, bool colour)
     }
     else if (this->CLASS == "SUBFUNCS")
     {
-        product = this->get_child(0)->print_code(depth + 1, code_file, colour);
+        product = this->get_child(0)->print_code(depth + 1, colour);
     }
     else if (this->CLASS == "DECL")
     {
-        std::string head = this->get_child(0)->print_code(depth, code_file, colour);
-        std::string body = this->get_child(1)->print_code(depth, code_file, colour);
+        std::string head = this->get_child(0)->print_code(depth, colour);
+        std::string body = this->get_child(1)->print_code(depth, colour);
         product = fmt::format("{}{}\n{}", indentation, head, body);
     }
     else if (this->CLASS == "VTYP" || this->CLASS == "PROLOG" || this->CLASS == "EPILOG")
     {
-        product = this->get_child(0)->print_code(depth, code_file, colour);
+        product = this->get_child(0)->print_code(depth, colour);
     }
     else if (this->CLASS == "VNAME")
     {
-        product = this->get_child(0)->print_code(depth, code_file, colour);
+        product = this->get_child(0)->print_code(depth, colour);
     }
     else if (this->CLASS == "FNAME")
     {
-        product = this->get_child(0)->print_code(depth, code_file, colour);
+        product = this->get_child(0)->print_code(depth, colour);
     }
     else if (this->CLASS == "CONST")
     {
-        product = this->get_child(0)->print_code(depth, code_file, colour);
+        product = this->get_child(0)->print_code(depth, colour);
     }
     else if (this->CLASS == "KEYWORD")
     {
@@ -237,19 +237,19 @@ std::string node::print_code(int depth, std::ofstream &code_file, bool colour)
     }
     else if (this->CLASS == "ARG")
     {
-        product = this->get_child(0)->print_code(depth, code_file, colour);
+        product = this->get_child(0)->print_code(depth, colour);
     }
     else if (this->CLASS == "ATOMIC")
     {
-        product = this->get_child(0)->print_code(depth, code_file, colour);
+        product = this->get_child(0)->print_code(depth, colour);
     }
     else if (this->CLASS == "TERM")
     {
-        product = this->get_child(0)->print_code(depth, code_file, colour);
+        product = this->get_child(0)->print_code(depth, colour);
     }
     else if (this->CLASS == "COND")
     {
-        product = this->get_child(0)->print_code(depth, code_file, colour);
+        product = this->get_child(0)->print_code(depth, colour);
     }
     else if (this->CLASS == "GLOBVARS")
     {
@@ -259,13 +259,13 @@ std::string node::print_code(int depth, std::ofstream &code_file, bool colour)
             std::cout << " " << c->WORD;
         }
         std::cout << "\n";
-        std::string vtyp = this->get_child(0)->print_code(depth, code_file, colour);
-        std::string vname = this->get_child(1)->print_code(depth, code_file, colour);
-        std::string comma = this->get_child(2)->print_code(depth, code_file, colour);
+        std::string vtyp = this->get_child(0)->print_code(depth, colour);
+        std::string vname = this->get_child(1)->print_code(depth, colour);
+        std::string comma = this->get_child(2)->print_code(depth, colour);
         std::string globvars = "";
         if (c.size() > 3)
         {
-            globvars = this->get_child(3)->print_code(depth, code_file, colour);
+            globvars = this->get_child(3)->print_code(depth, colour);
         }
         product = fmt::format("{}{}{}{}", vtyp, vname, comma, globvars);
     }
@@ -273,48 +273,48 @@ std::string node::print_code(int depth, std::ofstream &code_file, bool colour)
     {
         if (c.size() > 4)
         {
-            std::string binop = this->get_child(0)->print_code(depth, code_file, colour);
-            std::string open = this->get_child(1)->print_code(depth, code_file, colour);
-            std::string arg1 = this->get_child(2)->print_code(depth, code_file, colour);
-            std::string comma = this->get_child(3)->print_code(depth, code_file, colour);
-            std::string arg2 = this->get_child(4)->print_code(depth, code_file, colour);
-            std::string close = this->get_child(5)->print_code(depth, code_file, colour);
+            std::string binop = this->get_child(0)->print_code(depth, colour);
+            std::string open = this->get_child(1)->print_code(depth, colour);
+            std::string arg1 = this->get_child(2)->print_code(depth, colour);
+            std::string comma = this->get_child(3)->print_code(depth, colour);
+            std::string arg2 = this->get_child(4)->print_code(depth, colour);
+            std::string close = this->get_child(5)->print_code(depth, colour);
             product = fmt::format("{}{}{}{}{}{}", binop, open, arg1, comma, arg2, close);
         }
         else
         {
-            std::string unop = this->get_child(0)->print_code(depth, code_file, colour);
-            std::string open = this->get_child(1)->print_code(depth, code_file, colour);
-            std::string arg = this->get_child(2)->print_code(depth, code_file, colour);
-            std::string close = this->get_child(3)->print_code(depth, code_file, colour);
+            std::string unop = this->get_child(0)->print_code(depth, colour);
+            std::string open = this->get_child(1)->print_code(depth, colour);
+            std::string arg = this->get_child(2)->print_code(depth, colour);
+            std::string close = this->get_child(3)->print_code(depth, colour);
             product = fmt::format("{}{}{}{}", unop, open, arg, close);
         }
     }
     else if (this->CLASS == "ASSIGN")
     {
-        std::string vname = this->get_child(0)->print_code(depth, code_file, colour);
+        std::string vname = this->get_child(0)->print_code(depth, colour);
         if (c.size() == 2)
         {
-            std::string input = this->get_child(1)->print_code(depth, code_file, colour);
+            std::string input = this->get_child(1)->print_code(depth, colour);
             product = fmt::format("{}{}", vname, input);
         }
         else if (c.size() == 3)
         {
-            std::string assignment = this->get_child(1)->print_code(depth, code_file, colour);
-            std::string term = this->get_child(2)->print_code(depth, code_file, colour);
+            std::string assignment = this->get_child(1)->print_code(depth, colour);
+            std::string term = this->get_child(2)->print_code(depth, colour);
             product = fmt::format("{}{}{}", vname, assignment, term);
         }
         else // 10
         {
-            std::string assignment = this->get_child(1)->print_code(depth, code_file, colour);
-            std::string fname = this->get_child(2)->print_code(depth, code_file, colour);
-            std::string open = this->get_child(3)->print_code(depth, code_file, colour);
-            std::string atomic1 = this->get_child(4)->print_code(depth, code_file, colour);
-            std::string comma1 = this->get_child(5)->print_code(depth, code_file, colour);
-            std::string atomic2 = this->get_child(6)->print_code(depth, code_file, colour);
-            std::string comma2 = this->get_child(7)->print_code(depth, code_file, colour);
-            std::string atomic3 = this->get_child(8)->print_code(depth, code_file, colour);
-            std::string close = this->get_child(9)->print_code(depth, code_file, colour);
+            std::string assignment = this->get_child(1)->print_code(depth, colour);
+            std::string fname = this->get_child(2)->print_code(depth, colour);
+            std::string open = this->get_child(3)->print_code(depth, colour);
+            std::string atomic1 = this->get_child(4)->print_code(depth, colour);
+            std::string comma1 = this->get_child(5)->print_code(depth, colour);
+            std::string atomic2 = this->get_child(6)->print_code(depth, colour);
+            std::string comma2 = this->get_child(7)->print_code(depth, colour);
+            std::string atomic3 = this->get_child(8)->print_code(depth, colour);
+            std::string close = this->get_child(9)->print_code(depth, colour);
             product = fmt::format("{}{}{}{}{}{}{}{}{}{}", vname, assignment, fname, open, atomic1, comma1, atomic2, comma2, atomic3, close);
         }
     }
@@ -322,99 +322,99 @@ std::string node::print_code(int depth, std::ofstream &code_file, bool colour)
     {
         if (c.size() > 4)
         {
-            std::string op = this->get_child(0)->print_code(depth, code_file, colour);
-            std::string open = this->get_child(1)->print_code(depth, code_file, colour);
-            std::string simple1 = this->get_child(2)->print_code(depth, code_file, colour);
-            std::string comma = this->get_child(3)->print_code(depth, code_file, colour);
-            std::string simple2 = this->get_child(4)->print_code(depth, code_file, colour);
-            std::string close = this->get_child(5)->print_code(depth, code_file, colour);
+            std::string op = this->get_child(0)->print_code(depth, colour);
+            std::string open = this->get_child(1)->print_code(depth, colour);
+            std::string simple1 = this->get_child(2)->print_code(depth, colour);
+            std::string comma = this->get_child(3)->print_code(depth, colour);
+            std::string simple2 = this->get_child(4)->print_code(depth, colour);
+            std::string close = this->get_child(5)->print_code(depth, colour);
             product = fmt::format("{}{}{}{}{}{}", op, open, simple1, comma, simple2, close);
         }
         else
         {
-            std::string op = this->get_child(0)->print_code(depth, code_file, colour);
-            std::string open = this->get_child(1)->print_code(depth, code_file, colour);
-            std::string simple = this->get_child(2)->print_code(depth, code_file, colour);
-            std::string close = this->get_child(3)->print_code(depth, code_file, colour);
+            std::string op = this->get_child(0)->print_code(depth, colour);
+            std::string open = this->get_child(1)->print_code(depth, colour);
+            std::string simple = this->get_child(2)->print_code(depth, colour);
+            std::string close = this->get_child(3)->print_code(depth, colour);
             product = fmt::format("{}{}{}{}", op, open, simple, close);
         }
     }
     else if (this->CLASS == "SIMPLE")
     {
-        std::string op = this->get_child(0)->print_code(depth, code_file, colour);
-        std::string open = this->get_child(1)->print_code(depth, code_file, colour);
-        std::string atomic1 = this->get_child(2)->print_code(depth, code_file, colour);
-        std::string comma = this->get_child(3)->print_code(depth, code_file, colour);
-        std::string atomic2 = this->get_child(4)->print_code(depth, code_file, colour);
-        std::string close = this->get_child(5)->print_code(depth, code_file, colour);
+        std::string op = this->get_child(0)->print_code(depth, colour);
+        std::string open = this->get_child(1)->print_code(depth, colour);
+        std::string atomic1 = this->get_child(2)->print_code(depth, colour);
+        std::string comma = this->get_child(3)->print_code(depth, colour);
+        std::string atomic2 = this->get_child(4)->print_code(depth, colour);
+        std::string close = this->get_child(5)->print_code(depth, colour);
         product = fmt::format("{}{}{}{}{}{}", op, open, atomic1, comma, atomic2, close);
     }
     else if (this->CLASS == "UNOP" || this->CLASS == "BINOP")
     {
-        product = this->get_child(0)->print_code(depth, code_file, colour);
+        product = this->get_child(0)->print_code(depth, colour);
     }
     else if (this->CLASS == "LOCVARS")
     {
-        std::string vtyp1 = this->get_child(0)->print_code(depth, code_file, colour);
-        std::string vname1 = this->get_child(1)->print_code(depth, code_file, colour);
-        std::string comma1 = this->get_child(2)->print_code(depth, code_file, colour);
-        std::string vtyp2 = this->get_child(3)->print_code(depth, code_file, colour);
-        std::string vname2 = this->get_child(4)->print_code(depth, code_file, colour);
-        std::string comma2 = this->get_child(5)->print_code(depth, code_file, colour);
-        std::string vtyp3 = this->get_child(6)->print_code(depth, code_file, colour);
-        std::string vname3 = this->get_child(7)->print_code(depth, code_file, colour);
-        std::string comma3 = this->get_child(8)->print_code(depth, code_file, colour);
+        std::string vtyp1 = this->get_child(0)->print_code(depth, colour);
+        std::string vname1 = this->get_child(1)->print_code(depth, colour);
+        std::string comma1 = this->get_child(2)->print_code(depth, colour);
+        std::string vtyp2 = this->get_child(3)->print_code(depth, colour);
+        std::string vname2 = this->get_child(4)->print_code(depth, colour);
+        std::string comma2 = this->get_child(5)->print_code(depth, colour);
+        std::string vtyp3 = this->get_child(6)->print_code(depth, colour);
+        std::string vname3 = this->get_child(7)->print_code(depth, colour);
+        std::string comma3 = this->get_child(8)->print_code(depth, colour);
         product = fmt::format("{}{}{}{}{}{}{}{}{}", vtyp1, vname1, comma1, vtyp2, vname2, comma2, vtyp3, vname3, comma3);
     }
     else if (this->CLASS == "HEADER")
     {
-        std::string str = this->get_child(0)->print_code(depth, code_file, colour);
+        std::string str = this->get_child(0)->print_code(depth, colour);
         product = str;
-        str = this->get_child(1)->print_code(depth, code_file, colour);
+        str = this->get_child(1)->print_code(depth, colour);
         product = fmt::format("{}{}", product, str);
-        str = this->get_child(2)->print_code(depth, code_file, colour);
+        str = this->get_child(2)->print_code(depth, colour);
         product = fmt::format("{}{}", product, str);
-        str = this->get_child(3)->print_code(depth, code_file, colour);
+        str = this->get_child(3)->print_code(depth, colour);
         product = fmt::format("{}{}", product, str);
-        str = this->get_child(4)->print_code(depth, code_file, colour);
+        str = this->get_child(4)->print_code(depth, colour);
         product = fmt::format("{}{}", product, str);
-        str = this->get_child(5)->print_code(depth, code_file, colour);
+        str = this->get_child(5)->print_code(depth, colour);
         product = fmt::format("{}{}", product, str);
-        str = this->get_child(6)->print_code(depth, code_file, colour);
+        str = this->get_child(6)->print_code(depth, colour);
         product = fmt::format("{}{}", product, str);
-        str = this->get_child(7)->print_code(depth, code_file, colour);
+        str = this->get_child(7)->print_code(depth, colour);
         product = fmt::format("{}{}", product, str);
-        str = this->get_child(8)->print_code(depth, code_file, colour);
+        str = this->get_child(8)->print_code(depth, colour);
         product = fmt::format("{}{}", product, str);
     }
     // }
     else if (this->CLASS == "BODY")
     {
         std::string indentation = std::string((depth) * 4, ' ');
-        std::string prolog = this->get_child(0)->print_code(depth, code_file, colour);
-        std::string locvars = this->get_child(1)->print_code(depth + 1, code_file, colour);
-        std::string algo = this->get_child(2)->print_code(depth + 1, code_file, colour);
-        std::string epilog = this->get_child(3)->print_code(depth, code_file, colour);
+        std::string prolog = this->get_child(0)->print_code(depth, colour);
+        std::string locvars = this->get_child(1)->print_code(depth + 1, colour);
+        std::string algo = this->get_child(2)->print_code(depth + 1, colour);
+        std::string epilog = this->get_child(3)->print_code(depth, colour);
         if (c.size() == 5)
         {
-            std::string end = this->get_child(4)->print_code(depth, code_file, colour);
+            std::string end = this->get_child(4)->print_code(depth, colour);
             product = fmt::format("{}{}\n{}    {}\n{}\n{}{}\n{}{}", indentation, prolog, indentation, locvars, algo, indentation, epilog, indentation, end);
         }
         else
         {
-            std::string subfuncs = this->get_child(4)->print_code(depth, code_file, colour);
-            std::string end = this->get_child(5)->print_code(depth, code_file, colour);
+            std::string subfuncs = this->get_child(4)->print_code(depth, colour);
+            std::string end = this->get_child(5)->print_code(depth, colour);
             product = fmt::format("{}{}\n{}    {}\n{}\n{}{}\n{}\n{}{}", indentation, prolog, indentation, locvars, algo, indentation, epilog, subfuncs, indentation, end);
         }
     }
     else if (this->CLASS == "ALGO")
     {
-        std::string begin = this->get_child(0)->print_code(depth, code_file, colour);
-        std::string end = c[c.size() - 1]->print_code(depth, code_file, colour);
+        std::string begin = this->get_child(0)->print_code(depth, colour);
+        std::string end = c[c.size() - 1]->print_code(depth, colour);
         std::string indentation = std::string(depth * 4, ' ');
         if (c.size() > 2)
         {
-            std::string instruc = this->get_child(1)->print_code(depth + 1, code_file, colour);
+            std::string instruc = this->get_child(1)->print_code(depth + 1, colour);
 
             product = fmt::format("{}{}\n{}{}{}", indentation, begin, instruc, indentation, end);
         }
@@ -425,15 +425,14 @@ std::string node::print_code(int depth, std::ofstream &code_file, bool colour)
     }
     else if (this->CLASS == "BRANCH")
     {
-        std::string _if = this->get_child(0)->print_code(depth, code_file, colour);  // if
-        std::string cond = this->get_child(1)->print_code(depth, code_file, colour); // COND
-        code_file << std::string(indentation, depth);
-        std::string _then = this->get_child(2)->print_code(depth, code_file, colour);      // then
-        std::string t_algo = this->get_child(3)->print_code(depth + 1, code_file, colour); // ALGO
-        std::string _else = this->get_child(4)->print_code(depth, code_file, colour);      // else
-        std::string e_algo = this->get_child(5)->print_code(depth + 1, code_file, colour); // ALGO
+        std::string _if = this->get_child(0)->print_code(depth, colour);        // if
+        std::string cond = this->get_child(1)->print_code(depth, colour);       // COND
+        std::string _then = this->get_child(2)->print_code(depth, colour);      // then
+        std::string t_algo = this->get_child(3)->print_code(depth + 1, colour); // ALGO
+        std::string _else = this->get_child(4)->print_code(depth, colour);      // else
+        std::string e_algo = this->get_child(5)->print_code(depth + 1, colour); // ALGO
         std::string indentation = std::string(depth * 4, ' ');
-        product = fmt::format("{}{}{}\n{}{}\n{}\n{}{}\n{}", indentation, _if, cond, indentation, _then, t_algo, indentation, _else, e_algo);
+        product = fmt::format("{}{}{}\n{}{}\n{}\n{}{}\n{}", "", _if, cond, indentation, _then, t_algo, indentation, _else, e_algo);
     }
     else
     {

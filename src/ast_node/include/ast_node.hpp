@@ -104,7 +104,7 @@ public:
     bool subtree_generated = false;
     std::string printftable(std::shared_ptr<node> n);
     std::string printvtable(std::shared_ptr<node> n);
-    std::string print_code(int depth, std::ofstream &code_file, bool colour = false);
+    std::string print_code(int depth, bool colour = false);
     // std::string printftable(std::shared_ptr<node> n)
     // {
     //     std::string ftable = "";

@@ -26,6 +26,7 @@ typedef struct
     int num_text_v;
     int num_number_f;
     int num_void_f;
+    int num_instruc;
 } counters;
 class Tester
 {
