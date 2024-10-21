@@ -134,18 +134,20 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
     // reset lists
     if (parent->CLASS == "PROGPRIMEPRIME")
     {
-        parent->scope_f_table = std::make_shared<ftable_type>();
-        parent->scope_v_table = std::make_shared<vtable_type>();
+        parent->scope_f_table = std::make_shared<sym_table_type>();
+        parent->scope_v_table = std::make_shared<sym_table_type>();
+        parent->start_of_scope = std::make_shared<node>();
     }
     // reset list of "sibling" var declarations
     if (parent->CLASS == "DECL")
     {
-        parent->scope_v_table = std::make_shared<vtable_type>();
+        parent->scope_v_table = std::make_shared<sym_table_type>();
+        parent->start_of_scope = std::make_shared<node>();
     }
     // reset list of "sibling" func declarations
     if (parent->CLASS == "SUBFUNCS")
     {
-        parent->scope_f_table = std::make_shared<ftable_type>();
+        parent->scope_f_table = std::make_shared<sym_table_type>();
     }
     // configure tests, kind of
     bool stop_functions = counters.num_functions >= 3;
@@ -356,10 +358,12 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
             child->CLASS = sym_name;
             child->scope_f_table = parent->scope_f_table;
             child->scope_v_table = parent->scope_v_table;
+            child->start_of_scope = parent->start_of_scope;
             generate_tree(child, productions, depth + 1, test, counters);
 
             std::cout << fmt::format("{}generated subtree of {}\n", std::string(depth * 2, ' '), child->WORD);
             bool is_new = parent->add_child(child, child_index);
+
             if (!is_new)
             {
                 std::cerr << fmt::format("\n{}{} {} \"{}\" ATTEMPTED DUPLICATE CHILD OF {}\n", std::string(depth, ' '), child->CLASS, child->UID, child->WORD, parent->WORD);
@@ -450,11 +454,11 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
 
 // making a type alias because its super annoying to repeatedly define objects
 // of type std::shared_ptr<std::unordered_map<std::string, std::string>>
-using ftable_type = std::unordered_map<std::string, std::string[4]>;
-using vtable_type = std::unordered_map<std::string, std::string>;
-// Drill down through successive chains of FUNCTIONS == > FUNCTIONS productions void node::copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<node> t)
+// using sym_table_type = std::unordered_map<std::string, std::string[4]>;
+using sym_table_type = std::unordered_map<std::string, std::string>;
+// Drill down through successive chains of FUNCTIONS == > FUNCTIONS productions void node::copy_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<node> t)
 
-std::shared_ptr<ftable_type> Tester::preprocess_ftables(std::shared_ptr<node> n, int depth)
+std::shared_ptr<sym_table_type> Tester::preprocess_ftables(std::shared_ptr<node> n, int depth)
 {
     double collision_prob = 0.1;
     ++depth;
@@ -483,8 +487,8 @@ std::shared_ptr<ftable_type> Tester::preprocess_ftables(std::shared_ptr<node> n,
             random_pattern(fid);
         } while (n->scope_f_table->find(fid->WORD) != n->scope_f_table->end());
         // bind type to name
-        n->f_table[fid->WORD][0] = header->get_child(0)->WORD;
-        (*n->scope_f_table)[fid->WORD][0] = header->get_child(0)->WORD;
+        n->f_table[fid->WORD] = header->get_child(0)->WORD;
+        (*n->scope_f_table)[fid->WORD] = header->get_child(0)->WORD;
         std::cout << fmt::format("{}Creating new function id {}\n", std::string(depth * 2, ' '), fid->WORD);
         std::cout << fmt::format("{}collision_prob: {}, rand_collision: {}, n->scope_f_table->size(): {} \n", std::string(depth * 2, ' '), collision_prob, rand_collision, n->scope_f_table->size());
         std::cout << fmt::format("{}(rand_collision > collision_prob || n->scope_f_table->size() == 0) : {} \n", std::string(depth * 2, ' '), (rand_collision > collision_prob || n->scope_f_table->size() == 0));
@@ -510,8 +514,8 @@ std::shared_ptr<ftable_type> Tester::preprocess_ftables(std::shared_ptr<node> n,
         }
     }
 
-    std::shared_ptr<ftable_type> synthesized_table = std::make_shared<ftable_type>();
-    (*synthesized_table)[fid->WORD][0] = header->get_child(0)->WORD;
+    std::shared_ptr<sym_table_type> synthesized_table = std::make_shared<sym_table_type>();
+    (*synthesized_table)[fid->WORD] = header->get_child(0)->WORD;
 
     // check if a FUNCTIONS node is child
     bool prog_or_funcs = (n->CLASS == "FUNCTIONS");
@@ -522,7 +526,7 @@ std::shared_ptr<ftable_type> Tester::preprocess_ftables(std::shared_ptr<node> n,
         std::shared_ptr<node> f_child = n->get_child(n->num_children() - 1);
         // node::copy_ftable(n, c);
         node::copy_ftable(n, f_child);
-        std::shared_ptr<ftable_type> child_ftable = preprocess_ftables(f_child, depth);
+        std::shared_ptr<sym_table_type> child_ftable = preprocess_ftables(f_child, depth);
         // Copy child's f_table to current node
         node::copy_ftable(child_ftable, n);
         node::copy_ftable(child_ftable, synthesized_table);
@@ -541,7 +545,7 @@ void Tester::construct_ftables(std::shared_ptr<node> n, int depth, component tes
         std::cerr << fmt::format("construct_ftables Error loading {}\n", cfg_file);
         return;
     }
-    std::shared_ptr<ftable_type> synthesized = std::make_shared<ftable_type>();
+    std::shared_ptr<sym_table_type> synthesized = std::make_shared<sym_table_type>();
     thread_local static pugi::xml_node productions = doc.child("CFG").child("PRODUCTIONRULES");
     thread_local static pugi::xml_node terminals = doc.child("CFG").child("TERMINALS");
     if (terminals.child(n->CLASS.c_str()) != pugi::xml_node())
@@ -578,7 +582,7 @@ void Tester::construct_ftables(std::shared_ptr<node> n, int depth, component tes
         }
         node::copy_ftable(n, f_child);
 
-        std::shared_ptr<ftable_type> child_ftable = preprocess_ftables(f_child, depth);
+        std::shared_ptr<sym_table_type> child_ftable = preprocess_ftables(f_child, depth);
         // Copy child's f_table
         node::copy_ftable(f_child, n);
         // copy to SUBFUNCS if applicable

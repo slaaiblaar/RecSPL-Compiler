@@ -40,7 +40,7 @@ public:
     int num_terminals = 0;
     void populate_identifiers(std::shared_ptr<node> n, component test);
     void construct_ftables(std::shared_ptr<node> n, int depth, component test);
-    std::shared_ptr<ftable_type> preprocess_ftables(std::shared_ptr<node> n, int depth);
+    std::shared_ptr<sym_table_type> preprocess_ftables(std::shared_ptr<node> n, int depth);
     std::string print_code(std::shared_ptr<node> n);
     std::pair<int, std::string> messed_up_word = std::pair<int, std::string>(-1, "NONE");
     std::vector<std::pair<std::string, std::shared_ptr<node>>> scope_errors;

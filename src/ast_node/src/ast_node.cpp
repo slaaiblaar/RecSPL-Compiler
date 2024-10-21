@@ -2,8 +2,10 @@
 #include <fstream>
 #include <regex>
 int node_counter = 0; // Global UID counter
+thread_local long node::v_counter = 1;
+thread_local long node::f_counter = 1;
 
-thread_local long node::node_id_counter = 0;
+thread_local long node::node_id_counter = 1;
 void node::clear_node()
 {
     for (auto c : this->children)
@@ -17,6 +19,8 @@ void node::clear_node()
     parent = nullptr;
     scope_v_table = nullptr;
     scope_f_table = nullptr;
+    start_of_scope = nullptr;
+    type_table = nullptr;
 }
 node::~node()
 {
@@ -524,8 +528,8 @@ std::string printvtable(std::shared_ptr<node> n)
 
 // // making a type alias because its super annoying to repeatedly define objects
 // // of type std::shared_ptr<std::unordered_map<std::string, std::string>>
-// Drill down through successive chains of FUNCTIONS == > FUNCTIONS productions void node::copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<node> t)
-// void node::copy_ftable(ftable_type *f, std::shared_ptr<node> t)
+// Drill down through successive chains of FUNCTIONS == > FUNCTIONS productions void node::copy_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<node> t)
+// void node::copy_ftable(sym_table_type *f, std::shared_ptr<node> t)
 // {
 //     for (auto it = f->begin(); it != f->end(); ++it)
 //     {
@@ -534,18 +538,15 @@ std::string printvtable(std::shared_ptr<node> n)
 //             t->f_table[it->first][i] = it->second[i];
 //         }
 //     }
-// } // std::shared_ptr<ftable_type>
-void node::copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<node> t)
+// } // std::shared_ptr<sym_table_type>
+void node::copy_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<node> t)
 {
     for (auto it = f->begin(); it != f->end(); ++it)
     {
-        for (int i = 0; i < 4; ++i)
-        {
-            t->f_table[it->first][i] = it->second[i];
-        }
+        t->f_table[it->first] = it->second;
     }
 }
-void node::copy_vtable(vtable_type *f, std::shared_ptr<node> t)
+void node::copy_vtable(sym_table_type *f, std::shared_ptr<node> t)
 {
     for (auto it = f->begin(); it != f->end(); ++it)
     {
@@ -556,10 +557,7 @@ void node::copy_ftable(std::shared_ptr<node> f, std::shared_ptr<node> t)
 {
     for (auto it = f->f_table.begin(); it != f->f_table.end(); ++it)
     {
-        for (int i = 0; i < 4; ++i)
-        {
-            t->f_table[it->first][i] = it->second[i];
-        }
+        t->f_table[it->first] = it->second;
     }
 }
 void node::copy_vtable(std::shared_ptr<node> f, std::shared_ptr<node> t)
@@ -568,8 +566,8 @@ void node::copy_vtable(std::shared_ptr<node> f, std::shared_ptr<node> t)
     {
         t->v_table[it->first] = it->second;
     }
-} // std::shared_ptr<ftable_type>
-// void node::copy_ftable(ftable_type *f, ftable_type *t)
+} // std::shared_ptr<sym_table_type>
+// void node::copy_ftable(sym_table_type *f, sym_table_type *t)
 // {
 //     for (auto it = f->begin(); it != f->end(); ++it)
 //     {
@@ -579,13 +577,10 @@ void node::copy_vtable(std::shared_ptr<node> f, std::shared_ptr<node> t)
 //         }
 //     }
 // }
-void node::copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<ftable_type> t)
+void node::copy_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<sym_table_type> t)
 {
     for (auto it = f->begin(); it != f->end(); ++it)
     {
-        for (int i = 0; i < 4; ++i)
-        {
-            (*t)[it->first][i] = it->second[i];
-        }
+        (*t)[it->first] = it->second;
     }
 }
