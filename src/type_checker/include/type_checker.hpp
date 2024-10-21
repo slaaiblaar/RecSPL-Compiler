@@ -19,29 +19,41 @@ public:
     std::shared_ptr<node> ast_root;
     // unique_name => {original_name, types[]}
     //
-    std::unordered_map<std::string, symbol_table_entry> v_table;
-    std::unordered_map<std::string, symbol_table_entry> f_table;
-    std::string check_type(std::shared_ptr<node> n);
+    std::string type_of(std::shared_ptr<node> n);
     // gets type from tables, will check first
-    symbol_table_entry &get_type(std::shared_ptr<node> n);
+    bool check(std::shared_ptr<node> n);
+
+    bool prog(std::shared_ptr<node> n);
+    bool globvars(std::shared_ptr<node> n);
+    bool vtyp(std::shared_ptr<node> n);
+    bool vname(std::shared_ptr<node> n);
+    bool algo(std::shared_ptr<node> n);
+    bool instruc(std::shared_ptr<node> n);
+    bool command(std::shared_ptr<node> n);
+    bool atomic(std::shared_ptr<node> n);
+    bool cons(std::shared_ptr<node> n);
+    bool assign(std::shared_ptr<node> n);
+    bool branch(std::shared_ptr<node> n);
+    bool term(std::shared_ptr<node> n);
+    bool op(std::shared_ptr<node> n);
+    bool arg(std::shared_ptr<node> n);
+    bool cond(std::shared_ptr<node> n);
+    bool simple(std::shared_ptr<node> n);
+    bool composit(std::shared_ptr<node> n);
+    bool unop(std::shared_ptr<node> n);
+    bool binop(std::shared_ptr<node> n);
+    bool fname(std::shared_ptr<node> n);
+    bool functions(std::shared_ptr<node> n);
+    bool decl(std::shared_ptr<node> n);
+    bool header(std::shared_ptr<node> n);
+    bool body(std::shared_ptr<node> n);
+    bool prolog(std::shared_ptr<node> n);
+    bool epilog(std::shared_ptr<node> n);
+    bool locvars(std::shared_ptr<node> n);
+    bool subfuncs(std::shared_ptr<node> n);
+    bool keyword(std::shared_ptr<node> n);
+    bool literal(std::shared_ptr<node> n);
     // used for testing to throw immediately to catch unexpected circumstances
-    bool compare_types(symbol_table_entry lhs, symbol_table_entry rhs, bool testing = false)
-    {
-
-        if (lhs.original_name[0] != rhs.original_name[0])
-        {
-            std::cout << "\nComparing function and variable nodes\n";
-            return false;
-        }
-
-        for (int i = 0; i < 4; ++i)
-        {
-            if (lhs.types[i] != rhs.types[i])
-            {
-                return false;
-            }
-        }
-        return true;
-    };
+    // bool check(std::shared_ptr<node> n);
 };
 #endif

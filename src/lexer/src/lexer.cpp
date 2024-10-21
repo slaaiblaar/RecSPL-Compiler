@@ -34,13 +34,13 @@ Lexer::Lexer(std::string cfg_file) : cfg_file(cfg_file)
         dfa.append_pattern(literal_terminal.child_value(), literal_terminal.attribute("class").value());
     } while ((literal_terminal = literal_terminal.next_sibling()) != pugi::xml_node());
 
-    std::cout << "KEYWORDS:";
+    // std::cout << "KEYWORDS:";
     do
     {
-        std::cout << " \"" << keywords_terminal.child_value() << "\"";
+        // std::cout << " \"" << keywords_terminal.child_value() << "\"";
         dfa.append_keyword(keywords_terminal.child_value(), keywords_terminal.attribute("class").value());
     } while ((keywords_terminal = keywords_terminal.next_sibling()) != pugi::xml_node());
-    std::cout << "\n";
+    // std::cout << "\n";
     // return;
     // prints NFA state to terminal in a format that's easy to manually insert into render-automata.py
     // dfa.print_nfa();
@@ -160,7 +160,8 @@ bool Lexer::lex(bool testing, std::string dest_file)
             complete_lex = false;
             break;
         }
-        tokens.push_back(dfa.get_token());
+        Token lex_token = dfa.get_token();
+        tokens.push_back(lex_token);
     }
     if (!complete_lex)
     {
@@ -201,7 +202,10 @@ void Lexer::print_tokens(std::string fname)
             .set_value(std::to_string(t.row).c_str());
         pugi::xml_node col = tok.append_child("COL");
         col.append_child(pugi::node_pcdata)
-            .set_value(std::to_string(t.row).c_str());
+            .set_value(std::to_string(t.col).c_str());
+        pugi::xml_node file = tok.append_child("FILE");
+        file.append_child(pugi::node_pcdata)
+            .set_value(this->file_name.c_str());
     }
     pugi::xml_node tok = token_stream.append_child("TOK");
     pugi::xml_node id = tok.append_child("ID");

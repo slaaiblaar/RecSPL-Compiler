@@ -37,12 +37,13 @@ public:
     void testScopeChecker(int);
     bool check(std::shared_ptr<node> n, int depth = 0);
     bool run_scope_checker(int thread_number = -1);
-    std::shared_ptr<ftable_type> preprocess_ftables(std::shared_ptr<node> n, int depth);
+    std::shared_ptr<sym_table_type> preprocess_ftables(std::shared_ptr<node> n, int depth);
     void construct_ftables(std::shared_ptr<node> n, int depth);
     void populate_identifiers(std::shared_ptr<node> n, int depth = 0);
     std::string cfg_file = "CFG.xml";
     std::shared_ptr<node> root;
     std::vector<std::pair<std::string, std::pair<int, int>>> error;
+    std::vector<std::pair<std::string, std::shared_ptr<node>>> error_messages;
 
 private:
     struct SymbolTable

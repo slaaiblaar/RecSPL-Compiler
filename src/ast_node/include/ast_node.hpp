@@ -12,8 +12,10 @@
 #include <memory>
 #include <fmt/core.h>
 #include <thread>
-using ftable_type = std::unordered_map<std::string, std::string[4]>;
-using vtable_type = std::unordered_map<std::string, std::string>;
+// making a type alias because its super annoying to repeatedly define objects
+// of type std::shared_ptr<std::unordered_map<std::string, std::string>>
+// using sym_table_type = std::unordered_map<std::string, std::string[4]>;
+using sym_table_type = std::unordered_map<std::string, std::string>;
 class node : public std::enable_shared_from_this<node>
 {
 public:
@@ -23,10 +25,12 @@ public:
     std::string WORD;  // Word representing the production
     std::string printnode(int depth, std::string called_from);
     // {v_name: type}
-    vtable_type v_table;
-    std::unordered_map<std::string, std::string> v_id_map;
+    sym_table_type v_table;
     // {f_name: [returntype, arg1, arg1, arg3]}
-    ftable_type f_table;
+    sym_table_type f_table;
+    // stores unique v ids like in chapter 6
+    std::unordered_map<std::string, std::string> v_id_map;
+    // stores unique f ids like in chapter 6
     std::unordered_map<std::string, std::string> f_id_map;
     bool pre_processed = false;
     bool was_printed = false;
@@ -35,7 +39,35 @@ public:
     int prod = -1;
     int row = -1;
     int col = -1;
+    std::string file;
     thread_local static long node_id_counter;
+    thread_local static long v_counter;
+    thread_local static long f_counter;
+    std::shared_ptr<sym_table_type> type_table;
+    std::string bind_v(std::string n, std::string t)
+    {
+        std::string id = fmt::format("{}var{}", t, v_counter++);
+        (*type_table)[id] = t;
+        v_table[n] = id;
+        (*scope_v_table)[n] = id;
+        return id;
+    }
+    std::string bind_f(std::string n, std::string t)
+    {
+        std::string id = fmt::format("{}fun{}", t, f_counter++);
+        (*type_table)[id] = t;
+        std::cout << fmt::format("ID({}): {}\n", n, id);
+        f_table[n] = id;
+        (*scope_f_table)[n] = id;
+        return id;
+    }
+    // essentially stores a list of "siblibgs" for the given types of id
+    // is used to detect re-declarations within same scope
+    std::shared_ptr<sym_table_type> scope_v_table;
+    std::shared_ptr<sym_table_type> scope_f_table;
+    // used to find type of function
+    std::shared_ptr<node> start_of_scope;
+    bool print_colour = true;
     void clear_node();
     node();
     ~node();
@@ -96,7 +128,7 @@ public:
     bool subtree_generated = false;
     std::string printftable(std::shared_ptr<node> n);
     std::string printvtable(std::shared_ptr<node> n);
-    std::string print_code(int depth, std::ofstream &code_file);
+    std::string print_code(int depth, bool colour = false);
     // std::string printftable(std::shared_ptr<node> n)
     // {
     //     std::string ftable = "";
@@ -116,16 +148,13 @@ public:
     //     return vtable;
     // }
 
-    // // making a type alias because its super annoying to repeatedly define objects
-    // // of type std::shared_ptr<std::unordered_map<std::string, std::string>>
-    // Drill down through successive chains of FUNCTIONS == > FUNCTIONS productions void copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<node> t)
-    // static void copy_ftable(ftable_type *f, std::shared_ptr<node> t);
-    static void copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<node> t);
-    static void copy_vtable(vtable_type *f, std::shared_ptr<node> t);
+    // Drill down through successive chains of FUNCTIONS == > FUNCTIONS productions
+    // static void copy_ftable(sym_table_type *f, std::shared_ptr<node> t);
+    static void copy_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<node> t);
+    static void copy_vtable(sym_table_type *f, std::shared_ptr<node> t);
     static void copy_ftable(std::shared_ptr<node> f, std::shared_ptr<node> t);
     static void copy_vtable(std::shared_ptr<node> f, std::shared_ptr<node> t);
-    // static void copy_ftable(ftable_type *f, ftable_type *t);
-    static void copy_ftable(std::shared_ptr<ftable_type> f, std::shared_ptr<ftable_type> t);
+    static void copy_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<sym_table_type> t);
     std::shared_ptr<node> parent;
 
 private:
