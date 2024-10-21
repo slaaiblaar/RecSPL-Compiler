@@ -5,6 +5,7 @@
 #include "lexer.hpp"
 #include "parser.hpp"
 #include "scope_checker.hpp"
+#include "ast_node.hpp"
 // #include
 #include <iostream>
 #include <fmt/core.h>
@@ -40,6 +41,8 @@ void test_code_generation() {
     std::string output1 = cg.generate(assign_node);
     std::cout << output1 << std::endl;
 
+    assign_node->clear_node();
+
     // Test 2: Binary Operation (y := x + 5)
     std::cout << "Test 2: Binary Operation (y := x + 5)" << std::endl;
     auto binop_node = std::make_shared<node>();
@@ -70,6 +73,8 @@ void test_code_generation() {
     cg.vtable["y"] = "y";  // Ensure y is in the vtable
     std::string output2 = cg.generate(binop_node);
     std::cout << output2 << std::endl;
+
+    binop_node->clear_node();
 
     // Test 3: Function Call (z := my_function(5, x))
     std::cout << "Test 3: Function Call (z := my_function(5, x))" << std::endl;
@@ -102,6 +107,8 @@ void test_code_generation() {
     cg.ftable["my_function"][0] = "my_function";  // Ensure function is in the ftable
     std::string output3 = cg.generate(assign_call_node);
     std::cout << output3 << std::endl;
+
+    assign_call_node->clear_node();
 
     // Test 4: If Statement (if x > 5 then y := 10)
     std::cout << "Test 4: If Statement (if x > 5 then y := 10)" << std::endl;
@@ -142,6 +149,8 @@ void test_code_generation() {
 
     std::string output4 = cg.generate(if_node);
     std::cout << output4 << std::endl;
+
+    if_node->clear_node();
 }
 
 int main()
