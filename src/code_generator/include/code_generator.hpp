@@ -26,10 +26,10 @@ public:
 
 private:
     // Helper functions for translating different types of AST nodes (Phase A)
-    std::string TransExp(std::shared_ptr<node> Exp, vtable_type& vtable, ftable_type& ftable, std::string& place);
-    std::string TransStat(std::shared_ptr<node> Stat, vtable_type& vtable, ftable_type& ftable);
-    std::string TransCond(std::shared_ptr<node> Cond, const std::string& labelTrue, const std::string& labelFalse, vtable_type& vtable, ftable_type& ftable);
-    std::string TransExps(std::vector<std::shared_ptr<node>> Exps, vtable_type& vtable, ftable_type& ftable, std::vector<std::string>& args);
+    std::string TransExp(std::shared_ptr<node> Exp, sym_table_type& vtable, sym_table_type& ftable, std::string& place);
+    std::string TransStat(std::shared_ptr<node> Stat, sym_table_type& vtable, sym_table_type& ftable);
+    std::string TransCond(std::shared_ptr<node> Cond, const std::string& labelTrue, const std::string& labelFalse, sym_table_type& vtable, sym_table_type& ftable);
+    std::string TransExps(std::vector<std::shared_ptr<node>> Exps, sym_table_type& vtable, sym_table_type& ftable, std::vector<std::string>& args);
 
     sym_table_type vtable;
     sym_table_type ftable;
@@ -42,10 +42,10 @@ private:
     std::string TransExps(std::vector<std::shared_ptr<node>> Exps, sym_table_type &vtable, sym_table_type &ftable, std::vector<std::string> &args);
 
     // Handling function declarations and function bodies
-    std::string TransDecl(std::shared_ptr<node> Decl, vtable_type& vtable, ftable_type& ftable);  // Translates function declarations (DECL)
-    std::string TransHeader(std::shared_ptr<node> Header, vtable_type& vtable, ftable_type& ftable);  // Translates function header (HEADER)
-    std::string TransBody(std::shared_ptr<node> Body, vtable_type& vtable, ftable_type& ftable);  // Translates function body (BODY)
-    std::string TransLocVars(std::shared_ptr<node> LocVars, vtable_type& vtable, ftable_type& ftable);  // Translates local variables (LOCVARS)
+    std::string TransDecl(std::shared_ptr<node> Decl, sym_table_type& vtable, sym_table_type& ftable);  // Translates function declarations (DECL)
+    std::string TransHeader(std::shared_ptr<node> Header, sym_table_type& vtable, sym_table_type& ftable);  // Translates function header (HEADER)
+    std::string TransBody(std::shared_ptr<node> Body, sym_table_type& vtable, sym_table_type& ftable);  // Translates function body (BODY)
+    std::string TransLocVars(std::shared_ptr<node> LocVars, sym_table_type& vtable, sym_table_type& ftable);  // Translates local variables (LOCVARS)
 
     // Phase B: Converts intermediate code to executable code
     std::string generate_executable(const std::string& intermediate_code);

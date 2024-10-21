@@ -142,19 +142,20 @@ std::string Code_Generator::TransExp(std::shared_ptr<node> Exp, sym_table_type &
         std::string op = Exp->WORD;
         return code1 + code2 + fmt::format("{} := {} {} {}\n", place, place1, op, place2);
     }
-    if (Exp->CLASS == "call") {
-        std::vector<std::string> args;
-        std::string code1 = TransExps(Exp->get_children(), vtable, ftable, args);
-        std::string fname = ftable[Exp->WORD][0];
+
+    // if (Exp->CLASS == "call") {
+    //     std::vector<std::string> args;
+    //     std::string code1 = TransExps(Exp->get_children(), vtable, ftable, args);
+    //     std::string fname = ftable[Exp->WORD][0];
 
 
-        std::ostringstream argsStream;
-        for (size_t i = 0; i < args.size(); ++i) {
-            argsStream << args[i];
-            if (i != args.size() - 1) {
-                argsStream << ", ";  // Add comma between arguments
-            }
-        }
+    //     std::ostringstream argsStream;
+    //     for (size_t i = 0; i < args.size(); ++i) {
+    //         argsStream << args[i];
+    //         if (i != args.size() - 1) {
+    //             argsStream << ", ";  // Add comma between arguments
+    //         }
+    //     }
 
 
     // // Handle function calls
@@ -189,9 +190,6 @@ std::string Code_Generator::TransExp(std::shared_ptr<node> Exp, sym_table_type &
 }
 
 
-// Translates a statement node to intermediate code (Phase A)
-std::string Code_Generator::TransStat(std::shared_ptr<node> Stat, vtable_type& vtable, ftable_type& ftable) {
-    if (Stat->CLASS == "assign") {
 
 // Translates a statement node to intermediate code
 std::string Code_Generator::TransStat(std::shared_ptr<node> Stat, sym_table_type &vtable, sym_table_type &ftable)
@@ -221,10 +219,6 @@ std::string Code_Generator::TransStat(std::shared_ptr<node> Stat, sym_table_type
     return "";
 }
 
-
-// Translates a condition node to intermediate code (Phase A)
-std::string Code_Generator::TransCond(std::shared_ptr<node> Cond, const std::string& labelTrue, const std::string& labelFalse, vtable_type& vtable, ftable_type& ftable) {
-
 // Translates a condition node to intermediate code
 std::string Code_Generator::TransCond(std::shared_ptr<node> Cond, const std::string &labelTrue, const std::string &labelFalse, sym_table_type &vtable, sym_table_type &ftable)
 {
@@ -236,10 +230,6 @@ std::string Code_Generator::TransCond(std::shared_ptr<node> Cond, const std::str
     std::string op = Cond->WORD;
     return code1 + code2 + fmt::format("IF {} {} {} THEN {} ELSE {}\n", t1, op, t2, labelTrue, labelFalse);
 }
-
-
-// Translates multiple expressions for function arguments (Phase A)
-std::string Code_Generator::TransExps(std::vector<std::shared_ptr<node>> Exps, vtable_type& vtable, ftable_type& ftable, std::vector<std::string>& args) {
 
 // Translates multiple expressions for function arguments
 std::string Code_Generator::TransExps(std::vector<std::shared_ptr<node>> Exps, sym_table_type &vtable, sym_table_type &ftable, std::vector<std::string> &args)
@@ -257,38 +247,38 @@ std::string Code_Generator::TransExps(std::vector<std::shared_ptr<node>> Exps, s
 
 
 // Translates function declarations (DECL) - Phase A
-std::string Code_Generator::TransDecl(std::shared_ptr<node> Decl, vtable_type& vtable, ftable_type& ftable) {
+std::string Code_Generator::TransDecl(std::shared_ptr<node> Decl, sym_table_type& vtable, sym_table_type& ftable) {
     std::string header = TransHeader(Decl->get_child(0), vtable, ftable);  // Translate the header
     std::string body = TransBody(Decl->get_child(1), vtable, ftable);  // Translate the body
     return header + body;
 }
 
 // Translates the function header (HEADER) - Phase A
-std::string Code_Generator::TransHeader(std::shared_ptr<node> Header, vtable_type& vtable, ftable_type& ftable) {
-    std::string return_type = Header->get_child(0)->WORD;  // Return type (void or num)
-    std::string function_name = Header->get_child(1)->WORD;  // Function name (FNAME)
-    std::string param1 = Header->get_child(2)->WORD;  // Parameter 1 (VNAME)
-    std::string param2 = Header->get_child(3)->WORD;  // Parameter 2 (VNAME)
-    std::string param3 = Header->get_child(4)->WORD;  // Parameter 3 (VNAME)
+// std::string Code_Generator::TransHeader(std::shared_ptr<node> Header, sym_table_type& vtable, sym_table_type& ftable) {
+//     std::string return_type = Header->get_child(0)->WORD;  // Return type (void or num)
+//     std::string function_name = Header->get_child(1)->WORD;  // Function name (FNAME)
+//     std::string param1 = Header->get_child(2)->WORD;  // Parameter 1 (VNAME)
+//     std::string param2 = Header->get_child(3)->WORD;  // Parameter 2 (VNAME)
+//     std::string param3 = Header->get_child(4)->WORD;  // Parameter 3 (VNAME)
     
-    // Assign the function parameters individually to ftable[function_name]
-    ftable[function_name][0] = return_type;
-    ftable[function_name][1] = param1;
-    ftable[function_name][2] = param2;
-    ftable[function_name][3] = param3;
+//     // Assign the function parameters individually to ftable[function_name]
+//     ftable[function_name][0] = return_type;
+//     ftable[function_name][1] = param1;
+//     ftable[function_name][2] = param2;
+//     ftable[function_name][3] = param3;
     
-    return fmt::format("{} {}({},{},{})\n", return_type, function_name, param1, param2, param3);
-}
+//     return fmt::format("{} {}({},{},{})\n", return_type, function_name, param1, param2, param3);
+// }
 
 // Translates the function body (BODY) - Phase A
-std::string Code_Generator::TransBody(std::shared_ptr<node> Body, vtable_type& vtable, ftable_type& ftable) {
+std::string Code_Generator::TransBody(std::shared_ptr<node> Body, sym_table_type& vtable, sym_table_type& ftable) {
     std::string locals = TransLocVars(Body->get_child(0), vtable, ftable);  // Local variables (LOCVARS)
     std::string algo = TransStat(Body->get_child(1), vtable, ftable);  // ALGO (instructions)
     return fmt::format("{{\n{}\n{}\n}}\n", locals, algo);
 }
 
 // Translates local variables (LOCVARS) - Phase A
-std::string Code_Generator::TransLocVars(std::shared_ptr<node> LocVars, vtable_type& vtable, ftable_type& ftable) {
+std::string Code_Generator::TransLocVars(std::shared_ptr<node> LocVars, sym_table_type& vtable, sym_table_type& ftable) {
     (void)ftable;  // Suppress unused parameter warning
     std::string vars = "";
     for (auto child : LocVars->get_children()) {
@@ -318,7 +308,6 @@ std::string Code_Generator::newVar()
 // Generates a new label for conditional jumps
 std::string Code_Generator::newLabel()
 {
-
     static int labelCount = 0;
     return fmt::format("L{}", labelCount++);
 }
