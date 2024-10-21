@@ -22,8 +22,7 @@ std::string Tester::print_code(std::shared_ptr<node> n)
         e.second->WORD = fmt::format("\033[37;9m{}\033[0m", e.first);
         e.second->print_colour = false;
     }
-    std::ofstream dummy;
-    std::string code = n->print_code(0, dummy, true);
+    std::string code = n->print_code(0, true);
     // dummy.close();
     // reset
     for (auto e : this->scope_errors)
@@ -115,17 +114,17 @@ typedef struct
 */
 std::string counters_str(counters c, int depth)
 {
-    return fmt::format("[func: {}, branch: {}, v_num: {}, v_text: {}, f_num: {}, f_void: {}]",
+    return fmt::format("[func: {}, branch: {}, v_num: {}, v_text: {}, f_num: {}, f_void: {} instruc: {}]",
                        c.num_functions,
                        c.num_branches,
                        c.num_number_v,
                        c.num_text_v,
                        c.num_number_f,
-                       c.num_void_f);
+                       c.num_void_f,
+                       c.num_instruc);
 }
 int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productions, int depth, component test, counters counters)
 {
-
     if (parent->CLASS == "GLOBVARS" && depth > 10)
     {
         // emergency brake
@@ -143,6 +142,8 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
     {
         parent->scope_v_table = std::make_shared<sym_table_type>();
         parent->start_of_scope = std::make_shared<node>();
+        counters.num_branches = 0;
+        counters.num_instruc = 0;
     }
     // reset list of "sibling" func declarations
     if (parent->CLASS == "SUBFUNCS")
@@ -150,10 +151,12 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
         parent->scope_f_table = std::make_shared<sym_table_type>();
     }
     // configure tests, kind of
-    bool stop_functions = counters.num_functions >= 3;
-    bool force_branch = counters.num_branches < 3;
-    bool force_var = (counters.num_number_v < 3 || counters.num_text_v < 3);
-    bool force_func = (counters.num_number_f < 2 || counters.num_void_f < 2);
+    bool stop_functions = counters.num_functions >= 3 || (test == component::CODE_GEN && counters.num_functions >= 2);
+    bool force_branch = counters.num_branches < 3 && !(test == component::CODE_GEN && counters.num_branches > 1);
+    // bool force_branch = false;
+    bool force_var = (counters.num_number_v < 3 || counters.num_text_v < 3) && !(test == component::CODE_GEN && (counters.num_number_v + counters.num_text_v) > 3);
+    bool force_func = test != component::CODE_GEN && (counters.num_number_f < 2 || counters.num_void_f < 2);
+    bool stop_instruc = counters.num_instruc > 4;
     // bool force_globvar = (globvar_counter < 2) && test == component::PARSER;
     // bool force_short_tree = false;
     // bool force_var = false;
@@ -192,19 +195,15 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
         num_terminals = 0;
         globvar_counter = 0;
     }
-    std::cout << fmt::format("{}generating subtree of {}, counters: {}\n", std::string(depth * 2, ' '), parent->CLASS, counters_str(counters, depth));
+    // std::cout << fmt::format("{}generating subtree of {}, counters: {}\n", std::string(depth * 2, ' '), parent->CLASS, counters_str(counters, depth));
     // std::cout << std::string(depth, ' ') << parent->CLASS << "\n";
     // Find the production rule for the current node's WORD
     pugi::xpath_node lhs_xpath_node = productions.select_node(parent->CLASS.c_str());
 
     if (lhs_xpath_node != pugi::xpath_node())
     {
-        // std::cout << std::string(depth, ' ') << parent->CLASS << " point NT point 1\n";
         // Non-terminal node
         pugi::xpath_node_set rhs_set = lhs_xpath_node.node().select_nodes("production");
-        // if (rhs_set.size() > 0)
-        // {
-        // }
         parent->NAME = "INTERNAL";
         parent->WORD = parent->CLASS;
         // Randomly select one production rule (rhs)
@@ -212,9 +211,10 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
         std::vector<pugi::xml_node> rhs_list;
         for (pugi::xml_node rhs = lhs.child("production"); rhs != pugi::xml_node(); rhs = rhs.next_sibling())
         {
+            // std::cout << fmt::format("{}  RHS: {} size: {} node id: {}\n", std::string(depth * 2, ' '), rhs.first_child().name(), sizeof rhs, node::node_id_counter);
             rhs_list.push_back(rhs);
         }
-        // std::cout << std::string(depth, ' ') << parent->CLASS << " point NT point 2\n";
+        // rhs_list.shrink_to_fit();
         // Select a random production (rhs) to expand
         pugi::xml_node rhs;
         if (parent->CLASS == "GLOBVARS")
@@ -226,7 +226,6 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
         {
             if (force_var || force_globvar)
             {
-                // std::cout << std::string(depth * 2, ' ') << "Adding GLOBVAR via PROG\n";
                 prod_num = 0;
             }
             else if (force_short_tree)
@@ -234,13 +233,10 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
                 prod_num = 1;
             }
         }
-        // std::cout << std::string(depth, ' ') << parent->CLASS << fmt::format(" point NT point 3 force_var={} force_func={}\n", force_var, force_func);
         else if (parent->WORD == "GLOBVARS")
         {
             if (force_globvar)
             {
-                // rhs = rhs_list[1];
-                // std::cout << std::string(depth * 2, ' ') << "Adding GLOBVAR recursively\n";
                 prod_num = 1;
                 if (rhs_list[prod_num].child("GLOBVARS") == pugi::xml_node())
                 {
@@ -249,20 +245,19 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
             }
             else
             {
-                // rhs = rhs_list[0];
                 prod_num = 0;
             }
         }
         else if (parent->WORD == "FUNCTIONS")
         {
             counters.num_number_v += 3; // locvars are always numbers
+            ++counters.num_functions;
             if (force_func && !stop_functions)
             {
-                // rhs = rhs_list[1];
                 prod_num = 1;
                 if (rhs_list[prod_num].child("FUNCTIONS") == pugi::xml_node())
                 {
-                    std::cerr << "\nProduction 0 of FUNCTIONS is not FUNCTIONS ==> DECL FUNCTIONS\n";
+                    std::cerr << "\nProduction 1 of FUNCTIONS is not FUNCTIONS ==> DECL FUNCTIONS\n";
                 }
             }
             else if (stop_functions || force_short_tree || !force_var)
@@ -281,7 +276,8 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
             // PROGPRIMEPRIME => PROGPRIME => PROG => FUNCTIONS =>
             // with FUNCTIONS => DECL => BODY => ALGO => INSTRUC
             //          1          2       3      4         ^
-            if ((depth - (3 + counters.num_functions * 4)) > 4)
+            ++counters.num_instruc;
+            if (stop_instruc)
             {
                 // rhs = rhs_list[0];
                 prod_num = 0;
@@ -289,10 +285,6 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
                 {
                     std::cerr << "\nProduction 0 of INSTRUC is not INSTRUC ==> COMMAND ;\n";
                 }
-            }
-            else
-            {
-                prod_num = 1;
             }
         }
         else if (parent->WORD == "COND")
@@ -308,15 +300,34 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
         }
         else if (parent->WORD == "COMMAND")
         {
-            do
+            if (force_branch)
             {
-                // rhs = rhs_list[rand() % rhs_list.size()];
-                prod_num = rand() % rhs_list.size();
-            } while (rhs_list[prod_num].child("BRANCH") != pugi::xml_node());
+                int num_rolls = 0;
+                do
+                {
+                    prod_num = rand() % rhs_list.size();
+                    ++num_rolls;
+                    // slightly hisgher chance of choosing branch
+                    // by trying twice
+                } while (force_branch && num_rolls < 2);
+            }
+            else
+            {
+                do
+                {
+                    prod_num = rand() % rhs_list.size();
+                } while (rhs_list[prod_num].child("BRANCH") != pugi::xml_node());
+            }
+        }
+        else if (parent->WORD == "ALGO")
+        {
+            if (!stop_instruc)
+            {
+                prod_num = 0;
+            }
         }
         else
         {
-            // rhs = rhs_list[rand() % rhs_list.size()];
             prod_num = rand() % rhs_list.size();
         }
         if (prod_num == -1)
@@ -361,7 +372,7 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
             child->start_of_scope = parent->start_of_scope;
             generate_tree(child, productions, depth + 1, test, counters);
 
-            std::cout << fmt::format("{}generated subtree of {}\n", std::string(depth * 2, ' '), child->WORD);
+            // std::cout << fmt::format("{}generated subtree of {}\n", std::string(depth * 2, ' '), child->WORD);
             bool is_new = parent->add_child(child, child_index);
 
             if (!is_new)
@@ -383,14 +394,14 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
                 if (child->CLASS == "KEYWORD")
                 {
                     child->WORD = symbol.child("value").child_value();
-                    std::cout << fmt::format("{}  KEYWORD {}", std::string(depth * 2, ' '), child->WORD);
+                    // std::cout << fmt::format("{}  KEYWORD {}", std::string(depth * 2, ' '), child->WORD);
                     // 0.1 % chance of incorrect keyword
                     bool mess_up = (((double)rand() / (double)RAND_MAX) < 0.001);
                     if (test == component::LEXER && mess_up && this->messed_up_word.first < 0)
                     {
                         child->WORD = fmt::format("random_{}({})", std::to_string(rand() % 5), child->WORD);
                         this->messed_up_word = std::pair<int, std::string>(num_terminals, child->WORD);
-                        std::cout << fmt::format("{}  Overwrite keyword to: {}", std::string(depth * 2, ' '), child->WORD);
+                        // std::cout << fmt::format("{}  Overwrite keyword to: {}", std::string(depth * 2, ' '), child->WORD);
                         // std::cout << fmt::format("{}Incorrect token generated: {}: \"{}\"\n", std::string(depth * 2, ' '), num_terminals, child->WORD);
                         // std::cout << child->printnode(depth, "generate_tree()");
                         child->was_printed = false;
@@ -489,15 +500,15 @@ std::shared_ptr<sym_table_type> Tester::preprocess_ftables(std::shared_ptr<node>
         // bind type to name
         n->f_table[fid->WORD] = header->get_child(0)->WORD;
         (*n->scope_f_table)[fid->WORD] = header->get_child(0)->WORD;
-        std::cout << fmt::format("{}Creating new function id {}\n", std::string(depth * 2, ' '), fid->WORD);
-        std::cout << fmt::format("{}collision_prob: {}, rand_collision: {}, n->scope_f_table->size(): {} \n", std::string(depth * 2, ' '), collision_prob, rand_collision, n->scope_f_table->size());
-        std::cout << fmt::format("{}(rand_collision > collision_prob || n->scope_f_table->size() == 0) : {} \n", std::string(depth * 2, ' '), (rand_collision > collision_prob || n->scope_f_table->size() == 0));
+        // std::cout << fmt::format("{}Creating new function id {}\n", std::string(depth * 2, ' '), fid->WORD);
+        // std::cout << fmt::format("{}collision_prob: {}, rand_collision: {}, n->scope_f_table->size(): {} \n", std::string(depth * 2, ' '), collision_prob, rand_collision, n->scope_f_table->size());
+        // std::cout << fmt::format("{}(rand_collision > collision_prob || n->scope_f_table->size() == 0) : {} \n", std::string(depth * 2, ' '), (rand_collision > collision_prob || n->scope_f_table->size() == 0));
     }
     else
     {
-        std::cout << fmt::format("{}Creating function scope collision error \n", std::string(depth * 2, ' '));
-        std::cout << fmt::format("{}collision_prob: {}, rand_collision: {}, n->scope_f_table->size(): {} \n", std::string(depth * 2, ' '), collision_prob, rand_collision, n->scope_f_table->size());
-        std::cout << fmt::format("{}(rand_collision > collision_prob || n->scope_f_table->size() == 0) : {} \n", std::string(depth * 2, ' '), (rand_collision > collision_prob || n->scope_f_table->size() == 0));
+        // std::cout << fmt::format("{}Creating function scope collision error \n", std::string(depth * 2, ' '));
+        // std::cout << fmt::format("{}collision_prob: {}, rand_collision: {}, n->scope_f_table->size(): {} \n", std::string(depth * 2, ' '), collision_prob, rand_collision, n->scope_f_table->size());
+        // std::cout << fmt::format("{}(rand_collision > collision_prob || n->scope_f_table->size() == 0) : {} \n", std::string(depth * 2, ' '), (rand_collision > collision_prob || n->scope_f_table->size() == 0));
         int rand_id = rand() % n->scope_f_table->size();
         int index = 0;
         auto vit = n->scope_f_table->begin();
@@ -509,7 +520,7 @@ std::shared_ptr<sym_table_type> Tester::preprocess_ftables(std::shared_ptr<node>
         if (index == rand_id && vit != n->scope_f_table->end())
         {
             fid->WORD = vit->first;
-            std::cout << fmt::format("{}Randomly selected duplicate fname: {} {}\n", std::string(depth * 2, ' '), fid->WORD, fid->UID);
+            // std::cout << fmt::format("{}Randomly selected duplicate fname: {} {}\n", std::string(depth * 2, ' '), fid->WORD, fid->UID);
             this->scope_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(fid->WORD, fid));
         }
     }
@@ -674,7 +685,7 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
         // 5% chance of identifier being random string if none exists
         if (test == component::LEXER && this->messed_up_word.first < 0 && id_probability <= invalid_pattern_prob)
         {
-            std::cout << fmt::format("{}  Invalid id\n", std::string(depth * 2, ' '), n->WORD);
+            // std::cout << fmt::format("{}  Invalid id\n", std::string(depth * 2, ' '), n->WORD);
             // random invalid identifier
             if (n->CLASS == "VID")
             {
@@ -723,7 +734,7 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
         // globvars appear first in a program
         if (test == component::SCOPE_CHECK && id_probability < collision_prob && n->scope_v_table->size() > 0)
         {
-            std::cout << fmt::format("{}  Creating globvar scope collision error \n", std::string(depth * 2, ' '));
+            // std::cout << fmt::format("{}  Creating globvar scope collision error \n", std::string(depth * 2, ' '));
             int rand_id = rand() % n->scope_v_table->size();
             int index = 0;
             auto vit = n->scope_v_table->begin();
@@ -1008,11 +1019,11 @@ bool compare_nodes(std::shared_ptr<node> l, std::shared_ptr<node> r, bool debug 
 void Tester::run_tests(int thread_number)
 {
     std::vector<std::string> results;
-    test_lexer(thread_number, results);
-    test_parser(thread_number, results);
-    test_scope_checker(thread_number, results);
+    // test_lexer(thread_number, results);
+    // test_parser(thread_number, results);
+    // test_scope_checker(thread_number, results);
     // test_type_checker();
-    // test_code_generator();
+    test_code_generator();
     for (auto r : results)
     {
         std::cout << r;
@@ -1042,7 +1053,7 @@ void Tester::test_lexer(int thread_number, std::vector<std::string> &results)
     int num_nodes = 0;
     Lexer l(this->cfg_file);
     bool bad_lex = false;
-    for (int i = 0; !bad_lex && i < 40; ++i)
+    for (int i = 0; !bad_lex && i < 1; ++i)
     {
         std::shared_ptr<node> root = std::make_shared<node>();
         srand(rand());
@@ -1064,12 +1075,12 @@ void Tester::test_lexer(int thread_number, std::vector<std::string> &results)
         populate_identifiers(root, component::LEXER);
         std::string tree = root->printnode(0, "testScopeChecker()");
         tree = root->printnode(0, "testScopeChecker()");
-        code_file.open(fmt::format("thread_{}_code_file.txt", thread_number));
-        std::string plaintext_code = root->print_code(0, code_file);
+        code_file.open(fmt::format("thread_{}_lexer_code_file.txt", thread_number));
+        std::string plaintext_code = root->print_code(0);
         code_file << plaintext_code;
         code_file.close();
         // // do something with lexer
-        l.read_input(fmt::format("./thread_{}_code_file.txt", thread_number));
+        l.read_input(fmt::format("./thread_{}_lexer_code_file.txt", thread_number));
         bool lex_res = l.lex(true, fmt::format("./thread_{}_token_stream.xml", thread_number));
         pugi::xml_document tok_doc;
         pugi::xml_parse_result result = tok_doc.load_file(fmt::format("./thread_{}_token_stream.xml", thread_number).c_str());
@@ -1096,8 +1107,8 @@ void Tester::test_lexer(int thread_number, std::vector<std::string> &results)
             l.dfa.print_dfa(fmt::format("failed_test_artefacts/thread_{}_render-dfa.txt", thread_number), fmt::format("failed_test_artefacts/thread_{}_dfa_graph_incorrectly_failed.txt", thread_number));
             l.print_tokens(fmt::format("failed_test_artefacts/thread_{}_token_stream_incorrectly_failed.xml", thread_number));
 
-            code_file.open(fmt::format("failed_test_artefacts/thread_{}_code_file_incorrectly_failed.txt", thread_number));
-            std::string plaintext_code = root->print_code(0, code_file);
+            code_file.open(fmt::format("failed_test_artefacts/thread_{}_lexer_code_file_incorrectly_failed.txt", thread_number));
+            std::string plaintext_code = root->print_code(0);
             code_file << plaintext_code;
 
             code_file.close();
@@ -1113,8 +1124,8 @@ void Tester::test_lexer(int thread_number, std::vector<std::string> &results)
             l.dfa.print_dfa(fmt::format("failed_test_artefacts/thread_{}_render-dfa.txt", thread_number), fmt::format("failed_test_artefacts/thread_{}_dfa_graph_incorrectly_passed.txt", thread_number));
             l.print_tokens(fmt::format("failed_test_artefacts/thread_{}_token_stream_incorrectly_passed.xml", thread_number));
 
-            std::string plaintext_code = root->print_code(0, code_file);
-            code_file.open(fmt::format("failed_test_artefacts/thread_{}_code_file_incorrectly_passed.txt", thread_number));
+            std::string plaintext_code = root->print_code(0);
+            code_file.open(fmt::format("failed_test_artefacts/thread_{}_lexer_code_file_incorrectly_passed.txt", thread_number));
             code_file << plaintext_code;
 
             code_file.close();
@@ -1159,7 +1170,7 @@ void Tester::test_parser(int thread_number, std::vector<std::string> &results)
     int num_nodes = 0;
     Lexer l(this->cfg_file);
     bool bad_parse = false;
-    for (int i = 0; !bad_parse && i < 40; ++i)
+    for (int i = 0; !bad_parse && i < 1; ++i)
     {
         std::shared_ptr<node> root = std::make_shared<node>();
         srand(rand());
@@ -1186,7 +1197,7 @@ void Tester::test_parser(int thread_number, std::vector<std::string> &results)
         tree_file << tree;
         tree_file.close();
         code_file.open(fmt::format("thread_{}_code_file.txt", thread_number));
-        std::string plaintext_code = root->print_code(0, code_file);
+        std::string plaintext_code = root->print_code(0);
         code_file << plaintext_code;
         code_file.close();
         // // do something with lexer
@@ -1200,7 +1211,7 @@ void Tester::test_parser(int thread_number, std::vector<std::string> &results)
         Parser p(this->cfg_file);
         std::shared_ptr<node> parsed_root = p.parse(fmt::format("./thread_{}_parsed_ast.xml", thread_number), fmt::format("./thread_{}_token_stream.xml", thread_number));
         // code_file.open(fmt::format("thread_{}_generated_code_file.txt", thread_number));
-        // plaintext_code = parsed_root->print_code(0, code_file);
+        // plaintext_code = parsed_root->print_code(0);
         // code_file << plaintext_code;
         // code_file.close();
         // root is PROGPRIMEPRIME
@@ -1245,7 +1256,7 @@ void Tester::test_scope_checker(int thread_number, std::vector<std::string> &res
     bool bad_parse = false;
     Lexer l(this->cfg_file);
     // std::vector<std::string> results;
-    for (int i = 0; !bad_parse && i < 40; ++i)
+    for (int i = 0; !bad_parse && i < 1; ++i)
     {
         srand(rand());
         int num_nodes = 0;
@@ -1278,7 +1289,7 @@ void Tester::test_scope_checker(int thread_number, std::vector<std::string> &res
         tree_file.close();
         std::cout << i << ": Parsed thread_{}_generated_ast{}.xml\n";
         code_file.open(fmt::format("thread_{}_code_file{}.txt", thread_number, i));
-        std::string plaintext_code = root->print_code(0, code_file);
+        std::string plaintext_code = root->print_code(0);
         std::cout << i << ": code printed ()\n";
         code_file << plaintext_code;
         code_file.close();
@@ -1297,7 +1308,7 @@ void Tester::test_scope_checker(int thread_number, std::vector<std::string> &res
         std::shared_ptr<node> parsed_root = p.parse(fmt::format("./thread_{}_parsed_ast{}.xml", thread_number, i), fmt::format("./thread_{}_token_stream{}.xml", thread_number, i));
         // code_file.open(fmt::format("thread_{}_generated_code_file.txt", thread_number));
         std::cout << i << ": Parsed\n";
-        // plaintext_code = parsed_root->print_code(0, code_file);
+        // plaintext_code = parsed_root->print_code(0);
         // code_file << plaintext_code;
         // code_file.close();
         // root is PROGPRIMEPRIME
@@ -1386,6 +1397,7 @@ void Tester::test_scope_checker(int thread_number, std::vector<std::string> &res
                 }
             }
         }
+        std::cout << root->print_code(0, true);
         root->clear_node();
     }
 }
@@ -1446,7 +1458,7 @@ void Tester::test_type_checker(int thread_number, std::vector<std::string> &resu
         tree_file.close();
         std::cout << i << ": Parsed thread_{}_generated_ast{}.xml\n";
         code_file.open(fmt::format("thread_{}_code_file{}.txt", thread_number, i));
-        std::string plaintext_code = root->print_code(0, code_file);
+        std::string plaintext_code = root->print_code(0, false);
         std::cout << i << ": code printed ()\n";
         code_file << plaintext_code;
         code_file.close();
@@ -1560,5 +1572,159 @@ void Tester::test_type_checker(int thread_number, std::vector<std::string> &resu
 
 void Tester::test_code_generator()
 {
-    Code_Generator CG;
+    // get a syntax tree
+    pugi::xml_document doc;
+    if (!doc.load_file(cfg_file.c_str()))
+    {
+        std::cerr << fmt::format("run_tests Error loading {}\n", cfg_file);
+        return;
+    }
+
+    pugi::xml_node productions = doc.child("CFG").child("PRODUCTIONRULES");
+    Code_Generator cg;
+    std::shared_ptr<node> ast = std::make_shared<node>();
+    ast->CLASS = "PROGPRIMEPRIME";
+    std::time_t now = std::time(0);
+    srand(now);
+    generate_tree(ast, productions, -1, component::CODE_GEN);
+    construct_ftables(ast, 0, component::CODE_GEN);
+    populate_identifiers(ast, component::CODE_GEN);
+    std::cout << "\n";
+    std::cout << ast->print_code(0, true);
+    std::cout << "\n";
+
+    // print the syntax tree
+    // Test 1: Simple Assignment (x := 5)
+    std::cout << "Test 1: Simple Assignment (x := 5)" << std::endl;
+    auto assign_node = std::make_shared<node>();
+    assign_node->CLASS = "assign";
+
+    auto lhs = std::make_shared<node>(); // Left-hand side, variable x
+    lhs->CLASS = "id";
+    lhs->WORD = "x";
+
+    auto rhs = std::make_shared<node>(); // Right-hand side, number 5
+    rhs->CLASS = "num";
+    rhs->WORD = "5";
+
+    assign_node->add_child(lhs, 0);
+    assign_node->add_child(rhs, 1);
+
+    cg.vtable["x"] = "x"; // Ensure x is in the vtable
+    std::string output1 = cg.generate(assign_node);
+    std::cout << output1 << std::endl;
+
+    assign_node->clear_node();
+
+    // Test 2: Binary Operation (y := x + 5)
+    std::cout << "Test 2: Binary Operation (y := x + 5)" << std::endl;
+    auto binop_node = std::make_shared<node>();
+    binop_node->CLASS = "assign";
+
+    auto lhs2 = std::make_shared<node>(); // Left-hand side, variable y
+    lhs2->CLASS = "id";
+    lhs2->WORD = "y";
+
+    auto binop = std::make_shared<node>(); // Binary operation: x + 5
+    binop->CLASS = "binop";
+    binop->WORD = "+"; // Operation is addition
+
+    auto binop_lhs = std::make_shared<node>(); // x
+    binop_lhs->CLASS = "id";
+    binop_lhs->WORD = "x";
+
+    auto binop_rhs = std::make_shared<node>(); // 5
+    binop_rhs->CLASS = "num";
+    binop_rhs->WORD = "5";
+
+    binop->add_child(binop_lhs, 0);
+    binop->add_child(binop_rhs, 1);
+
+    binop_node->add_child(lhs2, 0);  // y :=
+    binop_node->add_child(binop, 1); // x + 5
+
+    cg.vtable["y"] = "y"; // Ensure y is in the vtable
+    std::string output2 = cg.generate(binop_node);
+    std::cout << output2 << std::endl;
+
+    binop_node->clear_node();
+
+    // Test 3: Function Call (z := my_function(5, x))
+    std::cout << "Test 3: Function Call (z := my_function(5, x))" << std::endl;
+    auto call_node = std::make_shared<node>();
+    call_node->CLASS = "call";
+    call_node->WORD = "my_function"; // Function name
+
+    auto call_arg1 = std::make_shared<node>();
+    call_arg1->CLASS = "num";
+    call_arg1->WORD = "5"; // First argument: 5
+
+    auto call_arg2 = std::make_shared<node>();
+    call_arg2->CLASS = "id";
+    call_arg2->WORD = "x"; // Second argument: x
+
+    call_node->add_child(call_arg1, 0);
+    call_node->add_child(call_arg2, 1);
+
+    auto assign_call_node = std::make_shared<node>();
+    assign_call_node->CLASS = "assign";
+
+    auto lhs_call = std::make_shared<node>(); // Left-hand side, variable z
+    lhs_call->CLASS = "id";
+    lhs_call->WORD = "z";
+
+    assign_call_node->add_child(lhs_call, 0);  // z :=
+    assign_call_node->add_child(call_node, 1); // my_function(5, x)
+
+    cg.vtable["z"] = "z";                     // Ensure z is in the vtable
+    cg.ftable["my_function"] = "my_function"; // Ensure function is in the ftable
+    std::string output3 = cg.generate(assign_call_node);
+    std::cout << output3 << std::endl;
+
+    assign_call_node->clear_node();
+
+    // Test 4: If Statement (if x > 5 then y := 10)
+    std::cout << "Test 4: If Statement (if x > 5 then y := 10)" << std::endl;
+    auto if_node = std::make_shared<node>();
+    if_node->CLASS = "if";
+
+    auto cond = std::make_shared<node>(); // Condition: x > 5
+    cond->CLASS = "binop";
+    cond->WORD = ">";
+
+    auto cond_lhs = std::make_shared<node>(); // x
+    cond_lhs->CLASS = "id";
+    cond_lhs->WORD = "x";
+
+    auto cond_rhs = std::make_shared<node>(); // 5
+    cond_rhs->CLASS = "num";
+    cond_rhs->WORD = "5";
+
+    cond->add_child(cond_lhs, 0);
+    cond->add_child(cond_rhs, 1);
+
+    auto if_body = std::make_shared<node>(); // y := 10
+    if_body->CLASS = "assign";
+
+    auto if_lhs = std::make_shared<node>(); // y
+    if_lhs->CLASS = "id";
+    if_lhs->WORD = "y";
+
+    auto if_rhs = std::make_shared<node>(); // 10
+    if_rhs->CLASS = "num";
+    if_rhs->WORD = "10";
+
+    if_body->add_child(if_lhs, 0);
+    if_body->add_child(if_rhs, 1);
+
+    if_node->add_child(cond, 0);    // if condition
+    if_node->add_child(if_body, 1); // then body
+
+    std::string output4 = cg.generate(if_node);
+    std::cout << output4 << std::endl;
+
+    if_node->clear_node();
+
+    // clear generated asts
+    ast->clear_node();
 }

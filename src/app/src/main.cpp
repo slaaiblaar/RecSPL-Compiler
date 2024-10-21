@@ -5,6 +5,7 @@
 #include "lexer.hpp"
 #include "parser.hpp"
 #include "scope_checker.hpp"
+#include "ast_node.hpp"
 // #include
 #include <iostream>
 #include <fmt/core.h>
@@ -16,6 +17,12 @@ void test_function(int num)
     test.cfg_file = fmt::format("CFG{}.xml", num);
     test.run_tests(num);
 }
+
+void test_code_generation()
+{
+    // moved to testing.cpp:1411:test_code_generator()
+}
+
 int main()
 {
     std::string dfa_test_strings[] = {
@@ -72,5 +79,10 @@ int main()
     // {
     //     t->join();
     // }
+
+    // Intermediate code generation test:
+    std::cout << "Phase A code generation test:" << std::endl;
+    // test_code_generation();
+
     return 0;
 }

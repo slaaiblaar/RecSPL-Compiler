@@ -128,7 +128,25 @@ public:
     bool subtree_generated = false;
     std::string printftable(std::shared_ptr<node> n);
     std::string printvtable(std::shared_ptr<node> n);
-    std::string print_code(int depth, std::ofstream &code_file, bool colour = false);
+    std::string print_code(int depth, bool colour = false);
+    // std::string printftable(std::shared_ptr<node> n)
+    // {
+    //     std::string ftable = "";
+    //     for (auto it = n->f_table.begin(); it != n->f_table.end(); ++it)
+    //     {
+    //         ftable = fmt::format("{}{}() ==> {}, ", ftable, it->first, it->second[0]);
+    //     }
+    //     return ftable;
+    // }
+    // std::string printvtable(std::shared_ptr<node> n)
+    // {
+    //     std::string vtable = "";
+    //     for (auto it = n->v_table.begin(); it != n->v_table.end(); ++it)
+    //     {
+    //         vtable = fmt::format("{}{}: {}, ", vtable, it->first, it->second);
+    //     }
+    //     return vtable;
+    // }
 
     // Drill down through successive chains of FUNCTIONS == > FUNCTIONS productions
     // static void copy_ftable(sym_table_type *f, std::shared_ptr<node> t);
