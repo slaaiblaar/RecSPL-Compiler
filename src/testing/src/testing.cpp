@@ -1384,16 +1384,174 @@ void Tester::test_scope_checker(int thread_number, std::vector<std::string> &res
         }
         root->clear_node();
     }
-    // for (auto s : results)
-    // {
-    //     std::cout << s;
-    // }
-    // std::cout << fmt::format("\033[3{}mThread {}\033[0m testing completed\n", 2 + thread_number, thread_number);
 }
 
-void Tester::test_type_checker()
+void Tester::test_type_checker(int thread_number, std::vector<std::string> &results)
 {
-    Type_Checker t;
+    std::cout << "===== Running Random Program Test =====\n";
+    // this->cfg_file = fmt::format("CFG{}.xml", thread_number);
+    pugi::xml_document doc;
+    if (!doc.load_file(cfg_file.c_str()))
+    {
+        std::cerr << fmt::format("run_tests Error loading {}\n", cfg_file);
+        return;
+    }
+
+    pugi::xml_node productions = doc.child("CFG").child("PRODUCTIONRULES");
+
+    // root node for tree
+    std::shared_ptr<node> root = std::make_shared<node>();
+    // std::time_t now = std::time(NULL);
+    // srand(now);
+    std::time_t now = std::time(0);
+    srand(now);
+    int num_nodes = 0;
+    bool bad_parse = false;
+    Lexer l(this->cfg_file);
+    // std::vector<std::string> results;
+    for (int i = 0; !bad_parse && i < 40; ++i)
+    {
+        srand(rand());
+        int num_nodes = 0;
+        std::shared_ptr<node> root = std::make_shared<node>();
+        do
+        {
+            this->messed_up_word = std::pair<int, std::string>(-1, "NONE");
+            root->clear_node();
+            root->CLASS = "PROGPRIMEPRIME";
+            std::cout << i << ": Generating tree\n";
+            num_nodes = this->generate_tree(root, productions, -1, component::TYPE_CHECK);
+            std::cout << i << ": Generated tree\n";
+        } while (num_nodes < 300);
+        this->scope_errors.clear();
+        std::cout << i << ": Tree generation completed\n";
+        std::ofstream rand_tree;
+        std::ofstream code_file;
+
+        construct_ftables(root, 0, component::TYPE_CHECK);
+
+        std::cout << i << ": FTables constructed\n";
+        this->num_terminals = 0;
+        populate_identifiers(root, component::TYPE_CHECK);
+        std::cout << i << ": Identidiers populated\n";
+        std::string tree = root->printnode(0, "testScopeChecker()");
+        std::cout << i << ": Tree printed ()\n";
+        tree = root->printnode(0, "testScopeChecker()");
+        std::ofstream tree_file(fmt::format("thread_{}_generated_ast{}.xml", thread_number, i));
+        tree_file << tree;
+        tree_file.close();
+        std::cout << i << ": Parsed thread_{}_generated_ast{}.xml\n";
+        code_file.open(fmt::format("thread_{}_code_file{}.txt", thread_number, i));
+        std::string plaintext_code = root->print_code(0, code_file);
+        std::cout << i << ": code printed ()\n";
+        code_file << plaintext_code;
+        code_file.close();
+        std::cout << i << ": Printed thread_{}_code_file{}.txt\n";
+        // // do something with lexer
+        l.read_input(fmt::format("./thread_{}_code_file{}.txt", thread_number, i));
+        std::cout << i << ": Lexer input read\n";
+        bool lex_res = l.lex(true, fmt::format("./thread_{}_token_stream{}.xml", thread_number, i));
+        std::cout << i << ": Lexed\n";
+        if (!lex_res)
+        {
+            std::cout << "Lexing failed\n";
+            return;
+        }
+        Parser p(this->cfg_file);
+        std::shared_ptr<node> parsed_root = p.parse(fmt::format("./thread_{}_parsed_ast{}.xml", thread_number, i), fmt::format("./thread_{}_token_stream{}.xml", thread_number, i));
+        // code_file.open(fmt::format("thread_{}_generated_code_file.txt", thread_number));
+        std::cout << i << ": Parsed\n";
+        // plaintext_code = parsed_root->print_code(0, code_file);
+        // code_file << plaintext_code;
+        // code_file.close();
+        // root is PROGPRIMEPRIME
+        std::shared_ptr<node> generated_root = root->get_child(0)->get_child(0);
+        if (compare_nodes(generated_root, parsed_root))
+        {
+            // std::cout << i << ": Parser succeeded\n";
+        }
+        else
+        {
+            std::cout << i << ": Parser failed\n";
+            bad_parse = true;
+            // catch immediately if it fails
+            throw;
+        }
+        Scope_Checker s(parsed_root);
+        std::cout << i << ": Running Scope checker ran\n";
+        bool scope_res = s.run_scope_checker(thread_number);
+        std::string filename = fmt::format("thread_{}_scoped_tree{}.xml", thread_number, i);
+        tree_file.open(filename);
+        tree_file << s.root->printnode(0, "Scope_Checker");
+        tree_file.close();
+        Type_Checker t;
+        // std::cout << i << ": Scope checker ran\n";
+        // {
+        //     results.push_back(fmt::format("{} Result of Scope Check: {}\n", i, scope_res));
+        //     results.push_back(fmt::format("{}\tIntentional Errors: {}\n", i, this->scope_errors.size()));
+        //     int num_intentional_errors = this->scope_errors.size();
+        //     std::string found_errors = "";
+        //     std::string non_errors = "";
+        //     int num_non_errors = 0;
+        //     int cr_counter = 0;
+        //     for (auto e : s.error)
+        //     {
+        //         bool found = false;
+        //         for (auto it = this->scope_errors.begin(); it != this->scope_errors.end(); ++it)
+        //         {
+        //             if (it->first == e.first)
+        //             {
+        //                 this->discovered_scope_errors.push_back(*it);
+        //                 this->scope_errors.erase(it);
+        //                 found = true;
+        //                 break;
+        //             }
+        //         }
+        //         if (found)
+        //         {
+        //             // found_errors.append(e.first).append(", ");
+        //             found_errors = fmt::format("{}\033[32m{}\033[0m, ", found_errors, e.first);
+        //         }
+        //         else
+        //         {
+        //             // non_errors.append(e.first).append(", ");
+        //             non_errors = fmt::format("{}\033[35m{}\033[0m, ", non_errors, e.first);
+        //             ++num_non_errors;
+        //         }
+        //     }
+        //     std::string missed_errors = "";
+        //     for (auto it = this->scope_errors.begin(); it != this->scope_errors.end(); ++it)
+        //     {
+        //         // missed_errors.append(it->first).append(", ");
+        //         missed_errors = fmt::format("{}\033[33m{}\033[0m, ", missed_errors, it->first);
+        //     }
+        //     results.push_back(fmt::format("{}\t{}/{} Discovered Errors: {}\n", i, s.error.size() - num_non_errors, num_intentional_errors, found_errors));
+        //     results.push_back(fmt::format("{}\t{} Missed Errors: {}\n", i, this->scope_errors.size(), missed_errors));
+        //     results.push_back(fmt::format("{}\t{} False Positives: {}\n", i, num_non_errors, non_errors));
+        //     if (scope_res)
+        //     {
+        //         if (s.error.size() == 0 && this->scope_errors.size() == 0)
+        //         {
+        //             results.push_back(fmt::format("{}\t\033[32mPassed\033[0m\n\n", i));
+        //         }
+        //         else if (this->scope_errors.size() > 0)
+        //         {
+        //             results.push_back(fmt::format("{}\t\033[31mFailed\033[0m\n\n", i));
+        //         }
+        //     }
+        //     else
+        //     {
+        //         if (s.error.size() > 0 && this->scope_errors.size() == 0 && non_errors.length() == 0)
+        //         {
+        //             results.push_back(fmt::format("{}\t\033[32mPassed\033[0m\n\n", i));
+        //         }
+        //         else if (this->scope_errors.size() > 0 || non_errors.length() == 0)
+        //         {
+        //             results.push_back(fmt::format("{}\t\033[31mFailed\033[0m\n\n", i));
+        //         }
+        //     }
+    }
+    root->clear_node();
 }
 
 void Tester::test_code_generator()

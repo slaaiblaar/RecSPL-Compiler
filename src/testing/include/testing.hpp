@@ -35,7 +35,7 @@ public:
     void test_lexer(int thread_number, std::vector<std::string> &results);
     void test_parser(int thread_number, std::vector<std::string> &results);
     void test_scope_checker(int thread_number, std::vector<std::string> &results);
-    void test_type_checker();
+    void test_type_checker(int thread_number, std::vector<std::string> &results);
     void test_code_generator();
     int num_terminals = 0;
     void populate_identifiers(std::shared_ptr<node> n, component test);
