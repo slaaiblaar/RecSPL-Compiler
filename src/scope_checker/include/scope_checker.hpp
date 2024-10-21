@@ -43,6 +43,7 @@ public:
     std::string cfg_file = "CFG.xml";
     std::shared_ptr<node> root;
     std::vector<std::pair<std::string, std::pair<int, int>>> error;
+    std::vector<std::pair<std::string, std::shared_ptr<node>>> error_messages;
 
 private:
     struct SymbolTable

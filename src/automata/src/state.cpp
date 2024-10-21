@@ -76,6 +76,11 @@ void State::add_transition(std::shared_ptr<State> to, std::string soombol)
 
 bool State::can_transition(char soombol, bool debug)
 {
+    if (debug)
+    {
+
+        std::cout << "STATE can_transition debugging\n";
+    }
     // std::cout << "STATE " << id << "transitions: \n";
     // for (auto t : transitions)
     // {

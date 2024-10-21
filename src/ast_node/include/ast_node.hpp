@@ -24,9 +24,11 @@ public:
     std::string printnode(int depth, std::string called_from);
     // {v_name: type}
     vtable_type v_table;
-    std::unordered_map<std::string, std::string> v_id_map;
     // {f_name: [returntype, arg1, arg1, arg3]}
     ftable_type f_table;
+    // stores unique v ids like in chapter 6
+    std::unordered_map<std::string, std::string> v_id_map;
+    // stores unique f ids like in chapter 6
     std::unordered_map<std::string, std::string> f_id_map;
     bool pre_processed = false;
     bool was_printed = false;
@@ -35,7 +37,13 @@ public:
     int prod = -1;
     int row = -1;
     int col = -1;
+    std::string file;
     thread_local static long node_id_counter;
+    // essentially stores a list of "siblibgs" for the given types of id
+    // is used to detect re-declarations within same scope
+    std::shared_ptr<vtable_type> scope_v_table;
+    std::shared_ptr<ftable_type> scope_f_table;
+    bool print_colour = true;
     void clear_node();
     node();
     ~node();
@@ -96,7 +104,7 @@ public:
     bool subtree_generated = false;
     std::string printftable(std::shared_ptr<node> n);
     std::string printvtable(std::shared_ptr<node> n);
-    std::string print_code(int depth, std::ofstream &code_file);
+    std::string print_code(int depth, std::ofstream &code_file, bool colour = false);
     // std::string printftable(std::shared_ptr<node> n)
     // {
     //     std::string ftable = "";
