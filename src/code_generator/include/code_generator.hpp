@@ -47,8 +47,10 @@ public:
     std::string generate_executable(const std::string& intermediate_code);
     
     // Phase B: Handles function calls and return statements in executable code
-    void handle_function_call(std::stringstream& final_code, const std::string& call_instruction);
-    void handle_return(std::stringstream& final_code, const std::string& return_instruction);
+    // void handle_function_call(std::stringstream& final_code, const std::string& call_instruction);
+    void Code_Generator::handle_function_call(std::stringstream& final_code, const std::string& call_instruction, int& line_number) ;
+    void Code_Generator::handle_return(std::stringstream& final_code, const std::string& return_instruction, int& line_number);
+    // void handle_return(std::stringstream& final_code, const std::string& return_instruction);
 
     // Utilities for generating temporary variables, labels, and stack frames
     std::string newVar();

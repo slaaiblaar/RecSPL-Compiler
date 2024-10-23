@@ -6,64 +6,54 @@
 // Simulated Call Stack (Phase B)
 std::vector<std::string> call_stack;
 
-Code_Generator::Code_Generator()
-{
+Code_Generator::Code_Generator() {
     std::cout << "Code Generator Initialized\n";
 }
 
 // Phase A: Generates intermediate code for the AST starting from the root node
-std::string Code_Generator::generate(std::shared_ptr<node> root)
-{
+std::string Code_Generator::generate(std::shared_ptr<node> root) {
     std::string code = TransStat(root, vtable, ftable);
-    std::cout << "Intermediate Code: " << code << std::endl; // Debugging output
+    std::cout << "Intermediate Code: " << code << std::endl;
     return code;
 }
 
 // Phase B: Generates final executable code from the intermediate code
-std::string Code_Generator::generate_final(std::shared_ptr<node> root)
-{
+std::string Code_Generator::generate_final(std::shared_ptr<node> root) {
     std::string intermediate_code = generate(root);
-    std::cout << "Intermediate Code for Final Generation: " << intermediate_code << std::endl; // Debugging output
     return generate_executable(intermediate_code);
 }
 
-// Phase B: Converts intermediate code into executable code
-std::string Code_Generator::generate_executable(const std::string &intermediate_code)
-{
+// Phase B: Converts intermediate code into BASIC target code
+std::string Code_Generator::generate_executable(const std::string& intermediate_code) {
     std::stringstream final_code;
     std::vector<std::string> lines;
     std::string line;
+    int line_number = 10; // BASIC programs start at line 10, increment by 10
 
     // Parse the intermediate code into individual lines
     std::istringstream iss(intermediate_code);
-    while (std::getline(iss, line))
-    {
+    while (std::getline(iss, line)) {
         lines.push_back(line);
     }
 
-    // Process each line of intermediate code into executable form
-    for (const auto &code_line : lines)
-    {
-        if (code_line.find("CALL") != std::string::npos)
-        {
-            handle_function_call(final_code, code_line);
+    // Process each line of intermediate code into BASIC code
+    for (const auto& code_line : lines) {
+        if (code_line.find("CALL") != std::string::npos) {
+            handle_function_call(final_code, code_line, line_number);
+        } else if (code_line.find("RETURN") != std::string::npos) {
+            handle_return(final_code, code_line, line_number);
+        } else {
+            // General instructions such as assignment, arithmetic, etc.
+            final_code << line_number << " " << code_line << "\n";
         }
-        else if (code_line.find("RETURN") != std::string::npos)
-        {
-            handle_return(final_code, code_line);
-        }
-        else
-        {
-            final_code << code_line << "\n"; // General instructions
-        }
+        line_number += 10;  // Increment line numbers by 10
     }
 
     return final_code.str();
 }
 
-// Phase B: Handles function calls in executable code
-void Code_Generator::handle_function_call(std::stringstream &final_code, const std::string &call_instruction)
-{
+// Phase B: Handles function calls in BASIC code
+void Code_Generator::handle_function_call(std::stringstream& final_code, const std::string& call_instruction, int& line_number) {
     size_t start = call_instruction.find("CALL ") + 5;
     size_t open_paren = call_instruction.find("(", start);
     size_t close_paren = call_instruction.find(")", open_paren);
@@ -71,151 +61,82 @@ void Code_Generator::handle_function_call(std::stringstream &final_code, const s
     std::string function_name = call_instruction.substr(start, open_paren - start);
     std::string args = call_instruction.substr(open_paren + 1, close_paren - open_paren - 1);
 
-    // Simulate pushing arguments onto the stack
-    final_code << "// Push arguments onto the stack\n";
+    // Generate BASIC code for the function call
     std::istringstream arg_stream(args);
     std::string arg;
-    while (std::getline(arg_stream, arg, ','))
-    {
-        final_code << "PUSH " << arg << "\n";
+    final_code << line_number << " REM Push arguments onto the stack\n";
+    while (std::getline(arg_stream, arg, ',')) {
+        final_code << line_number << " PUSH " << arg << "\n";
+        line_number += 10;
     }
 
-    // Simulate the function call
-    final_code << "// Call the function\n";
-    final_code << "CALL " << function_name << "\n";
-
-    // After the function call, pop the result from the stack
-    final_code << "// Pop the result from the stack\n";
-    final_code << "POP result\n";
+    // Simulate the function call with GOSUB
+    final_code << line_number << " GOSUB " << function_name << "\n";
 }
 
-// Phase B: Handles return statements in executable code
-void Code_Generator::handle_return(std::stringstream &final_code, const std::string &return_instruction)
-{
+// Phase B: Handles return statements in BASIC code
+void Code_Generator::handle_return(std::stringstream& final_code, const std::string& return_instruction, int& line_number) {
     size_t start = return_instruction.find("RETURN ") + 7;
     std::string return_value = return_instruction.substr(start);
 
-    // Simulate returning the value
-    final_code << "// Return value to the caller\n";
-    final_code << "RETURN " << return_value << "\n";
-
-    // Pop the call stack
-    final_code << "// Pop the current function's stack frame\n";
-    final_code << "POP_FRAME\n";
+    // Generate BASIC code for return
+    final_code << line_number << " REM Return value to caller\n";
+    final_code << line_number << " RETURN\n";
 }
 
-
-
-// Translates an expression node to intermediate code (Phase A)
-std::string Code_Generator::TransExp(std::shared_ptr<node> Exp, sym_table_type &vtable, sym_table_type &ftable, std::string &place)
-{
-    if (Exp->CLASS == "LITERAL")
-    {
-        std::string v = Exp->WORD; // Literal (num or text)
+// Phase A: Translates an expression node to intermediate code
+std::string Code_Generator::TransExp(std::shared_ptr<node> Exp, sym_table_type& vtable, sym_table_type& ftable, std::string& place) {
+    if (Exp->CLASS == "LITERAL") {
+        std::string v = Exp->WORD;
         return fmt::format("{} := {}\n", place, v);
     }
-    if (Exp->CLASS == "VID")
-    {
-        std::string x = Exp->WORD; // Variable ID is directly in WORD (VID)
+    if (Exp->CLASS == "VID") {
+        std::string x = Exp->WORD;
         return fmt::format("{} := {}\n", place, x);
     }
-    if (Exp->CLASS == "BINOP")
-    {
+    if (Exp->CLASS == "BINOP") {
         std::string place1 = newVar();
         std::string place2 = newVar();
         std::string code1 = TransExp(Exp->get_child(0), vtable, ftable, place1);
         std::string code2 = TransExp(Exp->get_child(1), vtable, ftable, place2);
-        std::string op = Exp->WORD; // Binary operation
+        std::string op = Exp->WORD;
         return code1 + code2 + fmt::format("{} := {} {} {}\n", place, place1, op, place2);
-    }
-
-    // Handle function calls (Phase A)
-    if (Exp->CLASS == "FNAME")
-    {
-        std::vector<std::string> args;
-        std::string code1 = TransExps(Exp->get_children(), vtable, ftable, args);
-        std::string fname = Exp->WORD; // Function name directly from WORD (FID)
-        
-        std::ostringstream args_stream;
-        for (size_t i = 0; i < args.size(); ++i)
-        {
-            args_stream << args[i];
-            if (i != args.size() - 1)
-            {
-                args_stream << ", "; // Add comma between arguments
-            }
-        }
-        return code1 + fmt::format("{} := CALL {}({})\n", place, fname, args_stream.str());
     }
     return "";
 }
 
-// Translates a statement node to intermediate code (Phase A)
-std::string Code_Generator::TransStat(std::shared_ptr<node> Stat, sym_table_type &vtable, sym_table_type &ftable)
-{
-    if (Stat->CLASS == "ASSIGN")
-    {
+// Phase A: Translates a statement node to intermediate code
+std::string Code_Generator::TransStat(std::shared_ptr<node> Stat, sym_table_type& vtable, sym_table_type& ftable) {
+    if (Stat->CLASS == "ASSIGN") {
         std::string place = newVar();
         std::string code1 = TransExp(Stat->get_child(1), vtable, ftable, place);
-        std::string x = Stat->get_child(0)->WORD; // Variable name (VID in WORD)
+        std::string x = Stat->get_child(0)->WORD;
         return code1 + fmt::format("{} := {}\n", x, place);
     }
-    if (Stat->CLASS == "BRANCH")
-    {
+    if (Stat->CLASS == "BRANCH") {
         std::string label1 = newLabel();
         std::string label2 = newLabel();
         std::string code1 = TransCond(Stat->get_child(0), label1, label2, vtable, ftable);
         std::string code2 = TransStat(Stat->get_child(1), vtable, ftable);
         return code1 + fmt::format("LABEL {}\n", label1) + code2 + fmt::format("LABEL {}\n", label2);
     }
-    if (Stat->CLASS == "COMMAND")
-    {
-        if (Stat->get_child(0)->CLASS == "FNAME")
-        {
-            // Handle function call as a command
-            return TransStat(Stat->get_child(0), vtable, ftable);
-        }
-        else if (Stat->get_child(0)->CLASS == "PRINT")
-        {
-            std::string place = newVar();
-            std::string code1 = TransExp(Stat->get_child(1), vtable, ftable, place);
-            return code1 + fmt::format("PRINT {}\n", place);
-        }
-        else if (Stat->get_child(0)->CLASS == "SKIP")
-        {
-            return "NOP\n"; // No operation
-        }
-        else if (Stat->get_child(0)->CLASS == "HALT")
-        {
-            return "HALT\n";
-        }
-        else if (Stat->get_child(0)->CLASS == "RETURN")
-        {
-            std::string place = newVar();
-            std::string code1 = TransExp(Stat->get_child(1), vtable, ftable, place);
-            return code1 + fmt::format("RETURN {}\n", place);
-        }
-    }
     return "";
 }
 
 // Translates a condition node to intermediate code (Phase A)
-std::string Code_Generator::TransCond(std::shared_ptr<node> Cond, const std::string &labelTrue, const std::string &labelFalse, sym_table_type &vtable, sym_table_type &ftable)
-{
+std::string Code_Generator::TransCond(std::shared_ptr<node> Cond, const std::string& labelTrue, const std::string& labelFalse, sym_table_type& vtable, sym_table_type& ftable) {
     std::string t1 = newVar();
     std::string t2 = newVar();
     std::string code1 = TransExp(Cond->get_child(0), vtable, ftable, t1);
     std::string code2 = TransExp(Cond->get_child(1), vtable, ftable, t2);
-    std::string op = Cond->WORD; // Relational operator (e.g., eq, grt)
+    std::string op = Cond->WORD;
     return code1 + code2 + fmt::format("IF {} {} {} THEN GOTO {} ELSE GOTO {}\n", t1, op, t2, labelTrue, labelFalse);
 }
 
-// Translates multiple expressions for function arguments
-std::string Code_Generator::TransExps(std::vector<std::shared_ptr<node>> Exps, sym_table_type &vtable, sym_table_type &ftable, std::vector<std::string> &args)
-{
+// Translates multiple expressions for function arguments (Phase A)
+std::string Code_Generator::TransExps(std::vector<std::shared_ptr<node>> Exps, sym_table_type& vtable, sym_table_type& ftable, std::vector<std::string>& args) {
     std::string result;
-    for (auto &Exp : Exps)
-    {
+    for (auto& Exp : Exps) {
         std::string place = newVar();
         result += TransExp(Exp, vtable, ftable, place);
         args.push_back(place);
@@ -223,48 +144,18 @@ std::string Code_Generator::TransExps(std::vector<std::shared_ptr<node>> Exps, s
     return result;
 }
 
-// Translates the function body (BODY) - Phase A
-std::string Code_Generator::TransBody(std::shared_ptr<node> Body, sym_table_type &vtable, sym_table_type &ftable)
-{
-    std::string locals = TransLocVars(Body->get_child(0), vtable, ftable); // Local variables (LOCVARS)
-    std::string algo = TransStat(Body->get_child(1), vtable, ftable);      // ALGO (instructions)
-    return fmt::format("{{\n{}\n{}\n}}\n", locals, algo);
-}
-
-// Translates local variables (LOCVARS) - Phase A
-std::string Code_Generator::TransLocVars(std::shared_ptr<node> LocVars, sym_table_type &vtable, sym_table_type &ftable)
-{
-    std::string vars;
-    for (auto child : LocVars->get_children())
-    {
-        std::string type = child->get_child(0)->WORD; // Variable type (VTYP)
-        std::string name = child->get_child(1)->WORD; // Variable name (VNAME)
-        vtable[name] = type;                          // Add local variable to vtable
-        vars += fmt::format("{} {};\n", type, name);
-    }
-    return vars;
-}
-
 // Generates a new temporary variable (Phase A)
-std::string Code_Generator::newVar()
-{
+std::string Code_Generator::newVar() {
     static int varCount = 0;
     return fmt::format("t{}", varCount++);
 }
 
 // Generates a new label for conditional jumps (Phase A)
-std::string Code_Generator::newLabel()
-{
+std::string Code_Generator::newLabel() {
     static int labelCount = 0;
     return fmt::format("L{}", labelCount++);
 }
 
-// Generates a new simulated call stack frame (Phase B)
-std::string Code_Generator::new_frame()
-{
-    static int frameCount = 0;
-    return fmt::format("frame{}", frameCount++);
-}
 
 // New function to handle the entire program
 
