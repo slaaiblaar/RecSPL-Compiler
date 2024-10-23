@@ -15,8 +15,11 @@ typedef struct symbol_table_entry
 class Type_Checker
 {
 public:
-    std::vector<std::pair<std::string, std::shared_ptr<node>>> type_errors;
-    Type_Checker();
+    Type_Checker(std::string input_file);
+    std::string input_file;
+    std::string cfg_file = "CFG.xml";
+    std::vector<std::pair<std::string, std::shared_ptr<node>>>
+        type_errors;
     std::shared_ptr<node> ast_root;
     // unique_name => {original_name, types[]}
     //

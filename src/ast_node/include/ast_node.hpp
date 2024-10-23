@@ -19,7 +19,7 @@ using sym_table_type = std::unordered_map<std::string, std::string>;
 class node : public std::enable_shared_from_this<node>
 {
 public:
-    std::string type;
+    std::string type = "";
     std::string NAME;  // Leaf or Internal node
     int UID;           // Unique identifier
     std::string CLASS; // Class of the node (nonterminal or terminal type)
@@ -33,6 +33,7 @@ public:
     std::unordered_map<std::string, std::string> v_id_map;
     // stores unique f ids like in chapter 6
     std::unordered_map<std::string, std::string> f_id_map;
+    std::string component;
     bool pre_processed = false;
     bool was_printed = false;
     bool is_in_scope = true;
@@ -129,7 +130,7 @@ public:
     bool subtree_generated = false;
     std::string printftable(std::shared_ptr<node> n);
     std::string printvtable(std::shared_ptr<node> n);
-    std::string print_code(int depth, bool colour = false);
+    std::string print_code(int depth, bool colour = false, std::string comp_name = "");
     // std::string printftable(std::shared_ptr<node> n)
     // {
     //     std::string ftable = "";

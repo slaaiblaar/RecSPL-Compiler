@@ -219,11 +219,18 @@
         </CONST>
 
         <ASSIGN>
-            <!-- ASSIGN ::= VNAME < input -->
+            <!-- ASSIGN ::= VNAME <input -->
             <production>
                 <VNAME terminal="false" />
                 <KEYWORD terminal="true">
                     <value>&lt;input</value>
+                </KEYWORD>
+            </production>
+            <!-- ASSIGN ::= VNAME < input -->
+            <production>
+                <VNAME terminal="false" />
+                <KEYWORD terminal="true">
+                    <value>&lt; input</value>
                 </KEYWORD>
             </production>
             <!-- ASSIGN ::= VNAME = TERM -->
@@ -613,6 +620,7 @@
             <value class="KEYWORD">return</value>
 
             <value class="KEYWORD">&lt;input</value>
+            <value class="KEYWORD">&lt; input</value>
             <value class="KEYWORD">=</value>
 
             <value class="KEYWORD">(</value>
