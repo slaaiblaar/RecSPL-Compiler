@@ -9,20 +9,19 @@ num F_n1 ( V_n3 , V_n4, V_n5 )
     text V_t3 , text V_t4 , text V_t5 , 
     begin 
         V_n3  <input ; 
+        V_n4  < input ; 
         print 39304 ; 
-        V_n5 = F_v1 (V_n3 , V_n2 , V_n4);
+        V_n5 = F_v1 (V_n3 , V_n2 , V_t2);
     end 
 } 
-    num F_n4 ( V_n6 , V_n7 , V_n8 ) 
+    num F_n4 ( V_n6 , V_n7 , V_t2 ) 
     { 
-        text V_n1 , text V_t7 , num V_t3 , 
+        text V_n1 , text V_t7 , num V_n8 , 
         begin 
-            F_n1 ( V_n1 , V_n6 , V_t3 ) ; 
+            F_n1 ( V_n1 , V_n6 , V_t2 ) ; 
             V_n6 = F_v1  ( -0.5461 , V_t3 , V_n7 ) ;
-            if grt(
-                eq(12, 34), 
-                or(123, "Hi")
-            ) then
+            if grt(eq(12, 34), or(123, "Hi")) 
+            then
                 begin
                     print "True";
                 end 
