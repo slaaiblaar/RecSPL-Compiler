@@ -266,16 +266,36 @@ std::shared_ptr<sym_table_type> Scope_Checker::preprocess_ftables(std::shared_pt
         std::cerr << "\nFNAME->children[1] is supposed to be a FID node\n";
     }
     // if scope collision
+    // if (fid->WORD == "F_n3")
+    // {
+    //     std::cout << "SCOPE CHECKER: FID == " << fid->WORD << "\n";
+    // }
     if (n->scope_f_table->find(fid->WORD) != n->scope_f_table->end())
     {
+        if (fid->WORD == "F_n3")
+        {
+            std::cout << "COLLISION FOR FID " << fid->WORD << ", existing type " << (*n->type_table)[(*n->scope_f_table)[fid->WORD]] << "\n ";
+        }
+        // if (fid->WORD == "F_n1")
+        // {
+        //     std::cout << "SCOPE CHECKER: FID == " << fid->WORD << "\n";
+        // }
         error.push_back(std::pair<std::string, std::pair<int, int>>(fid->WORD, std::pair<int, int>(-1, -1)));
         error_messages.push_back(std::pair<std::string, std::shared_ptr<node>>(
             fmt::format("\033[34m{}\033[0m:{}:{}: Re-declaration of function {} \n", fid->file, fid->row, fid->col, fid->WORD), fid));
     }
     else // else bind
     {
+        if (fid->WORD == "F_n3")
+        {
+            std::cout << "BINDING FID " << fid->WORD << " to type " << header->get_child(0)->WORD << "\n";
+        }
         // Bind name
         std::string id = n->bind_f(fid->WORD, header->get_child(0)->WORD);
+        if (fid->WORD == "F_n3")
+        {
+            std::cout << "NEW ID " << n->f_table[fid->WORD] << ", TYPE " << (*n->scope_f_table)[n->f_table[fid->WORD]] << "\n";
+        }
     }
 
     // syntesizhed table to return
@@ -290,11 +310,11 @@ std::shared_ptr<sym_table_type> Scope_Checker::preprocess_ftables(std::shared_pt
         // copy current node's f_table to child
         std::shared_ptr<node> f_child = n->get_child(n->num_children() - 1);
         // node::copy_ftable(n, c);
-        node::copy_ftable(n, f_child);
+        node::copy_ftable(n, f_child, "down");
         std::shared_ptr<sym_table_type> child_ftable = this->preprocess_ftables(f_child, depth);
         // Copy child's f_table to current node
-        node::copy_ftable(child_ftable, n);
-        node::copy_ftable(child_ftable, synthesized_table);
+        node::copy_ftable(child_ftable, n, "up");
+        node::copy_ftable(child_ftable, synthesized_table, "up");
     }
     n->pre_processed = true;
     return synthesized_table;
@@ -330,21 +350,21 @@ void Scope_Checker::construct_ftables(std::shared_ptr<node> n, int depth)
         {
             f_child = f_child->get_child(0);
         }
-        node::copy_ftable(n, f_child);
+        node::copy_ftable(n, f_child, "down");
 
         std::shared_ptr<sym_table_type> child_ftable = this->preprocess_ftables(f_child, depth);
         // Copy child's f_table
-        node::copy_ftable(f_child, n);
+        node::copy_ftable(f_child, n, "up");
         // copy to SUBFUNCS if applicable
         if (n->get_child(f_index)->UID != f_child->UID)
         {
             f_child = n->get_child(f_index);
-            node::copy_ftable(n, f_child);
+            node::copy_ftable(n, f_child, "up");
         }
     }
     for (auto c : n->get_children())
     {
-        node::copy_ftable(n, c);
+        node::copy_ftable(n, c, "down");
         this->construct_ftables(c, depth + 1);
     }
 }
@@ -409,12 +429,12 @@ void Scope_Checker::populate_identifiers(std::shared_ptr<node> curr_node, int de
     }
     for (auto c : curr_node->get_children())
     {
-        node::copy_vtable(curr_node, c);
-        node::copy_ftable(curr_node, c);
+        node::copy_vtable(curr_node, c, "down");
+        node::copy_ftable(curr_node, c, "down");
         this->populate_identifiers(c, depth + 1);
         if (c->CLASS == "GLOBVARS" || c->CLASS == "LOCVARS" || c->CLASS == "HEADER")
         {
-            node::copy_vtable(c, curr_node);
+            node::copy_vtable(c, curr_node, "up");
         }
     }
 }

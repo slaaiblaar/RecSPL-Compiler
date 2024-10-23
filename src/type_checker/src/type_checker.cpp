@@ -128,8 +128,8 @@ std::string Type_Checker::type_of(std::shared_ptr<node> n)
 bool Type_Checker::check(std::shared_ptr<node> n)
 {
     // int depth = -1;
-    if (n->CLASS == "ATOMIC" || n->CLASS == "CONST" || n->CLASS == "LITERAL")
-        std::cout << fmt::format("{}Checking type of {}:{}\n", std::string(depth * 2, ' '), n->CLASS, n->UID);
+    // if (n->CLASS == "ATOMIC" || n->CLASS == "CONST" || n->CLASS == "LITERAL")
+    std::cout << fmt::format("{}Checking type of {}:{}\n", std::string(depth * 2, ' '), n->CLASS, n->UID);
     ++depth;
     bool res = false;
     if (n->CLASS == "PROG")
@@ -257,8 +257,8 @@ bool Type_Checker::check(std::shared_ptr<node> n)
         std::cout << fmt::format("{}UNDEFINED CLASS {}\n", std::string(depth * 2, ' '), n->WORD);
     }
     --depth;
-    if (n->CLASS == "ATOMIC" || n->CLASS == "CONST" || n->CLASS == "LITERAL")
-        std::cout << fmt::format("{}Completed checking type of {}, result: {}\n", std::string(depth * 2, ' '), n->CLASS, (res ? "PASS" : "FAIL"));
+    // if (n->CLASS == "ATOMIC" || n->CLASS == "CONST" || n->CLASS == "LITERAL")
+    std::cout << fmt::format("{}Completed checking type of {}, result: {}\n", std::string(depth * 2, ' '), n->CLASS, (res ? "PASS" : "FAIL"));
     return res;
 }
 
@@ -358,7 +358,7 @@ bool Type_Checker::command(std::shared_ptr<node> n)
                 std::cout << fmt::format("{} printing type {} returns true\n", std::string(depth * 2, ' '), atomic_type);
                 return true;
             }
-            std::string t_error = fmt::format("{}:{}:{} Invalid type of print argument: \"{}\"\n", input_file, atomic->row, atomic->col, atomic->type);
+            std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid type of print argument: \"{}\"\n", input_file, atomic->row, atomic->col, atomic->type);
             std::cout << std::string(depth * 2, ' ') << t_error;
             this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n));
         }
@@ -375,13 +375,16 @@ bool Type_Checker::command(std::shared_ptr<node> n)
             }
             if (n->start_of_scope->CLASS == "PROG")
             {
-                std::string t_error = fmt::format("{}:{}:{} Type Error: Invalid \"return\" outside of subroutine\n", input_file, c->row, c->col);
+                std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid \"return\" outside of subroutine\n", input_file, c->row, c->col);
                 std::cout << std::string(depth * 2, ' ') << t_error;
                 this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n));
             }
-            std::string t_error = fmt::format("{}:{}:{} Invalid return type for function of type {}: {}\n", input_file, atomic->row, atomic->col, type_of(n->start_of_scope), atomic_type);
-            std::cout << std::string(depth * 2, ' ') << t_error;
-            this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n));
+            else
+            {
+                std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid return type for function of type {}: {}\n", input_file, atomic->row, atomic->col, type_of(n->start_of_scope), atomic_type);
+                std::cout << std::string(depth * 2, ' ') << t_error;
+                this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n));
+            }
         }
         return false;
     }
@@ -399,7 +402,7 @@ bool Type_Checker::command(std::shared_ptr<node> n)
         check(param);
         if (type_of(param) != "num")
         {
-            std::string t_error = fmt::format("{}:{}:{} Invalid function parameter type: {}\n", input_file, param->row, param->col, type_of(param));
+            std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid function parameter type: {}\n", input_file, param->row, param->col, type_of(param));
             std::cout << std::string(depth * 2, ' ') << t_error;
             this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, param));
             res = false;
@@ -408,7 +411,7 @@ bool Type_Checker::command(std::shared_ptr<node> n)
         check(param);
         if (type_of(param) != "num")
         {
-            std::string t_error = fmt::format("{}:{}:{} Invalid function parameter type: {}\n", input_file, param->row, param->col, type_of(param));
+            std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid function parameter type: {}\n", input_file, param->row, param->col, type_of(param));
             std::cout << std::string(depth * 2, ' ') << t_error;
             this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, param));
             res = false;
@@ -417,7 +420,7 @@ bool Type_Checker::command(std::shared_ptr<node> n)
         check(param);
         if (type_of(param) != "num")
         {
-            std::string t_error = fmt::format("{}:{}:{} Invalid function parameter type: {}\n", input_file, param->row, param->col, type_of(param));
+            std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid function parameter type: {}\n", input_file, param->row, param->col, type_of(param));
             std::cout << t_error;
             this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, param));
             res = false;
@@ -456,7 +459,7 @@ bool Type_Checker::assign(std::shared_ptr<node> n)
         res = type_of(var) == "num";
         if (!res)
         {
-            std::string t_error = fmt::format("{}:{}:{} Invalid variable type for numeric input: {}\n", input_file, var->row, var->col, type_of(var));
+            std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid variable type for numeric input: {}\n", input_file, var->row, var->col, type_of(var));
             std::cout << std::string(depth * 2, ' ') << t_error;
             this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, var));
         }
@@ -468,7 +471,7 @@ bool Type_Checker::assign(std::shared_ptr<node> n)
         if (type_of(var) != n->get_child(2)->type)
         {
             res = false;
-            std::string t_error = fmt::format("{}:{}:{} Invalid assignment of {} to {} type variable\n", input_file, var->row, var->col, n->get_child(2)->type, type_of(var));
+            std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid assignment of {} to {} type variable\n", input_file, var->row, var->col, n->get_child(2)->type, type_of(var));
             std::cout << std::string(depth * 2, ' ') << t_error;
             this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, var));
         }
@@ -481,7 +484,7 @@ bool Type_Checker::assign(std::shared_ptr<node> n)
         if (type_of(var) != type_of(func))
         {
             res = false;
-            std::string t_error = fmt::format("{}:{}:{} Invalid assignment of {} to {} type variable\n", input_file, var->row, var->col, n->get_child(2)->type, type_of(var));
+            std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid assignment of {} to {} type variable\n", input_file, var->row, var->col, n->get_child(2)->type, type_of(var));
             std::cout << std::string(depth * 2, ' ') << t_error;
             this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, func));
         }
@@ -489,7 +492,7 @@ bool Type_Checker::assign(std::shared_ptr<node> n)
         check(param);
         if (type_of(param) != "num")
         {
-            std::string t_error = fmt::format("{}:{}:{} Invalid function parameter type: {}\n", input_file, param->row, param->col, type_of(param));
+            std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid function parameter type: {}\n", input_file, param->row, param->col, type_of(param));
             std::cout << std::string(depth * 2, ' ') << t_error;
             this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, param));
             res = false;
@@ -498,7 +501,7 @@ bool Type_Checker::assign(std::shared_ptr<node> n)
         check(param);
         if (type_of(param) != "num")
         {
-            std::string t_error = fmt::format("{}:{}:{} Invalid function parameter type: {}\n", input_file, param->row, param->col, type_of(param));
+            std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid function parameter type: {}\n", input_file, param->row, param->col, type_of(param));
             std::cout << std::string(depth * 2, ' ') << t_error;
             this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, param));
             res = false;
@@ -507,7 +510,7 @@ bool Type_Checker::assign(std::shared_ptr<node> n)
         check(param);
         if (type_of(param) != "num")
         {
-            std::string t_error = fmt::format("{}:{}:{} Invalid function parameter type: {}\n", input_file, param->row, param->col, type_of(param));
+            std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid function parameter type: {}\n", input_file, param->row, param->col, type_of(param));
             std::cout << std::string(depth * 2, ' ') << t_error;
             this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, param));
             res = false;
@@ -521,15 +524,12 @@ bool Type_Checker::branch(std::shared_ptr<node> n)
     bool res = true;
     n->row = n->get_child(0)->row;
     n->col = n->get_child(0)->col;
-    res = check(n->get_child(1)) && res;
-
     std::shared_ptr<node> cond = n->get_child(1);
+
     res = check(cond);
     if (cond->type != "bool")
     {
-        std::string t_error = fmt::format("{}:{}:{} Branch condition must be boolean. Given type: {}\n", input_file, cond->row, cond->col, cond->type);
-        std::cout << std::string(depth * 2, ' ') << t_error;
-        this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, cond));
+        res = false;
     }
     res = check(n->get_child(3)) && res;
     res = check(n->get_child(5)) && res;
@@ -541,6 +541,8 @@ bool Type_Checker::term(std::shared_ptr<node> n)
     bool res = true;
     res = check(n->get_child(0));
     n->type = n->get_child(0)->type;
+    n->row = n->get_child(0)->row;
+    n->col = n->get_child(0)->col;
     return res;
 }
 bool Type_Checker::op(std::shared_ptr<node> n)
@@ -560,58 +562,58 @@ bool Type_Checker::op(std::shared_ptr<node> n)
         {
             if (n->get_child(2)->type != "bool")
             {
-                std::string t_error = fmt::format("{}:{}:{} Type Error: Invalid argument type for Boolean operation: {}\n", input_file, n->get_child(2)->row, n->get_child(2)->col, n->get_child(2)->type);
+                std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid argument type for Boolean operation: {}\n", input_file, n->get_child(2)->row, n->get_child(2)->col, n->get_child(2)->type);
                 std::cout << std::string(depth * 2, ' ') << t_error;
                 this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n->get_child(2)));
             }
             if (n->get_child(4)->type != "bool")
             {
-                std::string t_error = fmt::format("{}:{}:{} Type Error: Invalid argument type for Boolean operation: {}\n", input_file, n->get_child(4)->row, n->get_child(2)->col, n->get_child(4)->type);
+                std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid argument type for Boolean operation: {}\n", input_file, n->get_child(4)->row, n->get_child(2)->col, n->get_child(4)->type);
                 std::cout << std::string(depth * 2, ' ') << t_error;
                 this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n->get_child(2)));
             }
             n->type = "bool";
             std::cout << std::string(depth * 2, ' ') << "OP->BINOP type bool\n";
             res = true && res;
-            return res;
+            // return res;
         }
         if (n->get_child(0)->type == "num")
         {
             if (n->get_child(2)->type != "num")
             {
-                std::string t_error = fmt::format("{}:{}:{} Type Error: Invalid argument type for Numeric operation: {}\n", input_file, n->get_child(2)->row, n->get_child(2)->col, n->get_child(2)->type);
+                std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid argument type for Numeric operation: {}\n", input_file, n->get_child(2)->row, n->get_child(2)->col, n->get_child(2)->type);
                 std::cout << std::string(depth * 2, ' ') << t_error;
                 this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n->get_child(2)));
             }
             if (n->get_child(4)->type != "num")
             {
-                std::string t_error = fmt::format("{}:{}:{} Type Error: Invalid argument type for Numeric operation: {}\n", input_file, n->get_child(4)->row, n->get_child(4)->col, n->get_child(4)->type);
+                std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid argument type for Numeric operation: {}\n", input_file, n->get_child(4)->row, n->get_child(4)->col, n->get_child(4)->type);
                 std::cout << std::string(depth * 2, ' ') << t_error;
                 this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n->get_child(2)));
             }
             n->type = "num";
             std::cout << std::string(depth * 2, ' ') << "OP->BINOP type num\n";
             res = true && res;
-            return res;
+            // return res;
         }
         if (n->get_child(0)->type == "compare")
         {
             if (n->get_child(2)->type != "num")
             {
-                std::string t_error = fmt::format("{}:{}:{} Type Error: Invalid argument type for Comparison operation: {}\n", input_file, n->get_child(2)->row, n->get_child(2)->col, n->get_child(2)->type);
+                std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid argument type for Comparison operation: {}\n", input_file, n->get_child(2)->row, n->get_child(2)->col, n->get_child(2)->type);
                 std::cout << std::string(depth * 2, ' ') << t_error;
                 this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n->get_child(2)));
             }
             if (n->get_child(4)->type != "num")
             {
-                std::string t_error = fmt::format("{}:{}:{} Type Error: Invalid argument type for Comparison operation: {}\n", input_file, n->get_child(4)->row, n->get_child(4)->col, n->get_child(4)->type);
+                std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid argument type for Comparison operation: {}\n", input_file, n->get_child(4)->row, n->get_child(4)->col, n->get_child(4)->type);
                 std::cout << std::string(depth * 2, ' ') << t_error;
                 this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n->get_child(2)));
             }
             n->type = "bool";
             std::cout << std::string(depth * 2, ' ') << "OP->BINOP type bool\n";
             res = true && res;
-            return res;
+            // return res;
         }
     }
     // OP ==> UNOP ( ARG )
@@ -629,10 +631,9 @@ bool Type_Checker::op(std::shared_ptr<node> n)
             arg_types = fmt::format("{}, {}", arg_types, n->get_child(4)->type);
         }
         arg_types.append(" )");
-        std::string t_error = fmt::format("{}:{}:{} Type Error: Invalid operation type combination: {} {}\n", input_file, n->row, n->col, n->type, arg_types);
+        std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid operation type combination: {} {}\n", input_file, n->row, n->col, n->type, arg_types);
         std::cout << std::string(depth * 2, ' ') << t_error;
         this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n));
-        std::cout << "OP->UNOP type bool undefined\n";
         res = false;
     }
     return res;
@@ -676,6 +677,8 @@ bool Type_Checker::arg(std::shared_ptr<node> n)
     // std::cout << "Checking ARG\n";
     check(n->get_child(0));
     n->type = n->get_child(0)->type;
+    n->row = n->get_child(0)->row;
+    n->col = n->get_child(0)->col;
     return true;
 }
 bool Type_Checker::cond(std::shared_ptr<node> n)
@@ -692,62 +695,119 @@ bool Type_Checker::simple(std::shared_ptr<node> n)
     std::shared_ptr<node> op = n->get_child(0);
     std::shared_ptr<node> arg1 = n->get_child(2);
     std::shared_ptr<node> arg2 = n->get_child(4);
+    std::string t_error;
     // std::cout << "Checking SIMPLE\n";
     bool res = true;
     res = check(op) && res;
+    n->row = op->row;
+    n->col = op->col;
+
     res = check(arg1) && res;
+    std::string a1_type = arg1->type;
+
     res = check(arg2) && res;
-    if (op->type == arg1->type &&
-        op->type == arg2->type &&
-        op->type == "bool")
+    std::string a2_type = arg2->type;
+
+    if (op->type == "bool")
     {
-        n->type = "bool";
-        res = true && res;
+        if (a1_type != "bool")
+        {
+            t_error = fmt::format("{}:{}:{}: Type Error: Invalid argument type for Simple Boolean operator: {}\n", input_file, arg1->row, arg1->col, arg1->type);
+            type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n));
+            res = false;
+        }
+        if (a2_type != "bool")
+        {
+            t_error = fmt::format("{}:{}:{}: Type Error: Invalid argument type for Simple Boolean operator: {}\n", input_file, arg2->row, arg2->col, arg2->type);
+            type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n));
+            res = false;
+        }
     }
-    res = check(arg2) && res;
-    if (arg1->type == "num" &&
-        arg1->type == arg2->type &&
-        op->type == "compare")
+    else if (op->type == "compare")
+    {
+        if (a1_type != "num")
+        {
+            t_error = fmt::format("{}:{}:{}: Type Error: Invalid argument type for Simple Comparison operator: {}\n", input_file, arg1->row, arg1->col, arg1->type);
+            type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n));
+            res = false;
+        }
+        if (a2_type != "num")
+        {
+            t_error = fmt::format("{}:{}:{}: Type Error: Invalid argument type for Simple Comparison operator: {}\n", input_file, arg2->row, arg2->col, arg2->type);
+            type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n));
+            res = false;
+        }
+    }
+    else
+    {
+        std::string arg_types = fmt::format("( {}", n->get_child(2)->type);
+        arg_types = fmt::format("{}, {}", arg_types, n->get_child(4)->type);
+        arg_types.append(" )");
+        std::cout << std::string(depth * 2, ' ') << n->UID << ": " << t_error;
+        this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n));
+        res = false;
+    }
+    if (res)
     {
         n->type = "bool";
-        res = true && res;
     }
     else
     {
         n->type = "undefined";
-        res = false;
     }
     std::cout << std::string(depth * 2, ' ') << "SIMPLE type " << n->type << "\n";
-    n->row = op->row;
-    n->col = op->col;
 
     return res;
 }
 bool Type_Checker::composit(std::shared_ptr<node> n)
 {
     // std::cout << "Checking COMPOSITE\n";
+    std::string t_error;
     bool res = true;
-    res = check(n->get_child(0)) && res;
-    res = n->get_child(0)->type == "bool" && res;
-    res = check(n->get_child(2)) && res;
-    res = n->get_child(2)->type == "bool" && res;
+    std::shared_ptr<node> op = n->get_child(0);
+    res = check(op) && res;
+    res = op->type == "bool" && res;
+    n->row = op->row;
+    n->col = op->col;
+    std::shared_ptr<node> arg1 = n->get_child(2);
+    res = check(arg1) && res;
+    if (arg1->type != "bool")
+    {
+        t_error = fmt::format("{}:{}:{}: Type Error: Invalid argument type for Composite Boolean operator: {}\n", input_file, arg1->row, arg1->col, arg1->type);
+        type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n));
+        res = false;
+    }
     if (n->num_children() > 4)
     {
-        res = check(n->get_child(4)) && res;
-        res = n->get_child(4)->type == "bool" && res;
+
+        std::shared_ptr<node> arg2 = n->get_child(4);
+        res = check(arg2) && res;
+        if (arg2->type != "bool")
+        {
+            t_error = fmt::format("{}:{}:{}: Type Error: Invalid argument type for Composite Boolean operator: {}\n", input_file, arg2->row, arg2->col, arg2->type);
+            type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n));
+            res = false;
+        }
+        res = false;
         // std::cout << "2 ARG COMPOSIT type " << n->type;
     }
     if (!res)
     {
         n->type = "undefined";
+        std::string arg_types = fmt::format("( {}", n->get_child(2)->type);
+        arg_types = fmt::format("{}, {}", arg_types, n->get_child(4)->type);
+        arg_types.append(" )");
+        std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid branch condition operator type: {}\n", input_file, op->row, op->col, n->type);
+        std::cout << std::string(depth * 2, ' ') << n->UID << ": " << t_error;
+        this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n));
     }
     else
     {
         n->type = "bool";
     }
     std::cout << std::string(depth * 2, ' ') << "COMPOSIT type " << n->type;
-    n->row = n->get_child(0)->row;
-    n->col = n->get_child(0)->col;
+    n->row = op->row;
+    n->col = op->col;
     return res;
 }
 bool Type_Checker::fname(std::shared_ptr<node> n)
@@ -792,7 +852,7 @@ bool Type_Checker::header(std::shared_ptr<node> n)
     check(param);
     if (type_of(param) != "num")
     {
-        std::string t_error = fmt::format("{}:{}:{} Invalid function parameter type: {}\n", input_file, param->row, param->col, type_of(param));
+        std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid function parameter type: {}\n", input_file, param->row, param->col, type_of(param));
         std::cout << std::string(depth * 2, ' ') << t_error;
         this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, param));
         res = false;
@@ -801,7 +861,7 @@ bool Type_Checker::header(std::shared_ptr<node> n)
     check(param);
     if (type_of(param) != "num")
     {
-        std::string t_error = fmt::format("{}:{}:{} Invalid function parameter type: {}\n", input_file, param->row, param->col, type_of(param));
+        std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid function parameter type: {}\n", input_file, param->row, param->col, type_of(param));
         std::cout << std::string(depth * 2, ' ') << t_error;
         this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, param));
         res = false;
@@ -810,7 +870,7 @@ bool Type_Checker::header(std::shared_ptr<node> n)
     check(param);
     if (type_of(param) != "num")
     {
-        std::string t_error = fmt::format("{}:{}:{} Invalid function parameter type: {}\n", input_file, param->row, param->col, type_of(param));
+        std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid function parameter type: {}\n", input_file, param->row, param->col, type_of(param));
         std::cout << std::string(depth * 2, ' ') << t_error;
         this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, param));
         res = false;

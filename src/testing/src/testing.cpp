@@ -573,11 +573,11 @@ std::shared_ptr<sym_table_type> Tester::preprocess_ftables(std::shared_ptr<node>
         // copy current node's f_table to child
         std::shared_ptr<node> f_child = n->get_child(n->num_children() - 1);
         // node::copy_ftable(n, c);
-        node::copy_ftable(n, f_child);
+        node::copy_ftable(n, f_child, "down");
         std::shared_ptr<sym_table_type> child_ftable = preprocess_ftables(f_child, depth, test);
         // Copy child's f_table to current node
-        node::copy_ftable(child_ftable, n);
-        node::copy_ftable(child_ftable, synthesized_table);
+        node::copy_ftable(child_ftable, n, "up");
+        node::copy_ftable(child_ftable, synthesized_table, "up");
     }
     n->pre_processed = true;
     return synthesized_table;
@@ -628,16 +628,16 @@ void Tester::construct_ftables(std::shared_ptr<node> n, int depth, component tes
         {
             f_child = f_child->get_child(0);
         }
-        node::copy_ftable(n, f_child);
+        node::copy_ftable(n, f_child, "down");
 
         std::shared_ptr<sym_table_type> child_ftable = preprocess_ftables(f_child, depth, test);
         // Copy child's f_table
-        node::copy_ftable(f_child, n);
+        node::copy_ftable(f_child, n, "up");
         // copy to SUBFUNCS if applicable
         if (n->get_child(f_index)->UID != f_child->UID)
         {
             f_child = n->get_child(f_index);
-            node::copy_ftable(n, f_child);
+            node::copy_ftable(n, f_child, "up");
         }
     }
     for (auto c : n->get_children())
@@ -916,12 +916,12 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
     }
     for (auto c : n->get_children())
     {
-        node::copy_vtable(n, c);
-        node::copy_ftable(n, c);
+        node::copy_vtable(n, c, "down");
+        node::copy_ftable(n, c, "down");
         populate_identifiers(c, test);
         if (c->CLASS == "GLOBVARS" || c->CLASS == "LOCVARS" || c->CLASS == "HEADER")
         {
-            node::copy_vtable(c, n);
+            node::copy_vtable(c, n, "up");
             // std::cout << fmt::format("  {}: Copied vtable from child {}\n", n->CLASS, c->CLASS);
         }
     }
@@ -1167,7 +1167,7 @@ void Tester::test_parser(int thread_number, std::vector<std::string> &results)
             std::cout << "Lexing failed\n";
             return;
         }
-        Parser p(this->cfg_file);
+        Parser p(this->cfg_file, fmt::format("./thread_{}_code_file.txt", thread_number));
         std::shared_ptr<node> parsed_root = p.parse(fmt::format("./thread_{}_parsed_ast.xml", thread_number), fmt::format("./thread_{}_token_stream.xml", thread_number));
         // code_file.open(fmt::format("thread_{}_generated_code_file.txt", thread_number));
         // plaintext_code = parsed_root->print_code(0);
@@ -1263,7 +1263,7 @@ void Tester::test_scope_checker(int thread_number, std::vector<std::string> &res
             std::cout << "Lexing failed\n";
             return;
         }
-        Parser p(this->cfg_file);
+        Parser p(this->cfg_file, fmt::format("./thread_{}_code_file{}.txt", thread_number, i));
         std::shared_ptr<node> parsed_root = p.parse(fmt::format("./thread_{}_parsed_ast{}.xml", thread_number, i), fmt::format("./thread_{}_token_stream{}.xml", thread_number, i));
         // code_file.open(fmt::format("thread_{}_generated_code_file.txt", thread_number));
         std::cout << i << ": Parsed\n";
@@ -1432,7 +1432,7 @@ void Tester::test_type_checker(int thread_number, std::vector<std::string> &resu
             std::cout << "Lexing failed\n";
             return;
         }
-        Parser p(this->cfg_file);
+        Parser p(this->cfg_file, fmt::format("./thread_{}_code_file{}.txt", thread_number, i));
         std::shared_ptr<node> parsed_root = p.parse(fmt::format("./thread_{}_parsed_ast{}.xml", thread_number, i), fmt::format("./thread_{}_token_stream{}.xml", thread_number, i));
         // code_file.open(fmt::format("thread_{}_generated_code_file.txt", thread_number));
         std::cout << i << ": Parsed\n";

@@ -7,7 +7,7 @@
 #include <iomanip>
 #include <cstdlib>
 #include <regex>
-Parser::Parser(std::string cfg_file) : cfg_file(cfg_file)
+Parser::Parser(std::string cfg_file, std::string source_file) : cfg_file(cfg_file), source_file(source_file)
 {
     std::cout << "PARSER\n\n\n";
     pugi::xml_parse_result result = this->cfg_doc.load_file(cfg_file.c_str());
@@ -943,7 +943,7 @@ std::shared_ptr<node> Parser::parse(std::string dest_name, std::string token_fil
         }
         default:
             std::cout << fmt::format("ERROR: NO ACTION FOR STATE {} ON INPUT SYMBOL {}.\n", curr_state.first, curr_tok.child("WORD").child_value());
-            std::cout << fmt::format("{}:{}:{} ERROR: Invalid syntax {}", token_file, std::atoi(curr_tok.child("ROW").child_value()), std::atoi(curr_tok.child("COL").child_value()), curr_tok.child("WORD").child_value());
+            std::cout << fmt::format("{}:{}:{} ERROR: Invalid syntax {}", source_file, std::atoi(curr_tok.child("ROW").child_value()), std::atoi(curr_tok.child("COL").child_value()), curr_tok.child("WORD").child_value());
             // "./token_stream.xml" is the default used when not testing
             if (token_file != "./token_stream.xml")
             {

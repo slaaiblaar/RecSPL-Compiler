@@ -1,0 +1,70 @@
+main 
+num V_n1 , text V_t1 , num V_n2 , text V_t2 , 
+begin 
+    F_n1 ( 0.3 , 4669 , 195 ) ; 
+    V_t1 = F_v1  ( V_n2 , 0 , 5 ) ; 
+end 
+num F_n1 ( V_n3 , V_n4, V_n5 ) 
+{ 
+    text V_t3 , text V_t4 , text V_t5 , 
+    begin 
+        V_n3  <input ; 
+        print 39304 ; 
+        V_n5 = F_v1 (V_n3 , V_n2 , V_n4);
+    end 
+} 
+    num F_n4 ( V_n6 , V_n7 , V_n8 ) 
+    { 
+        text V_n1 , text V_t7 , num V_t3 , 
+        begin 
+            F_n1 ( V_n1 , V_n6 , V_t3 ) ; 
+            V_n6 = F_v1  ( -0.5461 , V_t3 , V_n7 ) ;
+            if grt(
+                eq(12, 34), 
+                or(123, "Hi")
+            ) then
+                begin
+                    print "True";
+                end 
+            else 
+                begin
+                    print "False";
+                end ;
+            if and(eq(V_n1, V_t3),
+                   grt(V_t3, V_n7))
+            then
+                begin
+                    V_n7 = F_n2(V_n1,V_t3,V_n4);
+                end 
+            else 
+                begin
+                    V_n1 = F_n2(V_n7,V_t3,V_n4);
+                end;
+        end 
+    } 
+    end 
+    num F_v1  ( V_t1 , V_xy , V_uw ) 
+    { 
+        text V_ew , text V_ix , num V_xzh , 
+        begin 
+            F_n1 ( V_t1 , 1368435241 , V_t3 ) ; 
+        end 
+    } 
+    end 
+end 
+num F_n2 ( V_cr , V_xy , V_uw ) 
+{ 
+    text V_ew , text V_ix , num V_xzh , 
+    begin 
+        F_n1 ( 791808375 , V_cr , V_uw ) ; 
+    end 
+} 
+end 
+void F_v1  ( V_cr , V_xy , V_uw ) 
+{ 
+    text V_ew , text V_ix , num V_xzh , 
+    begin 
+        F_n1 ( 791808375 , V_cr , V_uw ) ; 
+    end 
+} 
+end 

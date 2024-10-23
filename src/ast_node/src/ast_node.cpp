@@ -31,7 +31,7 @@ std::string node::printftable(std::shared_ptr<node> n)
     std::string ftable = "";
     for (auto it = n->f_table.begin(); it != n->f_table.end(); ++it)
     {
-        ftable = fmt::format("{}{}() ==> {}, ", ftable, it->first, it->second[0]);
+        ftable = fmt::format("{}{}() ==> {}, ", ftable, it->first, it->second);
     }
     return ftable;
 }
@@ -580,32 +580,52 @@ std::string printvtable(std::shared_ptr<node> n)
 //         }
 //     }
 // } // std::shared_ptr<sym_table_type>
-void node::copy_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<node> t)
+void node::copy_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<node> t, std::string direction)
 {
     for (auto it = f->begin(); it != f->end(); ++it)
     {
-        t->f_table[it->first] = it->second;
+        if (it->first == "F_n3")
+        {
+            std::cout << fmt::format("Copying F_n3 () => {}  to {}({})\n", (*f)[it->first], t->WORD, t->UID);
+        }
+        if (direction == "up")
+            t->f_table[it->first] = it->second;
+        else
+            t->f_table.try_emplace(it->first, it->second);
     }
 }
-void node::copy_vtable(sym_table_type *f, std::shared_ptr<node> t)
+void node::copy_vtable(sym_table_type *f, std::shared_ptr<node> t, std::string direction)
 {
     for (auto it = f->begin(); it != f->end(); ++it)
     {
+        // if (direction == "up")
         t->v_table[it->first] = it->second;
+        // else
+        //     t->f_table.try_emplace(it->first, it->second);
     }
 }
-void node::copy_ftable(std::shared_ptr<node> f, std::shared_ptr<node> t)
+void node::copy_ftable(std::shared_ptr<node> f, std::shared_ptr<node> t, std::string direction)
 {
     for (auto it = f->f_table.begin(); it != f->f_table.end(); ++it)
     {
-        t->f_table[it->first] = it->second;
+        if (it->first == "F_n3")
+        {
+            std::cout << fmt::format("Copying F_n3 () => {}  to {}({})\n", f->f_table[it->first], t->WORD, t->UID);
+        }
+        if (direction == "up")
+            t->f_table[it->first] = it->second;
+        else
+            t->f_table.try_emplace(it->first, it->second);
     }
 }
-void node::copy_vtable(std::shared_ptr<node> f, std::shared_ptr<node> t)
+void node::copy_vtable(std::shared_ptr<node> f, std::shared_ptr<node> t, std::string direction)
 {
     for (auto it = f->v_table.begin(); it != f->v_table.end(); ++it)
     {
+        // if (direction == "up")
         t->v_table[it->first] = it->second;
+        // else
+        //     t->f_table.try_emplace(it->first, it->second);
     }
 } // std::shared_ptr<sym_table_type>
 // void node::copy_ftable(sym_table_type *f, sym_table_type *t)
@@ -618,10 +638,13 @@ void node::copy_vtable(std::shared_ptr<node> f, std::shared_ptr<node> t)
 //         }
 //     }
 // }
-void node::copy_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<sym_table_type> t)
+void node::copy_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<sym_table_type> t, std::string direction)
 {
     for (auto it = f->begin(); it != f->end(); ++it)
     {
-        (*t)[it->first] = it->second;
+        if (direction == "up")
+            (*t)[it->first] = it->second;
+        else
+            t->try_emplace(it->first, it->second);
     }
 }

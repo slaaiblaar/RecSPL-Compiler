@@ -152,11 +152,11 @@ public:
 
     // Drill down through successive chains of FUNCTIONS == > FUNCTIONS productions
     // static void copy_ftable(sym_table_type *f, std::shared_ptr<node> t);
-    static void copy_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<node> t);
-    static void copy_vtable(sym_table_type *f, std::shared_ptr<node> t);
-    static void copy_ftable(std::shared_ptr<node> f, std::shared_ptr<node> t);
-    static void copy_vtable(std::shared_ptr<node> f, std::shared_ptr<node> t);
-    static void copy_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<sym_table_type> t);
+    static void copy_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<node> t, std::string direction);
+    static void copy_vtable(sym_table_type *f, std::shared_ptr<node> t, std::string direction);
+    static void copy_ftable(std::shared_ptr<node> f, std::shared_ptr<node> t, std::string direction);
+    static void copy_vtable(std::shared_ptr<node> f, std::shared_ptr<node> t, std::string direction);
+    static void copy_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<sym_table_type> t, std::string direction);
     std::shared_ptr<node> parent;
 
 private:
