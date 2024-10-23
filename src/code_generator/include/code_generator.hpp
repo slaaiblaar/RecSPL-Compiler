@@ -47,6 +47,11 @@ private:
     std::string newVar();
     std::string newLabel();
     std::string new_frame();  // Generates a new stack frame (Phase B)
+
+    //Helper functions
+    bool hasChild(const std::shared_ptr<node>& n, const std::string& child_class);
+    std::shared_ptr<node> getChild(const std::shared_ptr<node>& n, size_t index);
+    
 };
 
 #endif
