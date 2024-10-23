@@ -15,6 +15,7 @@ typedef struct symbol_table_entry
 class Type_Checker
 {
 public:
+    std::vector<std::pair<std::string, std::shared_ptr<node>>> type_errors;
     Type_Checker();
     std::shared_ptr<node> ast_root;
     // unique_name => {original_name, types[]}

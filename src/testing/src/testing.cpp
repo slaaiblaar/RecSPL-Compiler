@@ -1021,9 +1021,9 @@ void Tester::run_tests(int thread_number)
     std::vector<std::string> results;
     // test_lexer(thread_number, results);
     // test_parser(thread_number, results);
-    // test_scope_checker(thread_number, results);
-    // test_type_checker();
-    test_code_generator();
+    test_scope_checker(thread_number, results);
+    // test_type_checker(thread_number, results);
+    // test_code_generator();
     for (auto r : results)
     {
         std::cout << r;
@@ -1501,6 +1501,7 @@ void Tester::test_type_checker(int thread_number, std::vector<std::string> &resu
         tree_file << s.root->printnode(0, "Scope_Checker");
         tree_file.close();
         Type_Checker t;
+        t.check(parsed_root);
         // std::cout << i << ": Scope checker ran\n";
         // {
         //     results.push_back(fmt::format("{} Result of Scope Check: {}\n", i, scope_res));

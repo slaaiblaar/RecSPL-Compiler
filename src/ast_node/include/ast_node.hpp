@@ -19,6 +19,7 @@ using sym_table_type = std::unordered_map<std::string, std::string>;
 class node : public std::enable_shared_from_this<node>
 {
 public:
+    std::string type;
     std::string NAME;  // Leaf or Internal node
     int UID;           // Unique identifier
     std::string CLASS; // Class of the node (nonterminal or terminal type)
