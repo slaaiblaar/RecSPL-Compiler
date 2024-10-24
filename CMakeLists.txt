@@ -4,6 +4,7 @@ project(RecSPL-Compiler LANGUAGES CXX DESCRIPTION "A RecSPL compiler for COS341 
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+set(CMAKE_EXE_LINKER_FLAGS "-static -static-libgcc -static-libstdc++")
 
 # Generate the compile_commands.json file
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
@@ -22,7 +23,7 @@ set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR} ${CMAKE_PREFIX_PATH})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -g")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 set(ENV{LSAN_OPTIONS} "verbosity=1:log_threads=1")
 
 
