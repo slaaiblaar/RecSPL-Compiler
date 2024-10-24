@@ -1,6 +1,6 @@
 set(TARGET_NAME code_generator)
 set(TARGET_INCLUDE_FOLDER ${CMAKE_CURRENT_SOURCE_DIR}/include)
-set(TARGET_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/code_generator.cpp)
+set(TARGET_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/code_generator.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/intermediate_generation.cpp)
 
 
 if(BUILD_SHARED_LIBS)
