@@ -12,6 +12,7 @@
 #include "testing.hpp"
 #include <thread>
 #include <fstream>
+
 void test_function(int num)
 {
     Tester test;
@@ -24,7 +25,119 @@ void test_function(int num)
 #include <iostream>
 #include <memory>
 
-std::shared_ptr<node> build_test_ast() {
+// std::shared_ptr<node> build_complex_test_ast() {
+//     // Root node representing the program (PROG)
+//     auto root = std::make_shared<node>();
+//     root->CLASS = "PROG";
+//     root->WORD = "main";
+
+//     // ALGO node representing "begin-end"
+//     auto algo_node = std::make_shared<node>();
+//     algo_node->CLASS = "ALGO";
+//     algo_node->WORD = "begin-end";
+
+//     // First instruction: Assignment (x = 10)
+//     auto instruc1 = std::make_shared<node>();
+//     instruc1->CLASS = "INSTRUC";
+
+//     auto assign_cmd = std::make_shared<node>();
+//     assign_cmd->CLASS = "ASSIGN";
+//     assign_cmd->WORD = "=";
+
+//     // Variable node for 'x'
+//     auto x_var = std::make_shared<node>();
+//     x_var->CLASS = "VID";
+//     x_var->WORD = "x";
+
+//     // Literal node for '10'
+//     auto ten_literal = std::make_shared<node>();
+//     ten_literal->CLASS = "LITERAL";
+//     ten_literal->WORD = "10";
+
+//     assign_cmd->add_child(x_var, 0);    // Left-hand side of assignment
+//     assign_cmd->add_child(ten_literal, 1);  // Right-hand side of assignment
+//     instruc1->add_child(assign_cmd, 0);
+
+//     // Second instruction: Conditional Branch (if x > 5 then ...)
+//     auto instruc2 = std::make_shared<node>();
+//     instruc2->CLASS = "INSTRUC";
+
+//     auto branch_cmd = std::make_shared<node>();
+//     branch_cmd->CLASS = "BRANCH";
+//     branch_cmd->WORD = "if";
+
+//     // Condition: x > 5
+//     auto cond = std::make_shared<node>();
+//     cond->CLASS = "SIMPLE";
+//     cond->WORD = "grt";  // grt for "greater than"
+
+//     auto x_cond = std::make_shared<node>();
+//     x_cond->CLASS = "VID";
+//     x_cond->WORD = "x";
+
+//     auto five_literal = std::make_shared<node>();
+//     five_literal->CLASS = "LITERAL";
+//     five_literal->WORD = "5";
+
+//     cond->add_child(x_cond, 0);   // First operand (x)
+//     cond->add_child(five_literal, 1);  // Second operand (5)
+
+//     // Then-part: print 42
+//     auto then_algo = std::make_shared<node>();
+//     then_algo->CLASS = "ALGO";
+
+//     auto then_instruc = std::make_shared<node>();
+//     then_instruc->CLASS = "INSTRUC";
+
+//     auto print_cmd_42 = std::make_shared<node>();
+//     print_cmd_42->CLASS = "COMMAND";
+//     print_cmd_42->WORD = "print";
+
+//     auto literal_42 = std::make_shared<node>();
+//     literal_42->CLASS = "LITERAL";
+//     literal_42->WORD = "42";
+
+//     print_cmd_42->add_child(literal_42, 0);
+//     then_instruc->add_child(print_cmd_42, 0);
+//     then_algo->add_child(then_instruc, 0);
+
+//     // Else-part: print 0
+//     auto else_algo = std::make_shared<node>();
+//     else_algo->CLASS = "ALGO";
+
+//     auto else_instruc = std::make_shared<node>();
+//     else_instruc->CLASS = "INSTRUC";
+
+//     auto print_cmd_0 = std::make_shared<node>();
+//     print_cmd_0->CLASS = "COMMAND";
+//     print_cmd_0->WORD = "print";
+
+//     auto literal_0 = std::make_shared<node>();
+//     literal_0->CLASS = "LITERAL";
+//     literal_0->WORD = "0";
+
+//     print_cmd_0->add_child(literal_0, 0);
+//     else_instruc->add_child(print_cmd_0, 0);
+//     else_algo->add_child(else_instruc, 0);
+
+//     // Build the complete branch structure
+//     branch_cmd->add_child(cond, 0);         // Condition
+//     branch_cmd->add_child(then_algo, 1);    // Then-part
+//     branch_cmd->add_child(else_algo, 2);    // Else-part
+
+//     instruc2->add_child(branch_cmd, 0);
+
+//     // Add both instructions to the ALGO node
+//     algo_node->add_child(instruc1, 0);  // Assignment
+//     algo_node->add_child(instruc2, 1);  // Branch
+
+//     // Add ALGO to the root (PROG)
+//     root->add_child(algo_node, 0);
+
+//     return root;  // Return the fully built AST
+// }
+
+std::shared_ptr<node> build_complex_test_ast() {
     // Root node representing the program (PROG)
     auto root = std::make_shared<node>();
     root->CLASS = "PROG";
@@ -35,27 +148,113 @@ std::shared_ptr<node> build_test_ast() {
     algo_node->CLASS = "ALGO";
     algo_node->WORD = "begin-end";
 
-    // Instruction node (INSTRUC) with a print command (COMMAND)
-    auto instruc_node = std::make_shared<node>();
-    instruc_node->CLASS = "INSTRUC";
+    // First instruction: Assignment (x = 10)
+    auto instruc1 = std::make_shared<node>();
+    instruc1->CLASS = "INSTRUC";
 
-    // Print command node (COMMAND)
-    auto print_cmd = std::make_shared<node>();
-    print_cmd->CLASS = "COMMAND";
-    print_cmd->WORD = "print";
+    auto assign_cmd = std::make_shared<node>();
+    assign_cmd->CLASS = "ASSIGN";
+    assign_cmd->WORD = "=";
 
-    // Atomic node for the print value (a literal constant)
-    auto atomic = std::make_shared<node>();
-    atomic->CLASS = "LITERAL";  // LITERAL class as per new CFG
-    atomic->WORD = "42";        // Printing the constant "42"
+    // Variable node for 'x'
+    auto x_var = std::make_shared<node>();
+    x_var->CLASS = "VID";
+    x_var->WORD = "x";
 
-    // Build the AST by adding children to respective parents
-    print_cmd->add_child(atomic, 0);        // COMMAND node gets LITERAL as child
-    instruc_node->add_child(print_cmd, 0);  // INSTRUC gets COMMAND as child
-    algo_node->add_child(instruc_node, 0);  // ALGO gets INSTRUC as child
-    root->add_child(algo_node, 0);          // PROG gets ALGO as child
+    // Literal node for '10'
+    auto ten_literal = std::make_shared<node>();
+    ten_literal->CLASS = "LITERAL";
+    ten_literal->WORD = "10";
+
+    assign_cmd->add_child(x_var, 0);    // Left-hand side of assignment
+    assign_cmd->add_child(ten_literal, 1);  // Right-hand side of assignment
+    instruc1->add_child(assign_cmd, 0);
+
+    // Second instruction: Conditional Branch (if x > 5 then ...)
+    auto instruc2 = std::make_shared<node>();
+    instruc2->CLASS = "INSTRUC";
+
+    auto branch_cmd = std::make_shared<node>();
+    branch_cmd->CLASS = "BRANCH";
+    branch_cmd->WORD = "if";
+
+    // Condition: x > 5
+    auto cond = std::make_shared<node>();
+    cond->CLASS = "SIMPLE";
+    cond->WORD = "grt";  // grt for "greater than"
+
+    auto x_cond = std::make_shared<node>();
+    x_cond->CLASS = "VID";
+    x_cond->WORD = "x";
+
+    auto five_literal = std::make_shared<node>();
+    five_literal->CLASS = "LITERAL";
+    five_literal->WORD = "5";
+
+    cond->add_child(x_cond, 0);   // First operand (x)
+    cond->add_child(five_literal, 1);  // Second operand (5)
+
+    // Then-part: print 42
+    auto then_algo = std::make_shared<node>();
+    then_algo->CLASS = "ALGO";
+
+    auto then_instruc = std::make_shared<node>();
+    then_instruc->CLASS = "INSTRUC";
+
+    auto print_cmd_42 = std::make_shared<node>();
+    print_cmd_42->CLASS = "COMMAND";
+    print_cmd_42->WORD = "print";
+
+    auto literal_42 = std::make_shared<node>();
+    literal_42->CLASS = "LITERAL";
+    literal_42->WORD = "42";
+
+    print_cmd_42->add_child(literal_42, 0);
+    then_instruc->add_child(print_cmd_42, 0);
+    then_algo->add_child(then_instruc, 0);
+
+    // Else-part: print 0
+    auto else_algo = std::make_shared<node>();
+    else_algo->CLASS = "ALGO";
+
+    auto else_instruc = std::make_shared<node>();
+    else_instruc->CLASS = "INSTRUC";
+
+    auto print_cmd_0 = std::make_shared<node>();
+    print_cmd_0->CLASS = "COMMAND";
+    print_cmd_0->WORD = "print";
+
+    auto literal_0 = std::make_shared<node>();
+    literal_0->CLASS = "LITERAL";
+    literal_0->WORD = "0";
+
+    print_cmd_0->add_child(literal_0, 0);
+    else_instruc->add_child(print_cmd_0, 0);
+    else_algo->add_child(else_instruc, 0);
+
+    // Build the complete branch structure
+    branch_cmd->add_child(cond, 0);         // Condition
+    branch_cmd->add_child(then_algo, 1);    // Then-part
+    branch_cmd->add_child(else_algo, 2);    // Else-part
+
+    instruc2->add_child(branch_cmd, 0);
+
+    // Add both instructions to the ALGO node
+    algo_node->add_child(instruc1, 0);  // Assignment
+    algo_node->add_child(instruc2, 1);  // Branch
+
+    // Add ALGO to the root (PROG)
+    root->add_child(algo_node, 0);
 
     return root;  // Return the fully built AST
+}
+
+void print_ast(std::shared_ptr<node> n, int depth = 0) {
+    if (!n) return;
+    std::cout << std::string(depth, ' ') << "CLASS: " << n->CLASS << ", WORD: " << n->WORD << std::endl;
+    for (auto& child : n->get_children()) {
+        print_ast(child, depth + 2);  // Recursively print children with increased indentation
+    }
 }
 
 
@@ -86,9 +285,16 @@ int main(int argc, char *argv[])
     // }
     
     std::cout << "CODE GENERATOR TESTING:\n\n";
-    auto ast_root = build_test_ast();
+    auto ast_root = build_complex_test_ast();
+
+    // Print the AST to verify its structure
+    std::cout << "Printing AST structure:\n";
+    print_ast(ast_root);
+
+    // Initialize the code generator
     Code_Generator generator;
 
+    // Phase A: Generate intermediate code
     std::cout << "Generating Intermediate Code...\n";
     std::string intermediate_code = generator.generate(ast_root);
     if (intermediate_code.empty()) {
@@ -97,7 +303,7 @@ int main(int argc, char *argv[])
         std::cout << "Intermediate Code:\n" << intermediate_code << "\n";
     }
 
-
+    // Phase B: Generate final executable code
     std::cout << "Generating Final Code...\n";
     std::string final_code = generator.generate_final(ast_root);
     if (final_code.empty()) {
