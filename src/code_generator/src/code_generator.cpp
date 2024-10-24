@@ -74,7 +74,6 @@ void Code_Generator::handle_function_call(std::stringstream& final_code, const s
     final_code << line_number << " GOSUB " << function_name << "\n";
 }
 
-// Phase B: Handles return statements in BASIC code
 void Code_Generator::handle_return(std::stringstream& final_code, const std::string& return_instruction, int& line_number) {
     size_t start = return_instruction.find("RETURN ") + 7;
     std::string return_value = return_instruction.substr(start);
@@ -84,7 +83,6 @@ void Code_Generator::handle_return(std::stringstream& final_code, const std::str
     final_code << line_number << " RETURN\n";
 }
 
-// Phase A: Translates an expression node to intermediate code
 std::string Code_Generator::TransExp(std::shared_ptr<node> Exp, sym_table_type& vtable, sym_table_type& ftable, std::string& place) {
     if (Exp->CLASS == "LITERAL") {
         std::string v = Exp->WORD;
@@ -105,7 +103,6 @@ std::string Code_Generator::TransExp(std::shared_ptr<node> Exp, sym_table_type& 
     return "";
 }
 
-// Phase A: Translates a statement node to intermediate code
 std::string Code_Generator::TransStat(std::shared_ptr<node> Stat, sym_table_type& vtable, sym_table_type& ftable) {
     if (Stat->CLASS == "ASSIGN") {
         std::string place = newVar();
@@ -123,7 +120,6 @@ std::string Code_Generator::TransStat(std::shared_ptr<node> Stat, sym_table_type
     return "";
 }
 
-// Translates a condition node to intermediate code (Phase A)
 std::string Code_Generator::TransCond(std::shared_ptr<node> Cond, const std::string& labelTrue, const std::string& labelFalse, sym_table_type& vtable, sym_table_type& ftable) {
     std::string t1 = newVar();
     std::string t2 = newVar();
@@ -133,7 +129,6 @@ std::string Code_Generator::TransCond(std::shared_ptr<node> Cond, const std::str
     return code1 + code2 + fmt::format("IF {} {} {} THEN GOTO {} ELSE GOTO {}\n", t1, op, t2, labelTrue, labelFalse);
 }
 
-// Translates multiple expressions for function arguments (Phase A)
 std::string Code_Generator::TransExps(std::vector<std::shared_ptr<node>> Exps, sym_table_type& vtable, sym_table_type& ftable, std::vector<std::string>& args) {
     std::string result;
     for (auto& Exp : Exps) {
@@ -144,19 +139,16 @@ std::string Code_Generator::TransExps(std::vector<std::shared_ptr<node>> Exps, s
     return result;
 }
 
-// Generates a new temporary variable (Phase A)
 std::string Code_Generator::newVar() {
     static int varCount = 0;
     return fmt::format("t{}", varCount++);
 }
 
-// Generates a new label for conditional jumps (Phase A)
 std::string Code_Generator::newLabel() {
     static int labelCount = 0;
     return fmt::format("L{}", labelCount++);
 }
 
-// Generates a new simulated call stack frame (Phase B)
 std::string Code_Generator::new_frame()
 {
     static int frameCount = 0;
