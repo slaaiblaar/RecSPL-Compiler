@@ -84,8 +84,6 @@ void Code_Generator::handle_return(std::stringstream& final_code, const std::str
 }
 
 std::string Code_Generator::TransExp(std::shared_ptr<node> Exp, sym_table_type& vtable, sym_table_type& ftable, std::string& place) {
-    std::cout << "Translating EXP with CLASS: " << Exp->CLASS << ", WORD: " << Exp->WORD << std::endl;
-    
     if (Exp->CLASS == "LITERAL") {
         std::string v = Exp->WORD;
         return fmt::format("{} := {}\n", place, v);
@@ -107,8 +105,6 @@ std::string Code_Generator::TransExp(std::shared_ptr<node> Exp, sym_table_type& 
 
 
 std::string Code_Generator::TransStat(std::shared_ptr<node> Stat, sym_table_type& vtable, sym_table_type& ftable) {
-    std::cout << "Translating STAT with CLASS: " << Stat->CLASS << ", WORD: " << Stat->WORD << std::endl;
-    
     // Handle PROG node: delegate to children (ALGO, FUNCTIONS, etc.)
     if (Stat->CLASS == "PROG") {
         std::string algo_code;
@@ -142,7 +138,6 @@ std::string Code_Generator::TransStat(std::shared_ptr<node> Stat, sym_table_type
             }
         }
     }
-
 
     if (Stat->CLASS == "ASSIGN") {
         std::string place = newVar();
