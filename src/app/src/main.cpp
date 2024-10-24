@@ -24,6 +24,41 @@ void test_function(int num)
 #include <iostream>
 #include <memory>
 
+std::shared_ptr<node> build_test_ast() {
+    // Root node representing the program (PROG)
+    auto root = std::make_shared<node>();
+    root->CLASS = "PROG";
+    root->WORD = "main";
+
+    // ALGO node representing "begin-end"
+    auto algo_node = std::make_shared<node>();
+    algo_node->CLASS = "ALGO";
+    algo_node->WORD = "begin-end";
+
+    // Instruction node (INSTRUC) with a print command (COMMAND)
+    auto instruc_node = std::make_shared<node>();
+    instruc_node->CLASS = "INSTRUC";
+
+    // Print command node (COMMAND)
+    auto print_cmd = std::make_shared<node>();
+    print_cmd->CLASS = "COMMAND";
+    print_cmd->WORD = "print";
+
+    // Atomic node for the print value (a literal constant)
+    auto atomic = std::make_shared<node>();
+    atomic->CLASS = "LITERAL";  // LITERAL class as per new CFG
+    atomic->WORD = "42";        // Printing the constant "42"
+
+    // Build the AST by adding children to respective parents
+    print_cmd->add_child(atomic, 0);        // COMMAND node gets LITERAL as child
+    instruc_node->add_child(print_cmd, 0);  // INSTRUC gets COMMAND as child
+    algo_node->add_child(instruc_node, 0);  // ALGO gets INSTRUC as child
+    root->add_child(algo_node, 0);          // PROG gets ALGO as child
+
+    return root;  // Return the fully built AST
+}
+
+
 
 int main(int argc, char *argv[])
 {
@@ -49,6 +84,30 @@ int main(int argc, char *argv[])
     //     p.parse(fmt::format("./code_file{}.txt", i));
     //     // std::cout << "PARSED\n";
     // }
+    
+    std::cout << "CODE GENERATOR TESTING:\n\n";
+    auto ast_root = build_test_ast();
+    Code_Generator generator;
+
+    std::cout << "Generating Intermediate Code...\n";
+    std::string intermediate_code = generator.generate(ast_root);
+    if (intermediate_code.empty()) {
+        std::cerr << "Error: No intermediate code was generated.\n";
+    } else {
+        std::cout << "Intermediate Code:\n" << intermediate_code << "\n";
+    }
+
+
+    std::cout << "Generating Final Code...\n";
+    std::string final_code = generator.generate_final(ast_root);
+    if (final_code.empty()) {
+        std::cerr << "Error: No final code was generated.\n";
+    } else {
+        std::cout << "Final Code:\n" << final_code << "\n";
+    }
+
+    ast_root->clear_node();
+
     if (argc == 1)
     {
         std::thread t1(test_function, 1);
