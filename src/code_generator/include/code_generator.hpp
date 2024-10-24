@@ -16,7 +16,7 @@ public:
 
     // Phase A: Generates intermediate code from the AST root
     std::string generate(std::shared_ptr<node> root);
-
+    std::string trans(std::shared_ptr<node> root);
     // Phase B: Generates final executable code from the intermediate code
     std::string generate_final(std::shared_ptr<node> root);
 
@@ -48,8 +48,8 @@ public:
     
     // Phase B: Handles function calls and return statements in executable code
     // void handle_function_call(std::stringstream& final_code, const std::string& call_instruction);
-    void Code_Generator::handle_function_call(std::stringstream& final_code, const std::string& call_instruction, int& line_number) ;
-    void Code_Generator::handle_return(std::stringstream& final_code, const std::string& return_instruction, int& line_number);
+    void handle_function_call(std::stringstream& final_code, const std::string& call_instruction, int& line_number) ;
+    void handle_return(std::stringstream& final_code, const std::string& return_instruction, int& line_number);
     // void handle_return(std::stringstream& final_code, const std::string& return_instruction);
 
     // Utilities for generating temporary variables, labels, and stack frames
