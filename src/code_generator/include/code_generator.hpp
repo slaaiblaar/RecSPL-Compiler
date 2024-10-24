@@ -46,21 +46,18 @@ public:
     // Phase B: Converts intermediate code to executable code
     std::string generate_executable(const std::string& intermediate_code);
     
-    // Phase B: Handles function calls and return statements in executable code
+   
     // void handle_function_call(std::stringstream& final_code, const std::string& call_instruction);
-    void handle_function_call(std::stringstream& final_code, const std::string& call_instruction, int& line_number) ;
+    // void handle_function_call(std::stringstream& final_code, const std::string& call_instruction, int& line_number) ;
+    // void handle_return(std::stringstream& final_code, const std::string& return_instruction, int& line_number);
+    void handle_function_call(std::stringstream& final_code, const std::string& call_instruction, int& line_number);
     void handle_return(std::stringstream& final_code, const std::string& return_instruction, int& line_number);
-    // void handle_return(std::stringstream& final_code, const std::string& return_instruction);
+     // void handle_return(std::stringstream& final_code, const std::string& return_instruction);
 
-    // Utilities for generating temporary variables, labels, and stack frames
+   
     std::string newVar();
     std::string newLabel();
-    std::string new_frame();  // Generates a new stack frame (Phase B)
-
-    // //Helper functions
-    // bool hasChild(const std::shared_ptr<node>& n, const std::string& child_class);
-    // std::shared_ptr<node> getChild(const std::shared_ptr<node>& n, size_t index);
-    
+    std::string new_frame();  
 };
 
 #endif

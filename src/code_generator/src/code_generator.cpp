@@ -84,13 +84,15 @@ void Code_Generator::handle_return(std::stringstream& final_code, const std::str
 }
 
 std::string Code_Generator::TransExp(std::shared_ptr<node> Exp, sym_table_type& vtable, sym_table_type& ftable, std::string& place) {
+    std::cout << "Translating EXP with CLASS: " << Exp->CLASS << ", WORD: " << Exp->WORD << std::endl;
+    
     if (Exp->CLASS == "LITERAL") {
         std::string v = Exp->WORD;
         return fmt::format("{} := {}\n", place, v);
     }
     if (Exp->CLASS == "VID") {
-        std::string x = Exp->WORD;
-        return fmt::format("{} := {}\n", place, x);
+        std::string vid = Exp->WORD; // Directly use VID from the node
+        return fmt::format("{} := {}\n", place, vid);
     }
     if (Exp->CLASS == "BINOP") {
         std::string place1 = newVar();
@@ -103,11 +105,49 @@ std::string Code_Generator::TransExp(std::shared_ptr<node> Exp, sym_table_type& 
     return "";
 }
 
+
 std::string Code_Generator::TransStat(std::shared_ptr<node> Stat, sym_table_type& vtable, sym_table_type& ftable) {
+    std::cout << "Translating STAT with CLASS: " << Stat->CLASS << ", WORD: " << Stat->WORD << std::endl;
+    
+    // Handle PROG node: delegate to children (ALGO, FUNCTIONS, etc.)
+    if (Stat->CLASS == "PROG") {
+        std::string algo_code;
+        if (Stat->num_children() > 0) {
+            algo_code = TransStat(Stat->get_child(0), vtable, ftable);  // Assume first child is ALGO
+        }
+        return algo_code + "STOP\n";
+    }
+
+    if (Stat->CLASS == "ALGO") {
+        if (Stat->num_children() > 0) {
+            return TransStat(Stat->get_child(0), vtable, ftable);  // Translate INSTRUC
+        }
+        return "REM END\n";  // Empty ALGO block
+    }
+
+    if (Stat->CLASS == "INSTRUC") {
+        if (Stat->num_children() > 0) {
+            return TransStat(Stat->get_child(0), vtable, ftable);  // Translate COMMAND
+        }
+    }
+
+    if (Stat->CLASS == "COMMAND") {
+        if (Stat->WORD == "print") {
+            // Handle print command
+            std::string code = "PRINT ";
+            if (Stat->num_children() > 0) {
+                // Directly append the atomic value (literal or variable)
+                std::string arg = Stat->get_child(0)->WORD;  // Get the literal or variable name directly
+                return code + arg + "\n";  // Corrected to only append the value
+            }
+        }
+    }
+
+
     if (Stat->CLASS == "ASSIGN") {
         std::string place = newVar();
         std::string code1 = TransExp(Stat->get_child(1), vtable, ftable, place);
-        std::string x = Stat->get_child(0)->WORD;
+        std::string x = Stat->get_child(0)->WORD;  // Use VID directly from node->WORD
         return code1 + fmt::format("{} := {}\n", x, place);
     }
     if (Stat->CLASS == "BRANCH") {
@@ -117,8 +157,13 @@ std::string Code_Generator::TransStat(std::shared_ptr<node> Stat, sym_table_type
         std::string code2 = TransStat(Stat->get_child(1), vtable, ftable);
         return code1 + fmt::format("LABEL {}\n", label1) + code2 + fmt::format("LABEL {}\n", label2);
     }
+    if (Stat->CLASS == "RETURN") {
+        std::string ret_val = Stat->get_child(0)->WORD; // Return value directly from node->WORD
+        return fmt::format("RETURN {}\n", ret_val);
+    }
     return "";
 }
+
 
 std::string Code_Generator::TransCond(std::shared_ptr<node> Cond, const std::string& labelTrue, const std::string& labelFalse, sym_table_type& vtable, sym_table_type& ftable) {
     std::string t1 = newVar();
@@ -234,26 +279,3 @@ std::string Code_Generator::new_frame()
 // }
 
 
-// Utility function to check if a node has a child with a specific class
-// bool Code_Generator::hasChild(const std::shared_ptr<node>& n, const std::string& child_class) {
-//     try {
-//         for (size_t i = 0; i < n->get_children().size(); ++i) {
-//             if (n->get_child(i)->CLASS == child_class) {
-//                 return true;
-//             }
-//         }
-//     } catch (const std::exception& e) {
-//         // Handle exception if get_child throws
-//     }
-//     return false;
-// }
-
-// Utility function to get a child node by index
-// std::shared_ptr<node> Code_Generator::getChild(const std::shared_ptr<node>& n, size_t index) {
-//     try {
-//         return n->get_child(index);
-//     } catch (const std::out_of_range& e) {
-//         // Handle out of range error
-//         return nullptr;
-//     }
-// }
