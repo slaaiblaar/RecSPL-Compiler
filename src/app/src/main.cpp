@@ -286,43 +286,46 @@ int main(int argc, char *argv[])
     //     // std::cout << "PARSED\n";
     // }
 
-    std::cout << "CODE GENERATOR TESTING:\n\n";
-    auto ast_root = build_complex_test_ast();
+    // std::cout << "CODE GENERATOR TESTING:\n\n";
+    // auto ast_root = build_complex_test_ast();
 
-    // Print the AST to verify its structure
-    std::cout << "Printing AST structure:\n";
-    print_ast(ast_root);
+    // // Print the AST to verify its structure
+    // std::cout << "Printing AST structure:\n";
+    // print_ast(ast_root);
 
-    // Initialize the code generator
-    Code_Generator generator;
+    // // Initialize the code generator
+    // Code_Generator generator;
 
-    // Phase A: Generate intermediate code
-    std::cout << "Generating Intermediate Code...\n";
-    std::string intermediate_code = generator.generate(ast_root);
-    if (intermediate_code.empty())
-    {
-        std::cerr << "Error: No intermediate code was generated.\n";
-    }
-    else
-    {
-        std::cout << "Intermediate Code:\n"
-                  << intermediate_code << "\n";
-    }
+    // // Phase A: Generate intermediate code
+    // std::cout << "Generating Intermediate Code...\n";
+    // std::string intermediate_code = generator.generate(ast_root);
+    // std::ofstream intermediate_code_file("intermediate_code.txt");
+    // if (intermediate_code.empty())
+    // {
+    //     std::cerr << "Error: No intermediate code was generated.\n";
+    // }
+    // else
+    // {
+    //     std::cout << "Intermediate Code Printed to intermediate_code.txt";
+    //     intermediate_code_file << intermediate_code;
+    // }
+    // intermediate_code_file.close();
+    // // Phase B: Generate final executable code
+    // std::cout << "Generating Final Code...\n";
+    // std::string final_code = generator.generate_final(ast_root);
+    // std::ofstream final_code_file("final_code.txt");
+    // if (final_code.empty())
+    // {
+    //     std::cerr << "Error: No final code was generated.\n";
+    // }
+    // else
+    // {
+    //     std::cout << "Final Code Printed to final_code.txt";
+    //     final_code_file << intermediate_code;
+    // }
+    // final_code_file.close();
 
-    // Phase B: Generate final executable code
-    std::cout << "Generating Final Code...\n";
-    std::string final_code = generator.generate_final(ast_root);
-    if (final_code.empty())
-    {
-        std::cerr << "Error: No final code was generated.\n";
-    }
-    else
-    {
-        std::cout << "Final Code:\n"
-                  << final_code << "\n";
-    }
-
-    ast_root->clear_node();
+    // ast_root->clear_node();
 
     if (argc == 1)
     {
@@ -415,6 +418,37 @@ int main(int argc, char *argv[])
         {
             std::cout << "Type checker succeeded\n";
         }
+        // Initialize the code generator
+        Code_Generator generator;
+
+        // Phase A: Generate intermediate code
+        std::cout << "Generating Intermediate Code...\n";
+        std::string intermediate_code = generator.generate(root);
+        std::ofstream intermediate_code_file("intermediate_code.txt");
+        if (intermediate_code.empty())
+        {
+            std::cerr << "Error: No intermediate code was generated.\n";
+        }
+        else
+        {
+            std::cout << "Intermediate Code Printed to intermediate_code.txt";
+            intermediate_code_file << intermediate_code;
+        }
+        intermediate_code_file.close();
+        // Phase B: Generate final executable code
+        std::cout << "Generating Final Code...\n";
+        std::string final_code = generator.generate_final(root);
+        std::ofstream final_code_file("final_code.txt");
+        if (final_code.empty())
+        {
+            std::cerr << "Error: No final code was generated.\n";
+        }
+        else
+        {
+            std::cout << "Final Code Printed to final_code.txt";
+            final_code_file << intermediate_code;
+        }
+        final_code_file.close();
     }
     return 0;
 }
