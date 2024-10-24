@@ -466,7 +466,7 @@ bool Type_Checker::assign(std::shared_ptr<node> n)
     }
     else if (n->get_child(2)->CLASS == "TERM")
     {
-        res = check(n->get_child(2));
+        // res = check(n->get_child(2));
         check(n->get_child(2));
         if (type_of(var) != n->get_child(2)->type)
         {
@@ -743,6 +743,7 @@ bool Type_Checker::simple(std::shared_ptr<node> n)
         std::string arg_types = fmt::format("( {}", n->get_child(2)->type);
         arg_types = fmt::format("{}, {}", arg_types, n->get_child(4)->type);
         arg_types.append(" )");
+        t_error = fmt::format("{}:{}:{}: Type Error: Invalid operator type for Simple Condition: {}\n", input_file, op->row, op->col, op->type);
         std::cout << std::string(depth * 2, ' ') << n->UID << ": " << t_error;
         this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n));
         res = false;
@@ -766,11 +767,13 @@ bool Type_Checker::composit(std::shared_ptr<node> n)
     bool res = true;
     std::shared_ptr<node> op = n->get_child(0);
     res = check(op) && res;
+    std::cout << std::string(depth * 2, ' ') << "OPERATION: " << op->get_child(0)->WORD << "\n";
     res = op->type == "bool" && res;
     n->row = op->row;
     n->col = op->col;
     std::shared_ptr<node> arg1 = n->get_child(2);
     res = check(arg1) && res;
+    std::cout << std::string(depth * 2, ' ') << "     ARG1: " << arg1->WORD << ": " << arg1->type << "\n";
     if (arg1->type != "bool")
     {
         t_error = fmt::format("{}:{}:{}: Type Error: Invalid argument type for Composite Boolean operator: {}\n", input_file, arg1->row, arg1->col, arg1->type);
@@ -782,13 +785,13 @@ bool Type_Checker::composit(std::shared_ptr<node> n)
 
         std::shared_ptr<node> arg2 = n->get_child(4);
         res = check(arg2) && res;
+        std::cout << std::string(depth * 2, ' ') << "     ARG2: " << arg2->WORD << "\n";
         if (arg2->type != "bool")
         {
             t_error = fmt::format("{}:{}:{}: Type Error: Invalid argument type for Composite Boolean operator: {}\n", input_file, arg2->row, arg2->col, arg2->type);
             type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n));
             res = false;
         }
-        res = false;
         // std::cout << "2 ARG COMPOSIT type " << n->type;
     }
     if (!res)
@@ -797,7 +800,7 @@ bool Type_Checker::composit(std::shared_ptr<node> n)
         std::string arg_types = fmt::format("( {}", n->get_child(2)->type);
         arg_types = fmt::format("{}, {}", arg_types, n->get_child(4)->type);
         arg_types.append(" )");
-        std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid branch condition operator type: {}\n", input_file, op->row, op->col, n->type);
+        std::string t_error = fmt::format("{}:{}:{}: Type Error: Invalid branch composit condition operator type: {}\n", input_file, op->row, op->col, n->type);
         std::cout << std::string(depth * 2, ' ') << n->UID << ": " << t_error;
         this->type_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(t_error, n));
     }
@@ -805,7 +808,7 @@ bool Type_Checker::composit(std::shared_ptr<node> n)
     {
         n->type = "bool";
     }
-    std::cout << std::string(depth * 2, ' ') << "COMPOSIT type " << n->type;
+    std::cout << std::string(depth * 2, ' ') << "COMPOSIT type: " << n->type;
     n->row = op->row;
     n->col = op->col;
     return res;

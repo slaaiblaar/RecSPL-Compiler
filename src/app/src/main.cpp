@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
         s_tree << root->printnode(0, "main");
         Type_Checker t(input_file);
         t.check(root);
-        std::cout << root->print_code(0, true, "type");
+        std::cout << root->print_code(0, true);
         if (t.type_errors.size() > 0)
         {
             std::cout << "Type checker failed\n";
