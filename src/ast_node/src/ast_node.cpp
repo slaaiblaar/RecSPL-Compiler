@@ -299,12 +299,12 @@ std::string node::print_code(int depth, bool colour, std::string comp_name)
     }
     else if (this->CLASS == "GLOBVARS")
     {
-        std::cout << std::string(depth * 2, ' ') << "printing GLOBVARS ==>";
-        for (auto c : this->get_children())
-        {
-            std::cout << " " << c->WORD;
-        }
-        std::cout << "\n";
+        // std::cout << std::string(depth * 2, ' ') << "printing GLOBVARS ==>";
+        // for (auto c : this->get_children())
+        // {
+        //     std::cout << " " << c->WORD;
+        // }
+        // std::cout << "\n";
         std::string vtyp = this->get_child(0)->print_code(depth, colour, comp_name);
         std::string vname = this->get_child(1)->print_code(depth, colour, comp_name);
         std::string comma = this->get_child(2)->print_code(depth, colour, comp_name);
@@ -584,10 +584,6 @@ void node::copy_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<node> 
 {
     for (auto it = f->begin(); it != f->end(); ++it)
     {
-        if (it->first == "F_n3")
-        {
-            std::cout << fmt::format("Copying F_n3 () => {}  to {}({})\n", (*f)[it->first], t->WORD, t->UID);
-        }
         if (direction == "up")
             t->f_table[it->first] = it->second;
         else
@@ -608,10 +604,6 @@ void node::copy_ftable(std::shared_ptr<node> f, std::shared_ptr<node> t, std::st
 {
     for (auto it = f->f_table.begin(); it != f->f_table.end(); ++it)
     {
-        if (it->first == "F_n3")
-        {
-            std::cout << fmt::format("Copying F_n3 () => {}  to {}({})\n", f->f_table[it->first], t->WORD, t->UID);
-        }
         if (direction == "up")
             t->f_table[it->first] = it->second;
         else
@@ -646,5 +638,12 @@ void node::copy_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<sym_ta
             (*t)[it->first] = it->second;
         else
             t->try_emplace(it->first, it->second);
+    }
+}
+void node::copy_scope_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<sym_table_type> t)
+{
+    for (auto it = f->begin(); it != f->end(); ++it)
+    {
+        (*t)[it->first] = it->second;
     }
 }

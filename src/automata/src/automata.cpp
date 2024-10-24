@@ -216,7 +216,8 @@ std::shared_ptr<State> Automaton::tree_to_nfa(std::shared_ptr<RegexpNode> node, 
         if (node->children.size() != 1)
         {
             std::cout << "Invalid * operator" << std::endl;
-            throw "Invalid * operator";
+            // throw "Invalid * operator";
+            return nullptr;
         }
         curr_state = std::make_shared<State>(AutomatonClass::NFA);
         curr_state->e_closure[curr_state->id] = curr_state;
@@ -237,7 +238,7 @@ std::shared_ptr<State> Automaton::tree_to_nfa(std::shared_ptr<RegexpNode> node, 
             {
                 std::cout << "[" << child->value << "]" << "(" << child->precedence << ")" << "-" << child->uid << " ";
             }
-            throw "Invalid operator";
+            return nullptr;
         }
         curr_state = sub_nfa_start;
         curr_state->add_transition(sub_nfa_end, node->value);
@@ -250,7 +251,7 @@ std::shared_ptr<State> Automaton::tree_to_nfa(std::shared_ptr<RegexpNode> node, 
 */
 void Automaton::construct_subsets()
 {
-    std::cout << "Constructing Subsets\n";
+    // std::cout << "Constructing Subsets\n";
     std::shared_ptr<State> current_state;
     /*
         2D hashmap is massively overkill, but it's the simplest way to prevent
@@ -262,7 +263,7 @@ void Automaton::construct_subsets()
     while (!subset_construction_queue.empty())
     {
         current_state = subset_construction_queue.front();
-        std::cout << current_state->id << " ";
+        // std::cout << current_state->id << " ";
         // std::cout << "  Curr state: \n      " << current_state->id;
         subset_construction_queue.pop();
         transitions.clear();
@@ -333,7 +334,8 @@ void Automaton::construct_subsets()
                         if (destination->token_class != "")
                         {
                             std::cout << "\nOverlapping final states\n";
-                            throw "Overlapping final states";
+                            return;
+                            // throw "Overlapping final states";
                         }
                         destination->token_class = nfa_state.second->token_class;
                         destination->lhs_name = nfa_state.second->lhs_name;
@@ -706,7 +708,6 @@ bool Automaton::run(bool debug)
     }
     if (debug)
     {
-
         std::cout << "RUNNING LEXER:\n";
         std::cout << "start pos: " << read_start << "\n";
     }
@@ -724,7 +725,7 @@ bool Automaton::run(bool debug)
             std::cout << soombol << std::endl;
             std::cout << ": \tCAN TRANSITION FROM " << current_state << "?\n";
         }
-        if (!current_state->can_transition(soombol, (this->input == "return")))
+        if (!current_state->can_transition(soombol, debug))
         {
             if (debug)
             {

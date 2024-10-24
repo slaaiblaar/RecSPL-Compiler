@@ -58,7 +58,7 @@ public:
     {
         std::string id = fmt::format("{}fun{}", t, f_counter++);
         (*type_table)[id] = t;
-        std::cout << fmt::format("ID({}): {}\n", n, id);
+        // std::cout << fmt::format("ID({}): {}\n", n, id);
         f_table[n] = id;
         (*scope_f_table)[n] = id;
         return id;
@@ -157,6 +157,7 @@ public:
     static void copy_ftable(std::shared_ptr<node> f, std::shared_ptr<node> t, std::string direction);
     static void copy_vtable(std::shared_ptr<node> f, std::shared_ptr<node> t, std::string direction);
     static void copy_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<sym_table_type> t, std::string direction);
+    static void copy_scope_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<sym_table_type> t);
     std::shared_ptr<node> parent;
 
 private:

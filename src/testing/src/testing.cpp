@@ -1462,7 +1462,7 @@ void Tester::test_type_checker(int thread_number, std::vector<std::string> &resu
         Type_Checker t(fmt::format("thread_{}_code_file{}.txt", thread_number, i));
         if (t.check(parsed_root))
         {
-            std::cout << "Type checking passed\n";
+            // std::cout << "Type checking passed\n";
         }
         else
         {

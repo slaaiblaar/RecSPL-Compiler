@@ -24,7 +24,6 @@ void test_function(int num)
 #include <iostream>
 #include <memory>
 
-
 int main(int argc, char *argv[])
 {
     std::string dfa_test_strings[] = {
@@ -98,7 +97,7 @@ int main(int argc, char *argv[])
         }
         if (!l.lex(false, "token_stream.xml"))
         {
-            std::cout << "Lexing failed\n";
+            // std::cout << "Lexing failed\n";
             return 1;
         }
         Parser p("CFG.xml", input_file);
@@ -108,12 +107,15 @@ int main(int argc, char *argv[])
             std::cout << "Parsing failed\n";
             return 1;
         }
+        std::ofstream parsed_code("parsed_code_file.txt");
+        parsed_code << root->print_code(0);
+        parsed_code.close();
         Scope_Checker s(root, "CFG.xml");
         s.run_scope_checker();
-        if (s.error.size() > 0)
+        if (s.error_messages.size() > 0)
         {
             std::cout << "Scope checker failed\n";
-            for (auto e : s.error)
+            for (auto e : s.error_messages)
             {
                 std::cout << e.first;
             }

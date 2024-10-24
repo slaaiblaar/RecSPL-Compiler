@@ -7,6 +7,17 @@
 #include <iomanip>
 #include <cstdlib>
 #include <regex>
+std::shared_ptr<node> fake_root()
+{
+    std::shared_ptr<node> fake_root = std::make_shared<node>();
+    fake_root->NAME = "ERROR";
+    fake_root->UID = -1;
+    // fake_root->CLASS = curr_tok.child("CLASS").child_value();
+    // fake_root->WORD = curr_tok.child("WORD").child_value();
+    // fake_root->row = std::atoi(curr_tok.child("ROW").child_value());
+    // fake_root->col = std::atoi(curr_tok.child("COL").child_value());
+    return fake_root;
+}
 Parser::Parser(std::string cfg_file, std::string source_file) : cfg_file(cfg_file), source_file(source_file)
 {
     std::cout << "PARSER\n\n\n";
@@ -19,11 +30,11 @@ Parser::Parser(std::string cfg_file, std::string source_file) : cfg_file(cfg_fil
         return;
     }
     this->get_nullable();
-    std::cout << "Nullable\n";
+    // std::cout << "Nullable\n";
     this->generate_first_sets();
-    std::cout << "First\n";
+    // std::cout << "First\n";
     this->generate_follow_sets();
-    std::cout << "Follow\n";
+    // std::cout << "Follow\n";
 }
 
 void Parser::get_nullable()
@@ -713,7 +724,8 @@ std::shared_ptr<node> Parser::parse(std::string dest_name, std::string token_fil
     pugi::xml_parse_result result = tok_doc.load_file(token_file.c_str());
     if (!result)
     {
-        throw "token_stream.xml does not exist";
+        std::cout << "token_stream.xml does not exist";
+        return fake_root();
     }
     pugi::xml_document ast_doc;
     pugi::xml_node tok_str = tok_doc.child("TOKENSTREAM");
@@ -795,8 +807,9 @@ std::shared_ptr<node> Parser::parse(std::string dest_name, std::string token_fil
         {
             std::cout << "\n\n"
                       << curr_tok.child("WORD").child_value() << "\n\n";
-            throw "Nonterminal in token stream";
-            break;
+            std::cout << "Invalid token\n";
+            return nullptr;
+            // break;
         }
 
         case Operation::REDUCE:
@@ -902,8 +915,9 @@ std::shared_ptr<node> Parser::parse(std::string dest_name, std::string token_fil
                     {
                         std::cout << "\tTop of stack: {" << curr_state.first << ", " << curr_state.second->WORD
                                   << "} \n\tCurr Production Symbol: \"" << *rit << "\" Length " << rit->length();
-                        std::cout << "\tExpected: \"" << curr_state.second->WORD << "\" Length " << curr_state.second->WORD.length() << "\n";
-                        throw "\nInconsistent stack state\n";
+                        // std::cout << "\tExpected: \"" << curr_state.second->WORD << "\" Length " << curr_state.second->WORD.length() << "\n";
+                        // throw "\nInconsistent stack state\n";
+                        return fake_root();
                     }
                 }
                 // std::cout << "Adding " << curr_state.second->WORD << " to " << new_node->WORD << "\n";
@@ -943,23 +957,17 @@ std::shared_ptr<node> Parser::parse(std::string dest_name, std::string token_fil
         }
         default:
             std::cout << fmt::format("ERROR: NO ACTION FOR STATE {} ON INPUT SYMBOL {}.\n", curr_state.first, curr_tok.child("WORD").child_value());
-            std::cout << fmt::format("{}:{}:{} ERROR: Invalid syntax {}", source_file, std::atoi(curr_tok.child("ROW").child_value()), std::atoi(curr_tok.child("COL").child_value()), curr_tok.child("WORD").child_value());
+            std::cout << fmt::format("{}:{}:{} ERROR: Invalid syntax \"{}\"\n", source_file, std::atoi(curr_tok.child("ROW").child_value()), std::atoi(curr_tok.child("COL").child_value()), curr_tok.child("WORD").child_value());
             // "./token_stream.xml" is the default used when not testing
-            if (token_file != "./token_stream.xml")
-            {
-                throw;
-            }
-            else
-            {
-                std::shared_ptr<node> fake_root = std::make_shared<node>();
-                fake_root->NAME = "ERROR";
-                fake_root->UID = -1;
-                fake_root->CLASS = curr_tok.child("CLASS").child_value();
-                fake_root->WORD = curr_tok.child("WORD").child_value();
-                fake_root->row = std::atoi(curr_tok.child("ROW").child_value());
-                fake_root->col = std::atoi(curr_tok.child("COL").child_value());
-                return fake_root;
-            }
+
+            std::shared_ptr<node> fake_root = std::make_shared<node>();
+            fake_root->NAME = "ERROR";
+            fake_root->UID = -1;
+            fake_root->CLASS = curr_tok.child("CLASS").child_value();
+            fake_root->WORD = curr_tok.child("WORD").child_value();
+            fake_root->row = std::atoi(curr_tok.child("ROW").child_value());
+            fake_root->col = std::atoi(curr_tok.child("COL").child_value());
+            return fake_root;
         }
     }
     if (accept)
@@ -989,5 +997,5 @@ std::shared_ptr<node> Parser::parse(std::string dest_name, std::string token_fil
     {
         std::cout << "\n\nSomething went wrong\n\n";
     }
-    throw;
+    // throw;
 }

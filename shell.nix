@@ -86,12 +86,12 @@ pkgs.mkShell {
     # visualAutomata
     automataLib
     pkgs.glibc.static
-    pkgs.zlib.static
-    pkgs.libffi
-    pkgs.libtool
+    # pkgs.zlib.static
+    # pkgs.libffi
+    # pkgs.libtool
     pkgs.musl
-    pkgs.ghc
-    pkgs.gcc
+    # pkgs.ghc
+    # pkgs.gcc
   ];
   shellHook = ''
     alias makerun='cmake . && make && ./bin/app'

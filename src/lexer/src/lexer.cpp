@@ -68,7 +68,6 @@ Lexer::Lexer(std::string cfg_file) : cfg_file(cfg_file)
         {
             std::cout << "LEXER: Test string failed: " << test_string << std::endl;
             std::cout << "LEXER: Final State: " << dfa.current_state->id << std::endl;
-            throw;
         }
         // else if (true)
         // {
@@ -155,7 +154,7 @@ bool Lexer::lex(bool testing, std::string dest_file)
                     break;
                 }
             }
-            message = fmt::format("Invalid syntax in file \"{}\":{}:{}: \"{}\"", this->file_name, dfa.line_num, dfa.col_num, invalid_token);
+            message = fmt::format("{}:{}:{}:Invalid syntax \"{}\"", this->file_name, dfa.line_num, dfa.col_num, invalid_token);
             std::cout << message << "\n";
             complete_lex = false;
             break;
@@ -166,10 +165,6 @@ bool Lexer::lex(bool testing, std::string dest_file)
     if (!complete_lex)
     {
         std::cerr << "Lexing Failed\n";
-        if (!testing)
-        {
-            throw;
-        }
         // std::cout << input.substr(0, dfa.read_start);
         // std::cout << "\033[32m" << invalid_token << "\033[0m";
         // std::cout << input.substr(dfa.read_pos + invalid_token.length(), input.length() - (dfa.read_pos + invalid_token.length()));

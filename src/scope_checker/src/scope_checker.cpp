@@ -265,37 +265,15 @@ std::shared_ptr<sym_table_type> Scope_Checker::preprocess_ftables(std::shared_pt
     {
         std::cerr << "\nFNAME->children[1] is supposed to be a FID node\n";
     }
-    // if scope collision
-    // if (fid->WORD == "F_n3")
-    // {
-    //     std::cout << "SCOPE CHECKER: FID == " << fid->WORD << "\n";
-    // }
     if (n->scope_f_table->find(fid->WORD) != n->scope_f_table->end())
     {
-        if (fid->WORD == "F_n3")
-        {
-            std::cout << "COLLISION FOR FID " << fid->WORD << ", existing type " << (*n->type_table)[(*n->scope_f_table)[fid->WORD]] << "\n ";
-        }
-        // if (fid->WORD == "F_n1")
-        // {
-        //     std::cout << "SCOPE CHECKER: FID == " << fid->WORD << "\n";
-        // }
         error.push_back(std::pair<std::string, std::pair<int, int>>(fid->WORD, std::pair<int, int>(-1, -1)));
         error_messages.push_back(std::pair<std::string, std::shared_ptr<node>>(
             fmt::format("\033[34m{}\033[0m:{}:{}: Re-declaration of function {} \n", fid->file, fid->row, fid->col, fid->WORD), fid));
     }
     else // else bind
     {
-        if (fid->WORD == "F_n3")
-        {
-            std::cout << "BINDING FID " << fid->WORD << " to type " << header->get_child(0)->WORD << "\n";
-        }
-        // Bind name
         std::string id = n->bind_f(fid->WORD, header->get_child(0)->WORD);
-        if (fid->WORD == "F_n3")
-        {
-            std::cout << "NEW ID " << n->f_table[fid->WORD] << ", TYPE " << (*n->scope_f_table)[n->f_table[fid->WORD]] << "\n";
-        }
     }
 
     // syntesizhed table to return
@@ -311,6 +289,7 @@ std::shared_ptr<sym_table_type> Scope_Checker::preprocess_ftables(std::shared_pt
         std::shared_ptr<node> f_child = n->get_child(n->num_children() - 1);
         // node::copy_ftable(n, c);
         node::copy_ftable(n, f_child, "down");
+        node::copy_scope_ftable(n->scope_f_table, f_child->scope_f_table);
         std::shared_ptr<sym_table_type> child_ftable = this->preprocess_ftables(f_child, depth);
         // Copy child's f_table to current node
         node::copy_ftable(child_ftable, n, "up");
@@ -334,9 +313,10 @@ void Scope_Checker::construct_ftables(std::shared_ptr<node> n, int depth)
     }
 
     bool body_node = (n->CLASS == "BODY");
-    bool has_dubfuncs_child = (n->children_size() > 2 && n->get_child(n->children_size() - 2)->CLASS == "SUBFUNCS");
-    if (body_node && has_dubfuncs_child)
+    bool has_subfuncs_child = (n->children_size() > 2 && n->get_child(n->children_size() - 2)->CLASS == "SUBFUNCS");
+    if (body_node && has_subfuncs_child)
     {
+        std::cout << "Has subfuncs child\n";
         preprocessing_required = true;
         f_index = n->children_size() - 2;
     }
@@ -348,6 +328,12 @@ void Scope_Checker::construct_ftables(std::shared_ptr<node> n, int depth)
         // get FUNCTIONS child of SUBFUNCS if necessary
         if (f_child->CLASS == "SUBFUNCS")
         {
+            // copy parent name to subfuncs scoped f table
+            std::shared_ptr<node> header = n->start_of_scope->get_child(0);
+            std::shared_ptr<node> fname = header->get_child(1);
+            std::shared_ptr<node> fid = fname->get_child(0);
+            // std::cout << "Start of scope fname: " << fid->WORD << "\n";
+            (*f_child->scope_f_table)[fid->WORD] = (*n->scope_f_table)[fid->WORD];
             f_child = f_child->get_child(0);
         }
         node::copy_ftable(n, f_child, "down");
@@ -358,8 +344,10 @@ void Scope_Checker::construct_ftables(std::shared_ptr<node> n, int depth)
         // copy to SUBFUNCS if applicable
         if (n->get_child(f_index)->UID != f_child->UID)
         {
+            // std::cout << "Copying to subfuncs\n";
             f_child = n->get_child(f_index);
-            node::copy_ftable(n, f_child, "up");
+            // std::cout << "Got subfuncs\n";
+            node::copy_ftable(n, f_child, "down");
         }
     }
     for (auto c : n->get_children())
@@ -514,7 +502,7 @@ bool Scope_Checker::run_scope_checker(int thread_number)
     bool check_res = check(root);
     for (auto em : this->error_messages)
     {
-        std::cout << em.first;
+        // std::cout << em.first;
     }
     return this->error.size() == 0;
 }
