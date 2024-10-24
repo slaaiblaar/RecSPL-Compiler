@@ -1,0 +1,21 @@
+main 
+num V_i , text V_t1 , num V_n2 , text V_t2 , 
+begin 
+    print "Prompt";
+    V_i < input;
+    V_n2 = F_fib(V_i , 0 , 0);
+    print V_n2;
+end 
+num F_fib ( V_i , V_n4, V_n5 ) 
+{ 
+    num V_n6 , num V_n7 , num V_n8 , 
+    begin 
+        V_n6 = sub(V_i, 1);
+        V_n7 = sub(V_i, 2);
+        V_n6 = F_fib(V_n6,0,0);
+        V_n7 = F_fib(V_n7,0,0);
+        V_n8 = add(V_n6,V_n7);
+        return  V_n8;
+    end 
+} 
+end 

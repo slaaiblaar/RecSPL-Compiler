@@ -468,8 +468,44 @@ int Tester::generate_tree(std::shared_ptr<node> parent, pugi::xml_node productio
 // using sym_table_type = std::unordered_map<std::string, std::string[4]>;
 using sym_table_type = std::unordered_map<std::string, std::string>;
 // Drill down through successive chains of FUNCTIONS == > FUNCTIONS productions void node::copy_ftable(std::shared_ptr<sym_table_type> f, std::shared_ptr<node> t)
-
-std::shared_ptr<sym_table_type> Tester::preprocess_ftables(std::shared_ptr<node> n, int depth)
+void collision_error_func(std::shared_ptr<node> n, component test, Tester *tester)
+{
+    if (test != component::SCOPE_CHECK || n->CLASS != "FUNCTIONS")
+    {
+        return;
+    }
+    std::shared_ptr<node> header = n->get_child(0)->get_child(0);
+    if (header->WORD != "HEADER")
+    {
+        std::cerr << "\nFUNCTIONS->children[0]->children[0] is not a HEADER node\n";
+    }
+    std::shared_ptr<node> fname = header->get_child(1);
+    if (fname->WORD != "FNAME")
+    {
+        std::cerr << "\nHEADER->children[1] is supposed to be a FNAME node\n";
+    }
+    std::shared_ptr<node> fid = fname->get_child(0);
+    if (fid->CLASS != "FID")
+    {
+        std::cerr << "\nFNAME->children[1] is supposed to be a FID node\n";
+    }
+    double rand_collision = (double)rand() / (double)RAND_MAX;
+    int rand_id = rand() % n->scope_f_table->size();
+    int index = 0;
+    auto vit = n->scope_f_table->begin();
+    while (vit != n->scope_f_table->end() && index < rand_id)
+    {
+        ++vit;
+        ++index;
+    }
+    if (index == rand_id && vit != n->scope_f_table->end())
+    {
+        fid->WORD = vit->first;
+        // std::cout << fmt::format("{}Randomly selected duplicate fname: {} {}\n", std::string(depth * 2, ' '), fid->WORD, fid->UID);
+        tester->scope_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(fid->WORD, fid));
+    }
+}
+std::shared_ptr<sym_table_type> Tester::preprocess_ftables(std::shared_ptr<node> n, int depth, component test)
 {
     double collision_prob = 0.1;
     ++depth;
@@ -491,7 +527,7 @@ std::shared_ptr<sym_table_type> Tester::preprocess_ftables(std::shared_ptr<node>
     double rand_collision = (double)rand() / (double)RAND_MAX;
     // if ()
     // generate name
-    if (rand_collision > collision_prob || n->scope_f_table->size() == 0)
+    if ((test == component::TYPE_CHECK || rand_collision > collision_prob) || n->scope_f_table->size() == 0)
     {
         do
         {
@@ -509,20 +545,21 @@ std::shared_ptr<sym_table_type> Tester::preprocess_ftables(std::shared_ptr<node>
         // std::cout << fmt::format("{}Creating function scope collision error \n", std::string(depth * 2, ' '));
         // std::cout << fmt::format("{}collision_prob: {}, rand_collision: {}, n->scope_f_table->size(): {} \n", std::string(depth * 2, ' '), collision_prob, rand_collision, n->scope_f_table->size());
         // std::cout << fmt::format("{}(rand_collision > collision_prob || n->scope_f_table->size() == 0) : {} \n", std::string(depth * 2, ' '), (rand_collision > collision_prob || n->scope_f_table->size() == 0));
-        int rand_id = rand() % n->scope_f_table->size();
-        int index = 0;
-        auto vit = n->scope_f_table->begin();
-        while (vit != n->scope_f_table->end() && index < rand_id)
-        {
-            ++vit;
-            ++index;
-        }
-        if (index == rand_id && vit != n->scope_f_table->end())
-        {
-            fid->WORD = vit->first;
-            // std::cout << fmt::format("{}Randomly selected duplicate fname: {} {}\n", std::string(depth * 2, ' '), fid->WORD, fid->UID);
-            this->scope_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(fid->WORD, fid));
-        }
+        // int rand_id = rand() % n->scope_f_table->size();
+        // int index = 0;
+        // auto vit = n->scope_f_table->begin();
+        // while (vit != n->scope_f_table->end() && index < rand_id)
+        // {
+        //     ++vit;
+        //     ++index;
+        // }
+        // if (index == rand_id && vit != n->scope_f_table->end())
+        // {
+        //     fid->WORD = vit->first;
+        //     // std::cout << fmt::format("{}Randomly selected duplicate fname: {} {}\n", std::string(depth * 2, ' '), fid->WORD, fid->UID);
+        //     this->scope_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(fid->WORD, fid));
+        // }
+        collision_error_func(n, test, this);
     }
 
     std::shared_ptr<sym_table_type> synthesized_table = std::make_shared<sym_table_type>();
@@ -536,11 +573,11 @@ std::shared_ptr<sym_table_type> Tester::preprocess_ftables(std::shared_ptr<node>
         // copy current node's f_table to child
         std::shared_ptr<node> f_child = n->get_child(n->num_children() - 1);
         // node::copy_ftable(n, c);
-        node::copy_ftable(n, f_child);
-        std::shared_ptr<sym_table_type> child_ftable = preprocess_ftables(f_child, depth);
+        node::copy_ftable(n, f_child, "down");
+        std::shared_ptr<sym_table_type> child_ftable = preprocess_ftables(f_child, depth, test);
         // Copy child's f_table to current node
-        node::copy_ftable(child_ftable, n);
-        node::copy_ftable(child_ftable, synthesized_table);
+        node::copy_ftable(child_ftable, n, "up");
+        node::copy_ftable(child_ftable, synthesized_table, "up");
     }
     n->pre_processed = true;
     return synthesized_table;
@@ -591,16 +628,16 @@ void Tester::construct_ftables(std::shared_ptr<node> n, int depth, component tes
         {
             f_child = f_child->get_child(0);
         }
-        node::copy_ftable(n, f_child);
+        node::copy_ftable(n, f_child, "down");
 
-        std::shared_ptr<sym_table_type> child_ftable = preprocess_ftables(f_child, depth);
+        std::shared_ptr<sym_table_type> child_ftable = preprocess_ftables(f_child, depth, test);
         // Copy child's f_table
-        node::copy_ftable(f_child, n);
+        node::copy_ftable(f_child, n, "up");
         // copy to SUBFUNCS if applicable
         if (n->get_child(f_index)->UID != f_child->UID)
         {
             f_child = n->get_child(f_index);
-            node::copy_ftable(n, f_child);
+            node::copy_ftable(n, f_child, "up");
         }
     }
     for (auto c : n->get_children())
@@ -644,7 +681,7 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
         {
             id_probability = 0;
         }
-        if (id_probability > invalid_pattern_prob)
+        if (test != component::SCOPE_CHECK || id_probability > invalid_pattern_prob)
         {
             // std::cout << fmt::format("{}  Legitimate id\n", std::string(depth * 2, ' '));
             // std::cout << fmt::format("  {} existing id\n", n->CLASS);
@@ -771,49 +808,6 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
     //              0     1   2   3    4   5  6     7   8
     if (n->CLASS == "LOCVARS")
     {
-        // std::set<std::string> locvars;
-        // auto n1 = n->get_child(4)->get_child(0);
-        // std::vector<std::pair<std::shared_ptr<node>, std::shared_ptr<node>>> vars;
-        // for (int i = 0; i < 7; i += 3)
-        // {
-        //     std::shared_ptr<node> vtype = n->get_child(i);     // 0, 3, 6
-        //     std::shared_ptr<node> vname = n->get_child(i + 1); // 1, 4, 7
-        //     bool found = false;
-        //     do
-        //     {
-        //         random_pattern(vname->get_child(0));
-        //         // while the name is not unique
-        //     } while (n->scope_v_table->find(vname->get_child(0)->WORD) != n->scope_v_table->end());
-        //     vars.push_back(std::pair<std::shared_ptr<node>, std::shared_ptr<node>>(vtype->get_child(0), vname->get_child(0)));
-        //     // locvars.emplace(vname->get_child(0)->WORD);
-        //     // std::cout << fmt::format("  {}: New var {} {}\n", n->CLASS, vtype->get_child(0)->WORD, vname->get_child(0)->WORD);
-        // }
-        // id_probability = (double)rand() / (double)RAND_MAX;
-        // for (auto v : vars)
-        // {
-        //     if (test == component::SCOPE_CHECK && id_probability < 1 && n->scope_v_table->size() > 0)
-        //     {
-        //         int rand_id = rand() % n->scope_v_table->size();
-        //         auto vit = n->scope_v_table->begin();
-        //         int index = 0;
-        //         while (vit != n->v_table.end() && index < rand_id)
-        //         {
-        //             ++vit;
-        //             ++index;
-        //         }
-        //         if (index == rand_id && vit != n->scope_v_table->end())
-        //         {
-        //             v.second->WORD = vit->first;
-        //             std::cout << fmt::format("{}Randomly selected duplicate LOCVAR: {} {}\n", std::string(depth * 2, ' '), v.second->WORD, v.second->UID);
-        //             this->scope_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(v.second->WORD, v.second));
-        //             // don't need to touch scope tables
-        //             // because it is a duplicate and technically in scope
-        //             continue;
-        //         }
-        //         n->v_table[v.first->WORD] = v.second->WORD;
-        //         n->v_id_map[v.first->WORD] = v.second->WORD;
-        //     }
-        // }
         std::set<std::string> locvars;
         auto n1 = n->get_child(4)->get_child(0);
         std::vector<std::pair<std::shared_ptr<node>, std::shared_ptr<node>>> vars;
@@ -872,41 +866,6 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
     //              0     1   2   3   4   5   6   7   8
     if (n->CLASS == "HEADER")
     {
-        // std::set<std::string> params;
-        // for (int i = 3; i < 8; i += 2)
-        // {
-        //     std::shared_ptr<node> vname = n->get_child(i); // 3, 5, 7
-        //     bool found = false;
-        //     do
-        //     {
-        //         id_probability = (double)rand() / (double)RAND_MAX;
-        //         if (test == component::SCOPE_CHECK && id_probability < 1 && params.size() > 0)
-        //         {
-
-        //             int rand_id = rand() % params.size();
-        //             int index = 0;
-        //             for (auto vit = params.begin(); vit != params.end() && index < rand_id; ++index)
-        //             {
-        //                 if (index == rand_id)
-        //                 {
-        //                     vname->get_child(0)->WORD = *vit;
-        //                     found = true;
-        //                     this->scope_errors.push_back(std::pair<std::string, std::shared_ptr<node>>(vname->get_child(0)->WORD, vname->get_child(0)));
-        //                     break;
-        //                 }
-        //             }
-        //         }
-        //         else
-        //         {
-        //             random_pattern(vname->get_child(0));
-        //         }
-        //         random_pattern(vname->get_child(0));
-        //         // while the name is not unique
-        //         // not necessary but makes manual verification easier
-        //     } while (n->v_table.find(vname->get_child(0)->WORD) != n->v_table.end());
-        //     n->v_table[vname->get_child(0)->WORD] = "num";
-        //     // std::cout << fmt::format("  {}: New var {} {}\n", n->CLASS, vtype->get_child(0)->WORD, vname->get_child(0)->WORD);
-        // }
         std::set<std::string> params;
         for (int i = 3; i < 8; i += 2)
         {
@@ -957,12 +916,12 @@ void Tester::populate_identifiers(std::shared_ptr<node> n, component test)
     }
     for (auto c : n->get_children())
     {
-        node::copy_vtable(n, c);
-        node::copy_ftable(n, c);
+        node::copy_vtable(n, c, "down");
+        node::copy_ftable(n, c, "down");
         populate_identifiers(c, test);
         if (c->CLASS == "GLOBVARS" || c->CLASS == "LOCVARS" || c->CLASS == "HEADER")
         {
-            node::copy_vtable(c, n);
+            node::copy_vtable(c, n, "up");
             // std::cout << fmt::format("  {}: Copied vtable from child {}\n", n->CLASS, c->CLASS);
         }
     }
@@ -1022,7 +981,7 @@ void Tester::run_tests(int thread_number)
     // test_lexer(thread_number, results);
     // test_parser(thread_number, results);
     // test_scope_checker(thread_number, results);
-    // test_type_checker();
+    // test_type_checker(thread_number, results);
     test_code_generator();
     for (auto r : results)
     {
@@ -1208,7 +1167,7 @@ void Tester::test_parser(int thread_number, std::vector<std::string> &results)
             std::cout << "Lexing failed\n";
             return;
         }
-        Parser p(this->cfg_file);
+        Parser p(this->cfg_file, fmt::format("./thread_{}_code_file.txt", thread_number));
         std::shared_ptr<node> parsed_root = p.parse(fmt::format("./thread_{}_parsed_ast.xml", thread_number), fmt::format("./thread_{}_token_stream.xml", thread_number));
         // code_file.open(fmt::format("thread_{}_generated_code_file.txt", thread_number));
         // plaintext_code = parsed_root->print_code(0);
@@ -1256,7 +1215,7 @@ void Tester::test_scope_checker(int thread_number, std::vector<std::string> &res
     bool bad_parse = false;
     Lexer l(this->cfg_file);
     // std::vector<std::string> results;
-    for (int i = 0; !bad_parse && i < 1; ++i)
+    for (int i = 0; !bad_parse && i < 10; ++i)
     {
         srand(rand());
         int num_nodes = 0;
@@ -1304,7 +1263,7 @@ void Tester::test_scope_checker(int thread_number, std::vector<std::string> &res
             std::cout << "Lexing failed\n";
             return;
         }
-        Parser p(this->cfg_file);
+        Parser p(this->cfg_file, fmt::format("./thread_{}_code_file{}.txt", thread_number, i));
         std::shared_ptr<node> parsed_root = p.parse(fmt::format("./thread_{}_parsed_ast{}.xml", thread_number, i), fmt::format("./thread_{}_token_stream{}.xml", thread_number, i));
         // code_file.open(fmt::format("thread_{}_generated_code_file.txt", thread_number));
         std::cout << i << ": Parsed\n";
@@ -1425,7 +1384,7 @@ void Tester::test_type_checker(int thread_number, std::vector<std::string> &resu
     bool bad_parse = false;
     Lexer l(this->cfg_file);
     // std::vector<std::string> results;
-    for (int i = 0; !bad_parse && i < 40; ++i)
+    for (int i = 0; !bad_parse && i < 1; ++i)
     {
         srand(rand());
         int num_nodes = 0;
@@ -1473,7 +1432,7 @@ void Tester::test_type_checker(int thread_number, std::vector<std::string> &resu
             std::cout << "Lexing failed\n";
             return;
         }
-        Parser p(this->cfg_file);
+        Parser p(this->cfg_file, fmt::format("./thread_{}_code_file{}.txt", thread_number, i));
         std::shared_ptr<node> parsed_root = p.parse(fmt::format("./thread_{}_parsed_ast{}.xml", thread_number, i), fmt::format("./thread_{}_token_stream{}.xml", thread_number, i));
         // code_file.open(fmt::format("thread_{}_generated_code_file.txt", thread_number));
         std::cout << i << ": Parsed\n";
@@ -1500,7 +1459,20 @@ void Tester::test_type_checker(int thread_number, std::vector<std::string> &resu
         tree_file.open(filename);
         tree_file << s.root->printnode(0, "Scope_Checker");
         tree_file.close();
-        Type_Checker t;
+        Type_Checker t(fmt::format("thread_{}_code_file{}.txt", thread_number, i));
+        if (t.check(parsed_root))
+        {
+            std::cout << "Type checking passed\n";
+        }
+        else
+        {
+            std::cout << "Type checking failed\n";
+        }
+        std::cout << parsed_root->print_code(0, true, "type");
+        for (auto e : t.type_errors)
+        {
+            std::cout << e.first;
+        }
         // std::cout << i << ": Scope checker ran\n";
         // {
         //     results.push_back(fmt::format("{} Result of Scope Check: {}\n", i, scope_res));
@@ -1566,8 +1538,8 @@ void Tester::test_type_checker(int thread_number, std::vector<std::string> &resu
         //             results.push_back(fmt::format("{}\t\033[31mFailed\033[0m\n\n", i));
         //         }
         //     }
+        root->clear_node();
     }
-    root->clear_node();
 }
 
 void Tester::test_code_generator()

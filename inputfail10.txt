@@ -1,0 +1,16 @@
+main 
+num V_n1 , num V_n2 , num V_n3, num V_n4, num V_n5, num V_n6, text V_t1, text V_t2, text V_t3, text V_t4, text V_t5, text V_t6,
+begin 
+    V_n1 = add(V_n2 , sub(V_t3,V_n4));
+    V_n2 = mul(100,div(V_n4,V_n6));
+
+    V_n1 = add(sub(V_n3,V_n4) , V_n2);
+    V_n2 = mul(div(V_n4,V_n6),100);
+    
+    if grt (V_n1, V_n2)
+    then begin
+        print "Frstgrt";
+    end else begin
+        print "Scndgrt";
+    end;
+end 

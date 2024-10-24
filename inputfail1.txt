@@ -1,0 +1,5 @@
+main 
+num V_n1 , text V_t1 , num V_n2 , text V_t2 , 
+begin 
+    V_t1 = 123;
+end 

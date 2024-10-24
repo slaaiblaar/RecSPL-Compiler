@@ -1,0 +1,31 @@
+main 
+num V_only0the0first0two0assignments0should0be0valid,
+num V_n1, text V_t1, num V_n2, text V_t2, 
+begin 
+    V_only0the0first0two0assignments0should0be0valid = 0;
+    V_n1 = F_n1(0.3, 4669, 195) ; 
+    V_n1 <input ; 
+    V_n1 = F_v1(V_n2, 0, 5); 
+
+    V_t1 = F_n1(0.3, 4669, 195); 
+    V_t1 <input ; 
+    V_t1 = F_v1(V_n2, 0, 5);  
+end 
+num F_n1 ( V_n3 , V_n4, V_n5 ) 
+{ 
+    text V_t3 , text V_t4 , text V_t5 , 
+    begin 
+        V_n3  <input ; 
+        V_n4  <input ; 
+        print 39304 ; 
+    end 
+} 
+end 
+void F_v1  ( V_cr , V_xy , V_uw ) 
+{ 
+    text V_ew , text V_ix , num V_xzh , 
+    begin 
+        F_n1 ( 791808375 , V_cr , V_uw ) ; 
+    end 
+} 
+end 

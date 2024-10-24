@@ -41,12 +41,14 @@ public:
     int num_terminals = 0;
     void populate_identifiers(std::shared_ptr<node> n, component test);
     void construct_ftables(std::shared_ptr<node> n, int depth, component test);
-    std::shared_ptr<sym_table_type> preprocess_ftables(std::shared_ptr<node> n, int depth);
+    void get_type_errors(std::shared_ptr<node> n, int depth);
+    std::shared_ptr<sym_table_type> preprocess_ftables(std::shared_ptr<node> n, int depth, component test);
     std::string print_code(std::shared_ptr<node> n);
     std::pair<int, std::string> messed_up_word = std::pair<int, std::string>(-1, "NONE");
     std::vector<std::pair<std::string, std::shared_ptr<node>>> scope_errors;
     std::vector<std::pair<std::string, std::shared_ptr<node>>> discovered_scope_errors;
     std::string cfg_file = "CFG.xml";
+    std::string input_file;
     std::set<std::string> used_names;
 };
 #endif

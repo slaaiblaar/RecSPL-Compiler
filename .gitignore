@@ -12,6 +12,7 @@ random_tree*.xml
 *.txt
 *.xml
 !CMakeLists.txt
+!input*.txt
 *.csv
 *.ods
 *.py

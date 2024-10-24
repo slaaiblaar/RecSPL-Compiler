@@ -1,0 +1,8 @@
+main 
+num V_n1 , text V_t1 , num V_n2 , text V_t2 , 
+begin 
+    V_n1 = 123;
+    V_t1 = "Hi";
+    V_n2 = V_n1;
+    V_t2 = V_t1;
+end 

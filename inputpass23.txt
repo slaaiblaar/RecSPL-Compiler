@@ -1,0 +1,29 @@
+main 
+num V_n1 , num V_n2 , num V_n3, num V_n4, num V_n5, num V_n6, text V_t1, text V_t2, text V_t3, text V_t4, text V_t5, text V_t6,
+begin 
+    if and (grt(V_n1, V_n2),eq(V_n3,V_n4))
+    then begin
+        print "Frstgrt";
+    end else begin
+        print "Scndgrt";
+    end;
+    if or(grt(V_n1, V_n2),eq(V_n3,V_n4))
+    then begin
+        print "Frstgrt";
+    end else begin
+        print "Scndgrt";
+    end;
+    if not (grt(V_n1, V_n2))
+    then begin
+        print "Frstgrt";
+    end else begin
+        print "Scndgrt";
+    end;
+    if not(eq(V_n3,V_n4))
+    then begin
+        print "Frstgrt";
+    end else begin
+        print "Scndgrt";
+    end;
+    
+end 
