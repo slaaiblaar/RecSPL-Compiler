@@ -13,7 +13,7 @@ Code_Generator::Code_Generator() {
 // Phase A: Generates intermediate code for the AST starting from the root node
 std::string Code_Generator::generate(std::shared_ptr<node> root) {
     std::string code = TransStat(root, vtable, ftable);
-    std::cout << "Intermediate Code: " << code << std::endl;
+    //std::cout << "Intermediate Code: " << code << std::endl;
     return code;
 }
 
@@ -104,58 +104,253 @@ std::string Code_Generator::TransExp(std::shared_ptr<node> Exp, sym_table_type& 
 }
 
 
+// std::string Code_Generator::TransStat(std::shared_ptr<node> Stat, sym_table_type& vtable, sym_table_type& ftable) {
+//     // Handle PROG node: delegate to children (ALGO, FUNCTIONS, etc.)
+//     if (Stat->CLASS == "PROG") {
+//         std::string algo_code;
+//         if (Stat->num_children() > 0) {
+//             algo_code = TransStat(Stat->get_child(0), vtable, ftable);  // Assume first child is ALGO
+//         }
+//         return algo_code + "STOP\n";
+//     }
+
+//     if (Stat->CLASS == "ALGO") {
+//         if (Stat->num_children() > 0) {
+//             return TransStat(Stat->get_child(0), vtable, ftable);  // Translate INSTRUC
+//         }
+//         return "REM END\n";  // Empty ALGO block
+//     }
+
+//     if (Stat->CLASS == "INSTRUC") {
+//         if (Stat->num_children() > 0) {
+//             return TransStat(Stat->get_child(0), vtable, ftable);  // Translate COMMAND
+//         }
+//     }
+
+//     if (Stat->CLASS == "COMMAND") {
+//         if (Stat->WORD == "print") {
+//             // Handle print command
+//             std::string code = "PRINT ";
+//             if (Stat->num_children() > 0) {
+//                 // Directly append the atomic value (literal or variable)
+//                 std::string arg = Stat->get_child(0)->WORD;  // Get the literal or variable name directly
+//                 return code + arg + "\n";  // Corrected to only append the value
+//             }
+//         }
+//     }
+
+//     if (Stat->CLASS == "ASSIGN") {
+//         std::string place = newVar();
+//         std::string code1 = TransExp(Stat->get_child(1), vtable, ftable, place);
+//         std::string x = Stat->get_child(0)->WORD;  // Use VID directly from node->WORD
+//         return code1 + fmt::format("{} := {}\n", x, place);
+//     }
+//     if (Stat->CLASS == "BRANCH") {
+//         std::string label1 = newLabel();
+//         std::string label2 = newLabel();
+//         std::string code1 = TransCond(Stat->get_child(0), label1, label2, vtable, ftable);
+//         std::string code2 = TransStat(Stat->get_child(1), vtable, ftable);
+//         return code1 + fmt::format("LABEL {}\n", label1) + code2 + fmt::format("LABEL {}\n", label2);
+//     }
+//     if (Stat->CLASS == "RETURN") {
+//         std::string ret_val = Stat->get_child(0)->WORD; // Return value directly from node->WORD
+//         return fmt::format("RETURN {}\n", ret_val);
+//     }
+//     return "";
+// }
+
+// std::string Code_Generator::TransStat(std::shared_ptr<node> Stat, sym_table_type& vtable, sym_table_type& ftable) {
+//     if (Stat->CLASS == "PROG") {
+//         std::string algo_code;
+//         if (Stat->num_children() > 0) {
+//             algo_code = TransStat(Stat->get_child(0), vtable, ftable);  // Assume first child is ALGO
+//         }
+//         return algo_code + "STOP\n";
+//     }
+
+//     if (Stat->CLASS == "ALGO") {
+//         if (Stat->num_children() > 0) {
+//             return TransStat(Stat->get_child(0), vtable, ftable);  // Translate INSTRUC
+//         }
+//         return "REM END\n";  // Empty ALGO block
+//     }
+
+//     if (Stat->CLASS == "INSTRUC") {
+//         if (Stat->num_children() > 0) {
+//             return TransStat(Stat->get_child(0), vtable, ftable);  // Translate COMMAND
+//         }
+//     }
+
+//     if (Stat->CLASS == "ASSIGN") {
+//         std::string place = newVar();
+//         std::string code1 = TransExp(Stat->get_child(1), vtable, ftable, place);  // Right-hand side (RHS)
+//         std::string x = Stat->get_child(0)->WORD;  // Left-hand side (LHS) is the variable name
+//         return code1 + fmt::format("{} := {}\n", x, place);
+//     }
+
+//     // Handle BRANCH (if statement)
+//     if (Stat->CLASS == "BRANCH") {
+//         std::string label_true = newLabel();
+//         std::string label_false = newLabel();
+//         std::string label_end = newLabel();
+
+//         // Translate condition (SIMPLE or COMPOSITE condition)
+//         std::string cond_code = TransCond(Stat->get_child(0), label_true, label_false, vtable, ftable);
+
+//         // Translate then-block (ALGO)
+//         std::string then_code = TransStat(Stat->get_child(1), vtable, ftable);
+
+//         // Translate else-block (ALGO)
+//         std::string else_code = TransStat(Stat->get_child(2), vtable, ftable);
+
+//         // Assemble the complete if-then-else structure
+//         return cond_code +
+//                fmt::format("LABEL {}\n", label_true) +
+//                then_code +
+//                fmt::format("GOTO {}\n", label_end) +   // Jump to the end after the then block
+//                fmt::format("LABEL {}\n", label_false) +
+//                else_code +
+//                fmt::format("LABEL {}\n", label_end);
+//     }
+
+//     if (Stat->CLASS == "COMMAND" && Stat->WORD == "print") {
+//         std::string code = "PRINT ";
+//         if (Stat->num_children() > 0) {
+//             std::string arg = Stat->get_child(0)->WORD;  // Literal or variable to print
+//             return code + arg + "\n";
+//         }
+//     }
+
+//     return "";
+// }
+
+// std::string Code_Generator::TransStat(std::shared_ptr<node> Stat, sym_table_type& vtable, sym_table_type& ftable) {
+//     std::cout << "Translating STAT with CLASS: " << Stat->CLASS << ", WORD: " << Stat->WORD << std::endl;  // Debug output
+
+//     if (Stat->CLASS == "PROG") {
+//         std::string algo_code;
+//         if (Stat->num_children() > 0) {
+//             algo_code = TransStat(Stat->get_child(0), vtable, ftable);  // Assume first child is ALGO
+//         }
+//         return algo_code + "STOP\n";
+//     }
+
+//     if (Stat->CLASS == "ALGO") {
+//         if (Stat->num_children() > 0) {
+//             return TransStat(Stat->get_child(0), vtable, ftable);  // Translate INSTRUC
+//         }
+//         return "REM END\n";  // Empty ALGO block
+//     }
+
+//     if (Stat->CLASS == "INSTRUC") {
+//         if (Stat->num_children() > 0) {
+//             return TransStat(Stat->get_child(0), vtable, ftable);  // Translate COMMAND or BRANCH
+//         }
+//     }
+
+//     if (Stat->CLASS == "ASSIGN") {
+//         std::string place = newVar();
+//         std::string code1 = TransExp(Stat->get_child(1), vtable, ftable, place);  // Right-hand side (RHS)
+//         std::string x = Stat->get_child(0)->WORD;  // Left-hand side (LHS) is the variable name
+//         return code1 + fmt::format("{} := {}\n", x, place);
+//     }
+
+//     // Handle BRANCH (if statement)
+//     if (Stat->CLASS == "BRANCH") {
+//         std::cout << "Processing BRANCH node...\n";  // Debug output
+//         std::string label_true = newLabel();
+//         std::string label_false = newLabel();
+//         std::string label_end = newLabel();
+
+//         // Translate condition (SIMPLE or COMPOSITE condition)
+//         std::string cond_code = TransCond(Stat->get_child(0), label_true, label_false, vtable, ftable);
+
+//         // Translate then-block (ALGO)
+//         std::string then_code = TransStat(Stat->get_child(1), vtable, ftable);
+
+//         // Translate else-block (ALGO)
+//         std::string else_code = TransStat(Stat->get_child(2), vtable, ftable);
+
+//         // Assemble the complete if-then-else structure
+//         return cond_code +
+//                fmt::format("LABEL {}\n", label_true) +
+//                then_code +
+//                fmt::format("GOTO {}\n", label_end) +   // Jump to the end after the then block
+//                fmt::format("LABEL {}\n", label_false) +
+//                else_code +
+//                fmt::format("LABEL {}\n", label_end);
+//     }
+
+//     if (Stat->CLASS == "COMMAND" && Stat->WORD == "print") {
+//         std::string code = "PRINT ";
+//         if (Stat->num_children() > 0) {
+//             std::string arg = Stat->get_child(0)->WORD;  // Literal or variable to print
+//             return code + arg + "\n";
+//         }
+//     }
+
+//     return "";
+// }
+
 std::string Code_Generator::TransStat(std::shared_ptr<node> Stat, sym_table_type& vtable, sym_table_type& ftable) {
-    // Handle PROG node: delegate to children (ALGO, FUNCTIONS, etc.)
+
     if (Stat->CLASS == "PROG") {
         std::string algo_code;
         if (Stat->num_children() > 0) {
-            algo_code = TransStat(Stat->get_child(0), vtable, ftable);  // Assume first child is ALGO
+            algo_code = TransStat(Stat->get_child(0), vtable, ftable);  // Translate ALGO
         }
         return algo_code + "STOP\n";
     }
 
-    if (Stat->CLASS == "ALGO") {
-        if (Stat->num_children() > 0) {
-            return TransStat(Stat->get_child(0), vtable, ftable);  // Translate INSTRUC
+    if (Stat->CLASS == "ALGO" || Stat->CLASS == "INSTRUC") {
+        std::string code;
+        for (std::size_t i = 0; i < Stat->num_children(); ++i) {  // Process all children
+            code += TransStat(Stat->get_child(i), vtable, ftable);
         }
-        return "REM END\n";  // Empty ALGO block
-    }
-
-    if (Stat->CLASS == "INSTRUC") {
-        if (Stat->num_children() > 0) {
-            return TransStat(Stat->get_child(0), vtable, ftable);  // Translate COMMAND
-        }
-    }
-
-    if (Stat->CLASS == "COMMAND") {
-        if (Stat->WORD == "print") {
-            // Handle print command
-            std::string code = "PRINT ";
-            if (Stat->num_children() > 0) {
-                // Directly append the atomic value (literal or variable)
-                std::string arg = Stat->get_child(0)->WORD;  // Get the literal or variable name directly
-                return code + arg + "\n";  // Corrected to only append the value
-            }
-        }
+        return code;
     }
 
     if (Stat->CLASS == "ASSIGN") {
         std::string place = newVar();
-        std::string code1 = TransExp(Stat->get_child(1), vtable, ftable, place);
-        std::string x = Stat->get_child(0)->WORD;  // Use VID directly from node->WORD
+        std::string code1 = TransExp(Stat->get_child(1), vtable, ftable, place);  // Right-hand side (RHS)
+        std::string x = Stat->get_child(0)->WORD;  // Left-hand side (LHS) is the variable name
         return code1 + fmt::format("{} := {}\n", x, place);
     }
+
+    // Handle BRANCH (if statement)
     if (Stat->CLASS == "BRANCH") {
-        std::string label1 = newLabel();
-        std::string label2 = newLabel();
-        std::string code1 = TransCond(Stat->get_child(0), label1, label2, vtable, ftable);
-        std::string code2 = TransStat(Stat->get_child(1), vtable, ftable);
-        return code1 + fmt::format("LABEL {}\n", label1) + code2 + fmt::format("LABEL {}\n", label2);
+        std::cout << "Processing BRANCH node...\n";  // Debug output
+        std::string label_true = newLabel();
+        std::string label_false = newLabel();
+        std::string label_end = newLabel();
+
+        // Translate condition (SIMPLE or COMPOSITE condition)
+        std::string cond_code = TransCond(Stat->get_child(0), label_true, label_false, vtable, ftable);
+
+        // Translate then-block (ALGO)
+        std::string then_code = TransStat(Stat->get_child(1), vtable, ftable);
+
+        // Translate else-block (ALGO)
+        std::string else_code = TransStat(Stat->get_child(2), vtable, ftable);
+
+        // Assemble the complete if-then-else structure
+        return cond_code +
+               fmt::format("LABEL {}\n", label_true) +
+               then_code +
+               fmt::format("GOTO {}\n", label_end) +   // Jump to the end after the then block
+               fmt::format("LABEL {}\n", label_false) +
+               else_code +
+               fmt::format("LABEL {}\n", label_end);
     }
-    if (Stat->CLASS == "RETURN") {
-        std::string ret_val = Stat->get_child(0)->WORD; // Return value directly from node->WORD
-        return fmt::format("RETURN {}\n", ret_val);
+
+    if (Stat->CLASS == "COMMAND" && Stat->WORD == "print") {
+        std::string code = "PRINT ";
+        if (Stat->num_children() > 0) {
+            std::string arg = Stat->get_child(0)->WORD;  // Literal or variable to print
+            return code + arg + "\n";
+        }
     }
+
     return "";
 }
 
