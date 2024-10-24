@@ -156,6 +156,13 @@ std::string Code_Generator::newLabel() {
     return fmt::format("L{}", labelCount++);
 }
 
+// Generates a new simulated call stack frame (Phase B)
+std::string Code_Generator::new_frame()
+{
+    static int frameCount = 0;
+    return fmt::format("frame{}", frameCount++);
+}
+
 
 // New function to handle the entire program
 
